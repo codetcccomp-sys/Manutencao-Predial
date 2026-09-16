@@ -26,6 +26,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', servico: 'Sistema de Manutenção Predial API' });
 });
 
+// Checagem que realmente exercita o banco: /health sozinho responde "ok" mesmo
+// com o banco inacessível, o que esconde falha de credencial, de rede ou de SSL.
+app.get('/health/db', async (req, res) => {
+  try {
+    const { rows } = await require('./config/db').query('SELECT now() AS agora');
+    res.json({ status: 'ok', banco: 'conectado', agora: rows[0].agora });
+  } catch (err) {
+    res.status(503).json({ status: 'erro', banco: 'indisponivel', detalhe: err.message });
+  }
+});
+
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/chamados', require('./routes/chamados.routes'));
 app.use('/usuarios', require('./routes/usuarios.routes'));
