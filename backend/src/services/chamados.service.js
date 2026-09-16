@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { gerarProtocolo } = require('../utils/protocolo');
 
@@ -16,22 +17,20 @@ const TRANSICOES = {
 async function criar({ titulo, descricao, categoria_id, local_id, prioridade }, solicitanteId) {
   const protocolo = gerarProtocolo();
 
-  const { rows } = await pool.query(
-    `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, solicitante_id, prioridade)
-     VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::prioridade_chamado, 'baixa'))
-     RETURNING *`,
-    [protocolo, titulo, descricao, categoria_id, local_id, solicitanteId, prioridade]
-  );
+  return transacao(async (client) => {
+    const { rows } = await client.query(
+      `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, solicitante_id, prioridade)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::prioridade_chamado, 'baixa'))
+       RETURNING *`,
+      [protocolo, titulo, descricao, categoria_id, local_id, solicitanteId, prioridade]
+    );
 
-  const chamado = rows[0];
+    const chamado = rows[0];
 
-  await pool.query(
-    `INSERT INTO historico_chamado (chamado_id, usuario_id, estado_anterior, estado_novo, observacao)
-     VALUES ($1, $2, NULL, 'aberto', 'Chamado aberto.')`,
-    [chamado.id, solicitanteId]
-  );
+    await registrarHistorico(client, chamado.id, solicitanteId, null, 'aberto', 'Chamado aberto.');
 
-  return chamado;
+    return chamado;
+  });
 }
 
 async function listar(usuario, filtros = {}) {
@@ -95,80 +94,91 @@ async function atribuir(id, { tecnico_id, equipe_id }, usuario) {
     throw new AppError('Apenas gestores ou administradores podem atribuir chamados.', 403, 'ACESSO_NEGADO');
   }
 
-  const chamado = await buscarChamadoBruto(id);
-  validarTransicao(chamado.estado, 'atribuido');
+  return transacao(async (client) => {
+    const chamado = await bloquearChamado(client, id);
+    validarTransicao(chamado.estado, 'atribuido');
 
-  const { rows } = await pool.query(
-    `UPDATE chamado SET tecnico_id = $1, equipe_id = $2, estado = 'atribuido'
-     WHERE id = $3 RETURNING *`,
-    [tecnico_id || null, equipe_id || null, id]
-  );
-
-  await registrarHistorico(id, usuario.id, chamado.estado, 'atribuido', 'Chamado atribuído a técnico/equipe.');
-
-  if (tecnico_id) {
-    await pool.query(
-      `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
-       VALUES ($1, $2, 'atribuicao', $3)`,
-      [tecnico_id, id, `Você foi designado para o chamado ${chamado.protocolo}.`]
+    const { rows } = await client.query(
+      `UPDATE chamado SET tecnico_id = $1, equipe_id = $2, estado = 'atribuido'
+       WHERE id = $3 RETURNING *`,
+      [tecnico_id || null, equipe_id || null, id]
     );
-  }
 
-  return rows[0];
+    await registrarHistorico(
+      client,
+      id,
+      usuario.id,
+      chamado.estado,
+      'atribuido',
+      'Chamado atribuído a técnico/equipe.'
+    );
+
+    if (tecnico_id) {
+      await client.query(
+        `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
+         VALUES ($1, $2, 'atribuicao', $3)`,
+        [tecnico_id, id, `Você foi designado para o chamado ${chamado.protocolo}.`]
+      );
+    }
+
+    return rows[0];
+  });
 }
 
 async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
-  const chamado = await buscarChamadoBruto(id);
+  return transacao(async (client) => {
+    const chamado = await bloquearChamado(client, id);
 
-  const podeAlterar =
-    usuario.perfil === 'administrador' ||
-    usuario.perfil === 'gestor' ||
-    chamado.tecnico_id === usuario.id;
+    const podeAlterar =
+      usuario.perfil === 'administrador' ||
+      usuario.perfil === 'gestor' ||
+      chamado.tecnico_id === usuario.id;
 
-  if (!podeAlterar) {
-    throw new AppError('Você não tem permissão para alterar o estado deste chamado.', 403, 'ACESSO_NEGADO');
-  }
+    if (!podeAlterar) {
+      throw new AppError('Você não tem permissão para alterar o estado deste chamado.', 403, 'ACESSO_NEGADO');
+    }
 
-  validarTransicao(chamado.estado, novoEstado);
+    validarTransicao(chamado.estado, novoEstado);
 
-  const campos = ['estado = $1'];
-  const params = [novoEstado];
+    const campos = ['estado = $1'];
+    const params = [novoEstado];
 
-  if (novoEstado === 'aguardando_material') {
-    campos.push('aguardando_material_desde = now()');
-  }
+    if (novoEstado === 'aguardando_material') {
+      campos.push('aguardando_material_desde = now()');
+    }
 
-  if (chamado.estado === 'aguardando_material' && novoEstado !== 'aguardando_material') {
-    campos.push(
-      "tempo_suspenso_total = tempo_suspenso_total + COALESCE(now() - aguardando_material_desde, '0 seconds')"
+    if (chamado.estado === 'aguardando_material' && novoEstado !== 'aguardando_material') {
+      campos.push(
+        "tempo_suspenso_total = tempo_suspenso_total + COALESCE(now() - aguardando_material_desde, '0 seconds')"
+      );
+      campos.push('aguardando_material_desde = NULL');
+    }
+
+    if (novoEstado === 'concluido') {
+      campos.push('data_conclusao = now()');
+    }
+
+    params.push(id);
+    const { rows } = await client.query(
+      `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params
     );
-    campos.push('aguardando_material_desde = NULL');
-  }
 
-  if (novoEstado === 'concluido') {
-    campos.push('data_conclusao = now()');
-  }
+    await registrarHistorico(client, id, usuario.id, chamado.estado, novoEstado, observacao);
 
-  params.push(id);
-  const { rows } = await pool.query(
-    `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length} RETURNING *`,
-    params
-  );
+    await client.query(
+      `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        chamado.solicitante_id,
+        id,
+        novoEstado === 'concluido' ? 'conclusao' : 'mudanca_estado',
+        `O chamado ${chamado.protocolo} mudou de estado: ${chamado.estado} → ${novoEstado}.`,
+      ]
+    );
 
-  await registrarHistorico(id, usuario.id, chamado.estado, novoEstado, observacao);
-
-  await pool.query(
-    `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
-     VALUES ($1, $2, $3, $4)`,
-    [
-      chamado.solicitante_id,
-      id,
-      novoEstado === 'concluido' ? 'conclusao' : 'mudanca_estado',
-      `O chamado ${chamado.protocolo} mudou de estado: ${chamado.estado} → ${novoEstado}.`,
-    ]
-  );
-
-  return rows[0];
+    return rows[0];
+  });
 }
 
 async function avaliar(id, { nota, comentario }, usuario) {
@@ -202,12 +212,23 @@ function validarTransicao(estadoAtual, novoEstado) {
   }
 }
 
-async function registrarHistorico(chamadoId, usuarioId, estadoAnterior, estadoNovo, observacao) {
-  await pool.query(
+async function registrarHistorico(client, chamadoId, usuarioId, estadoAnterior, estadoNovo, observacao) {
+  await client.query(
     `INSERT INTO historico_chamado (chamado_id, usuario_id, estado_anterior, estado_novo, observacao)
      VALUES ($1, $2, $3, $4, $5)`,
     [chamadoId, usuarioId, estadoAnterior, estadoNovo, observacao || null]
   );
+}
+
+// Lê o chamado já travando a linha: sem isso, duas mudanças de estado
+// simultâneas leem o mesmo estado atual e ambas passam na validação de
+// transição, gravando um histórico incoerente.
+async function bloquearChamado(client, id) {
+  const { rows } = await client.query('SELECT * FROM chamado WHERE id = $1 FOR UPDATE', [id]);
+  if (!rows[0]) {
+    throw new AppError('Chamado não encontrado.', 404, 'CHAMADO_NAO_ENCONTRADO');
+  }
+  return rows[0];
 }
 
 async function buscarChamadoBruto(id) {
