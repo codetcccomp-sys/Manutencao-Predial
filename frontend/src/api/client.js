@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// A API é sempre chamada pelo mesmo domínio do front: em produção um rewrite
+// da Vercel (vercel.json) encaminha /api/* para o backend, e em dev o proxy do
+// Vite faz o mesmo para localhost:3333. Assim não há CORS nem dependência de
+// qual domínio o backend está publicado.
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3333',
+  baseURL: '/api',
 });
 
 api.interceptors.request.use((config) => {
