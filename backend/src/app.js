@@ -12,11 +12,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', servico: 'Sistema de Manutenção Predial API' });
 });
 
-// app.use('/auth', require('./routes/auth.routes'));
-// app.use('/chamados', require('./routes/chamados.routes'));
-// app.use('/usuarios', require('./routes/usuarios.routes'));
-// app.use('/locais', require('./routes/locais.routes'));
-// app.use('/categorias', require('./routes/categorias.routes'));
+app.use('/auth', require('./routes/auth.routes'));
+app.use('/chamados', require('./routes/chamados.routes'));
+app.use('/usuarios', require('./routes/usuarios.routes'));
+app.use('/locais', require('./routes/locais.routes'));
+app.use('/categorias', require('./routes/categorias.routes'));
 // app.use('/relatorios', require('./routes/relatorios.routes'));
 
 app.use((req, res) => {
