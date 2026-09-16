@@ -4,7 +4,21 @@ const { errorHandler } = require('./middlewares/errorHandler');
 
 const app = express();
 
-app.use(cors());
+const ORIGENS_PERMITIDAS = [
+  /^https:\/\/manutencao-predial-frontend(-[a-z0-9]+)?(-git-[a-z0-9-]+)?-tec-code\.vercel\.app$/,
+  'http://localhost:5173',
+];
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || ORIGENS_PERMITIDAS.some((o) => (o instanceof RegExp ? o.test(origin) : o === origin))) {
+        return callback(null, true);
+      }
+      callback(new Error('Origem não permitida pelo CORS.'));
+    },
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
