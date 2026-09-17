@@ -27,9 +27,21 @@ function Dashboard() {
   const [paginacao, setPaginacao] = useState({ pagina: 1, limite: 20, total: 0, paginas: 0 });
   const [estado, setEstado] = useState('');
   const [somenteAtrasados, setSomenteAtrasados] = useState(false);
+  const [busca, setBusca] = useState('');
+  const [buscaAplicada, setBuscaAplicada] = useState('');
   const [pagina, setPagina] = useState(1);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
+
+  // Uma consulta por tecla afogaria o banco e faria a lista piscar a cada
+  // letra; espera a digitação parar antes de perguntar.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setBuscaAplicada(busca.trim());
+      setPagina(1);
+    }, 400);
+    return () => clearTimeout(id);
+  }, [busca]);
 
   const carregar = useCallback(() => {
     setCarregando(true);
@@ -40,6 +52,7 @@ function Dashboard() {
           pagina,
           ...(estado ? { estado } : {}),
           ...(somenteAtrasados ? { atrasados: 'true' } : {}),
+          ...(buscaAplicada ? { busca: buscaAplicada } : {}),
         },
       })
       .then(({ data }) => {
@@ -48,7 +61,7 @@ function Dashboard() {
       })
       .catch(() => setErro('Não foi possível carregar os chamados.'))
       .finally(() => setCarregando(false));
-  }, [pagina, estado, somenteAtrasados]);
+  }, [pagina, estado, somenteAtrasados, buscaAplicada]);
 
   useEffect(() => {
     carregar();
@@ -82,6 +95,20 @@ function Dashboard() {
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-4">
+        <div className="flex-1 min-w-[16rem]">
+          <label className="sr-only" htmlFor="busca">
+            Buscar
+          </label>
+          <input
+            id="busca"
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por protocolo ou título"
+            className="border rounded px-3 py-2 text-sm bg-white w-full"
+          />
+        </div>
+
         <div>
           <label className="text-sm text-gray-600 mr-2" htmlFor="filtro-estado">
             Estado
@@ -116,7 +143,11 @@ function Dashboard() {
       {carregando && <p className="text-gray-500 text-sm">Carregando...</p>}
 
       {!carregando && chamados.length === 0 && (
-        <p className="text-gray-500 text-sm">Nenhum chamado encontrado.</p>
+        <p className="text-gray-500 text-sm">
+          {buscaAplicada
+            ? `Nenhum chamado encontrado para "${buscaAplicada}".`
+            : 'Nenhum chamado encontrado.'}
+        </p>
       )}
 
       <div className="grid gap-3">

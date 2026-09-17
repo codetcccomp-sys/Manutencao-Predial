@@ -3,26 +3,33 @@ const app = require('../src/app');
 const pool = require('../src/config/db');
 const { LIMITES } = require('../src/middlewares/rateLimit');
 
+const { ipDaSuite } = require('./apoio/ip');
+
+// Ver tests/apoio/ip.js: cada suíte se apresenta ao login como um cliente
+// distinto, para não dividir a cota por IP com as suítes que rodam em paralelo.
+const IP = ipDaSuite(__filename);
+
 const email = `ratelimit_${Date.now()}@exemplo.com`;
 
 beforeAll(async () => {
   await request(app).post('/auth/registrar').send({ nome: 'Rate Limit', email, senha: 'senha123' });
 });
 
-// Os testes compartilham o mesmo IP de origem (o socket local), então sem
-// zerar a tabela o limite por IP de um teste vazaria para o seguinte e a
-// ordem de execução passaria a importar.
+// Os testes desta suíte compartilham o mesmo IP, então sem zerar as tentativas
+// o limite de um teste vazaria para o seguinte e a ordem de execução passaria a
+// importar. O recorte por IP é essencial: apagar a tabela inteira derrubaria o
+// contador das suítes que rodam em paralelo no meio das asserções delas.
 beforeEach(async () => {
-  await pool.query('DELETE FROM tentativa_login');
+  await pool.query('DELETE FROM tentativa_login WHERE ip = $1', [IP]);
 });
 
 afterAll(async () => {
-  await pool.query('DELETE FROM tentativa_login');
+  await pool.query('DELETE FROM tentativa_login WHERE ip = $1', [IP]);
   await pool.end();
 });
 
 async function tentarSenhaErrada(alvo = email) {
-  return request(app).post('/auth/login').send({ email: alvo, senha: 'senha_errada' });
+  return request(app).post('/auth/login').set('X-Real-IP', IP).send({ email: alvo, senha: 'senha_errada' });
 }
 
 describe('Rate limiting do login', () => {
@@ -46,7 +53,7 @@ describe('Rate limiting do login', () => {
       await tentarSenhaErrada();
     }
 
-    const resposta = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+    const resposta = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
     expect(resposta.status).toBe(429);
   });
 
@@ -55,7 +62,7 @@ describe('Rate limiting do login', () => {
       await tentarSenhaErrada();
     }
 
-    const sucesso = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+    const sucesso = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
     expect(sucesso.status).toBe(200);
 
     const { rows } = await pool.query(
@@ -95,8 +102,11 @@ describe('Rate limiting do login', () => {
 
     expect(ultima.status).toBe(429);
 
+    // As tentativas barradas nem chegam a ser registradas: o limite para o
+    // pedido antes do bcrypt, então a contagem para exatamente no teto.
     const { rows } = await pool.query(
-      'SELECT count(*)::int AS falhas FROM tentativa_login WHERE NOT sucesso'
+      'SELECT count(*)::int AS falhas FROM tentativa_login WHERE NOT sucesso AND ip = $1',
+      [IP]
     );
     expect(rows[0].falhas).toBe(LIMITES.MAX_FALHAS_POR_IP);
   });
@@ -105,7 +115,7 @@ describe('Rate limiting do login', () => {
 describe('Enumeração de usuários', () => {
   it('responde o mesmo corpo para e-mail inexistente e para senha errada', async () => {
     const inexistente = await request(app)
-      .post('/auth/login')
+      .post('/auth/login').set('X-Real-IP', IP)
       .send({ email: `nao_existe_${Date.now()}@exemplo.com`, senha: 'senha123' });
     const senhaErrada = await tentarSenhaErrada();
 

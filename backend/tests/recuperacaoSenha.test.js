@@ -4,6 +4,12 @@ const app = require('../src/app');
 const pool = require('../src/config/db');
 const recuperacao = require('../src/services/recuperacao.service');
 
+const { ipDaSuite } = require('./apoio/ip');
+
+// Ver tests/apoio/ip.js: cada suíte se apresenta ao login como um cliente
+// distinto, para não dividir a cota por IP com as suítes que rodam em paralelo.
+const IP = ipDaSuite(__filename);
+
 const email = `recupera_${Date.now()}@exemplo.com`;
 let usuarioId;
 
@@ -95,10 +101,10 @@ describe('POST /auth/redefinir-senha', () => {
       .send({ token, senha: 'novaSenha456' });
     expect(resp.status).toBe(200);
 
-    const comNova = await request(app).post('/auth/login').send({ email, senha: 'novaSenha456' });
+    const comNova = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'novaSenha456' });
     expect(comNova.status).toBe(200);
 
-    const comAntiga = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+    const comAntiga = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
     expect(comAntiga.status).toBe(401);
 
     // Devolve ao estado inicial para os demais testes.
@@ -161,9 +167,9 @@ describe('POST /auth/redefinir-senha', () => {
   it('libera o bloqueio por tentativas de login', async () => {
     // Erra a senha até bloquear.
     for (let i = 0; i < 6; i += 1) {
-      await request(app).post('/auth/login').send({ email, senha: 'errada' });
+      await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'errada' });
     }
-    const bloqueado = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+    const bloqueado = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
     expect(bloqueado.status).toBe(429);
 
     const token = await tokenMaisRecente();
@@ -171,7 +177,7 @@ describe('POST /auth/redefinir-senha', () => {
 
     // Quem acabou de provar ser dono da conta não deve seguir barrado por
     // erros anteriores.
-    const depois = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+    const depois = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
     expect(depois.status).toBe(200);
   });
 

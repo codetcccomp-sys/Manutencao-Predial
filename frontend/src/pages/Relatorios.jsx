@@ -202,6 +202,44 @@ function Relatorios() {
             </div>
           </div>
 
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="mb-3">
+              <h3 className="font-medium text-navy">Por local</h3>
+              <p className="text-xs text-gray-500">
+                Os 20 locais com mais chamados no período. O recorte responde onde a demanda se
+                concentra e onde ela está vencendo o prazo.
+              </p>
+            </div>
+            {dados.resumo.por_local.length === 0 ? (
+              <p className="text-sm text-gray-500">Nenhum chamado no período.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="py-2 pr-4 font-medium">Local</th>
+                      <th className="py-2 pr-4 font-medium">Total</th>
+                      <th className="py-2 pr-4 font-medium">Em aberto</th>
+                      <th className="py-2 font-medium">Atrasados</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dados.resumo.por_local.map((l) => (
+                      <tr key={l.local} className="border-b last:border-0">
+                        <td className="py-2 pr-4 text-navy">{l.local}</td>
+                        <td className="py-2 pr-4">{l.total}</td>
+                        <td className="py-2 pr-4">{l.em_aberto}</td>
+                        <td className={`py-2 ${l.atrasados > 0 ? 'text-red-700 font-medium' : ''}`}>
+                          {l.atrasados}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
             <div>
               <h3 className="font-medium text-navy">Tempo de atendimento</h3>

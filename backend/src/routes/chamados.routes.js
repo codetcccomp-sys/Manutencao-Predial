@@ -26,6 +26,20 @@ router.post(
 router.get('/', chamadosController.listar);
 router.get('/:id', chamadosController.buscarPorId);
 
+// RN03: o solicitante corrige o que escreveu enquanto o chamado não foi
+// atribuído; a gestão edita como ação autorizada. Quem pode depende do
+// estado e da relação com o chamado, então a checagem fica no serviço.
+router.patch(
+  '/:id',
+  validate({
+    titulo: { tipo: 'string', minLength: 3, maxLength: 200 },
+    descricao: { tipo: 'string', minLength: 5 },
+    categoria_id: { tipo: 'number' },
+    local_id: { tipo: 'number' },
+  }),
+  chamadosController.editar
+);
+
 router.patch(
   '/:id/atribuir',
   authorize('administrador', 'gestor'),

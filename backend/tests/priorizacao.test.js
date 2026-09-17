@@ -3,6 +3,12 @@ const app = require('../src/app');
 const pool = require('../src/config/db');
 const { calcular } = require('../src/services/priorizacao.service');
 
+const { ipDaSuite } = require('./apoio/ip');
+
+// Ver tests/apoio/ip.js: cada suíte se apresenta ao login como um cliente
+// distinto, para não dividir a cota por IP com as suítes que rodam em paralelo.
+const IP = ipDaSuite(__filename);
+
 let gestor;
 let solicitante;
 let localId;
@@ -14,7 +20,7 @@ async function criarUsuarioELogar(perfil) {
   if (perfil !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
   }
-  const login = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
   return { token: login.body.token, usuario: login.body.usuario };
 }
 
@@ -34,6 +40,16 @@ async function abrir() {
 const comoGestor = () => ({ Authorization: `Bearer ${gestor.token}` });
 
 beforeAll(async () => {
+  // A suíte inteira lê a regra vigente esperando a v1 — e o próprio bloco de
+  // versionamento, no fim, publica outra e encerra a v1. Sem restaurar o
+  // estado aqui, o segundo `npm test` contra o mesmo banco falharia por um
+  // motivo que nada tem a ver com o código. Encerra as demais antes de
+  // reabrir a v1: o índice único só admite uma regra sem data de fim.
+  await pool.query(
+    "UPDATE regra_priorizacao SET vigencia_fim = now() WHERE versao <> 'v1' AND vigencia_fim IS NULL"
+  );
+  await pool.query("UPDATE regra_priorizacao SET vigencia_fim = NULL WHERE versao = 'v1'");
+
   gestor = await criarUsuarioELogar('gestor');
   solicitante = await criarUsuarioELogar('solicitante');
 
@@ -238,6 +254,20 @@ describe('Simulação', () => {
 });
 
 describe('Versionamento da regra (RN12)', () => {
+  let chamadoSobV1;
+
+  // Prioriza um chamado enquanto a v1 ainda vale, para depois conferir que ele
+  // guarda a versão que o classificou. Olhar "o chamado mais antigo do banco"
+  // dependeria do que as outras suítes fizeram em paralelo.
+  beforeAll(async () => {
+    const chamado = await abrir();
+    const resp = await request(app)
+      .patch(`/chamados/${chamado.id}/priorizacao`)
+      .set(comoGestor())
+      .send({ urgencia: 3, impacto: 3, risco: 2 });
+    chamadoSobV1 = resp.body.chamado;
+  });
+
   it('publicar nova versão encerra a vigência da anterior', async () => {
     const admin = await criarUsuarioELogar('administrador');
 
@@ -275,8 +305,8 @@ describe('Versionamento da regra (RN12)', () => {
     const { rows } = await pool.query(
       `SELECT c.regra_priorizacao_id, r.versao
          FROM chamado c JOIN regra_priorizacao r ON r.id = c.regra_priorizacao_id
-        WHERE c.regra_priorizacao_id IS NOT NULL
-        ORDER BY c.id LIMIT 1`
+        WHERE c.id = $1`,
+      [chamadoSobV1.id]
     );
     // A versão antiga continua existindo para explicar a decisão tomada sob
     // uma calibração que já não vale.
