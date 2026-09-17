@@ -26,6 +26,7 @@ function Dashboard() {
   const [chamados, setChamados] = useState([]);
   const [paginacao, setPaginacao] = useState({ pagina: 1, limite: 20, total: 0, paginas: 0 });
   const [estado, setEstado] = useState('');
+  const [somenteAtrasados, setSomenteAtrasados] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
@@ -34,14 +35,20 @@ function Dashboard() {
     setCarregando(true);
     setErro('');
     api
-      .get('/chamados', { params: { pagina, ...(estado ? { estado } : {}) } })
+      .get('/chamados', {
+        params: {
+          pagina,
+          ...(estado ? { estado } : {}),
+          ...(somenteAtrasados ? { atrasados: 'true' } : {}),
+        },
+      })
       .then(({ data }) => {
         setChamados(data.chamados);
         setPaginacao(data.paginacao);
       })
       .catch(() => setErro('Não foi possível carregar os chamados.'))
       .finally(() => setCarregando(false));
-  }, [pagina, estado]);
+  }, [pagina, estado, somenteAtrasados]);
 
   useEffect(() => {
     carregar();
@@ -51,6 +58,11 @@ function Dashboard() {
   // filtro pode nem ter; volta para a primeira.
   function trocarEstado(novo) {
     setEstado(novo);
+    setPagina(1);
+  }
+
+  function alternarAtrasados(ligado) {
+    setSomenteAtrasados(ligado);
     setPagina(1);
   }
 
@@ -69,23 +81,35 @@ function Dashboard() {
         </Link>
       </div>
 
-      <div className="mb-4">
-        <label className="text-sm text-gray-600 mr-2" htmlFor="filtro-estado">
-          Estado
+      <div className="flex flex-wrap items-center gap-4 mb-4">
+        <div>
+          <label className="text-sm text-gray-600 mr-2" htmlFor="filtro-estado">
+            Estado
+          </label>
+          <select
+            id="filtro-estado"
+            value={estado}
+            onChange={(e) => trocarEstado(e.target.value)}
+            className="border rounded px-3 py-2 text-sm bg-white"
+          >
+            <option value="">Todos</option>
+            {Object.entries(ESTADO_LABEL).map(([valor, rotulo]) => (
+              <option key={valor} value={valor}>
+                {rotulo}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={somenteAtrasados}
+            onChange={(e) => alternarAtrasados(e.target.checked)}
+            className="rounded"
+          />
+          Somente atrasados
         </label>
-        <select
-          id="filtro-estado"
-          value={estado}
-          onChange={(e) => trocarEstado(e.target.value)}
-          className="border rounded px-3 py-2 text-sm bg-white"
-        >
-          <option value="">Todos</option>
-          {Object.entries(ESTADO_LABEL).map(([valor, rotulo]) => (
-            <option key={valor} value={valor}>
-              {rotulo}
-            </option>
-          ))}
-        </select>
       </div>
 
       {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-3 mb-4">{erro}</div>}
@@ -106,11 +130,16 @@ function Dashboard() {
               <p className="font-medium text-navy truncate">{c.titulo}</p>
               <p className="text-xs text-gray-500">{c.protocolo}</p>
             </div>
-            <span
-              className={`text-xs font-medium px-2 py-1 rounded shrink-0 ${ESTADO_COR[c.estado]}`}
-            >
-              {ESTADO_LABEL[c.estado]}
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              {c.em_atraso && (
+                <span className="text-xs font-medium px-2 py-1 rounded bg-red-100 text-red-700">
+                  Em atraso
+                </span>
+              )}
+              <span className={`text-xs font-medium px-2 py-1 rounded ${ESTADO_COR[c.estado]}`}>
+                {ESTADO_LABEL[c.estado]}
+              </span>
+            </div>
           </Link>
         ))}
       </div>

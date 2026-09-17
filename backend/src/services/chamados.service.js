@@ -3,6 +3,18 @@ const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { gerarProtocolo } = require('../utils/protocolo');
 const notificacoesService = require('./notificacoes.service');
+const slaService = require('./sla.service');
+
+// "Em atraso" não é um estado da máquina, é uma leitura do relógio sobre o
+// estado atual: vira e desvira sozinho quando o prazo passa ou quando o
+// chamado é concluído. Como estado, precisaria de transições para dentro e
+// para fora de todos os outros e ainda assim ficaria desatualizado entre uma
+// escrita e outra.
+const EM_ATRASO = `(
+  estado NOT IN ('concluido', 'cancelado')
+  AND prazo_estimado IS NOT NULL
+  AND now() > prazo_estimado
+)`;
 
 // Transições de estado permitidas (RN implícitas no fluxo de atendimento).
 const TRANSICOES = {
@@ -19,11 +31,16 @@ async function criar({ titulo, descricao, categoria_id, local_id, prioridade }, 
   const protocolo = gerarProtocolo();
 
   return transacao(async (client) => {
+    // O prazo nasce junto do chamado, na mesma transação: um chamado sem
+    // prazo ficaria invisível para toda a apuração de atraso.
+    const prazoHoras = await slaService.calcularPrazo(client, prioridade);
+
     const { rows } = await client.query(
-      `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, solicitante_id, prioridade)
-       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::prioridade_chamado, 'baixa'))
+      `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, solicitante_id, prioridade, prazo_estimado)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::prioridade_chamado, 'baixa'),
+               CASE WHEN $8::int IS NULL THEN NULL ELSE now() + ($8::int * interval '1 hour') END)
        RETURNING *`,
-      [protocolo, titulo, descricao, categoria_id, local_id, solicitanteId, prioridade]
+      [protocolo, titulo, descricao, categoria_id, local_id, solicitanteId, prioridade, prazoHoras]
     );
 
     const chamado = rows[0];
@@ -71,6 +88,9 @@ async function listar(usuario, filtros = {}) {
     params.push(filtros.categoria_id);
     condicoes.push(`categoria_id = $${params.length}`);
   }
+  if (filtros.atrasados === 'true') {
+    condicoes.push(EM_ATRASO);
+  }
 
   const { pagina, limite } = normalizarPaginacao(filtros);
   const offset = (pagina - 1) * limite;
@@ -81,7 +101,7 @@ async function listar(usuario, filtros = {}) {
   // vez de repetir o mesmo WHERE num SELECT count separado.
   params.push(limite, offset);
   const { rows } = await pool.query(
-    `SELECT *, count(*) OVER () AS total_registros
+    `SELECT *, ${EM_ATRASO} AS em_atraso, count(*) OVER () AS total_registros
        FROM chamado
        ${where}
       ORDER BY data_abertura DESC, id DESC
@@ -237,6 +257,13 @@ async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
         "tempo_suspenso_total = tempo_suspenso_total + COALESCE(now() - aguardando_material_desde, '0 seconds')"
       );
       campos.push('aguardando_material_desde = NULL');
+      // O prazo anda junto com a suspensão. Espera por insumo é falha de
+      // suprimento, não da equipe de campo: descontar o tempo da métrica de
+      // atendimento (como os relatórios já fazem) e ainda assim deixar o
+      // relógio do prazo correndo seria cobrar duas coisas incoerentes.
+      campos.push(
+        "prazo_estimado = prazo_estimado + COALESCE(now() - aguardando_material_desde, '0 seconds')"
+      );
     }
 
     if (novoEstado === 'concluido') {
@@ -321,7 +348,10 @@ async function bloquearChamado(client, id) {
 }
 
 async function buscarChamadoBruto(id) {
-  const { rows } = await pool.query('SELECT * FROM chamado WHERE id = $1', [id]);
+  const { rows } = await pool.query(
+    `SELECT *, ${EM_ATRASO} AS em_atraso FROM chamado WHERE id = $1`,
+    [id]
+  );
   if (!rows[0]) {
     throw new AppError('Chamado não encontrado.', 404, 'CHAMADO_NAO_ENCONTRADO');
   }
