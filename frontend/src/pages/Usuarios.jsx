@@ -150,7 +150,10 @@ function Usuarios() {
         </button>
       </form>
 
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      {/* min-w-0: o cartão é item de grid, e sem isso a tabela de cinco
+          colunas vazava para fora em vez de rolar dentro do overflow-x-auto,
+          levando a página inteira junto no celular. */}
+      <div className="bg-white rounded-lg shadow-sm p-6 min-w-0">
         <h3 className="font-medium text-navy mb-3">Cadastrados</h3>
 
         {carregando ? (

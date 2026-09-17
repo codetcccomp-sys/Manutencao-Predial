@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import api from '../api/client';
+import api, { baixarArquivo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const PRIORIDADE_LABEL = {
@@ -64,6 +64,7 @@ function Relatorios() {
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
+  const [baixando, setBaixando] = useState('');
 
   const carregar = useCallback(() => {
     setCarregando(true);
@@ -110,6 +111,20 @@ function Relatorios() {
     }
   }
 
+  // A exportação respeita o mesmo período da tela: um relatório baixado com
+  // recorte diferente do que está à vista seria a pior surpresa possível.
+  async function exportar(formato, caminho) {
+    setErro('');
+    setBaixando(formato);
+    try {
+      await baixarArquivo(caminho, { ...(de ? { de } : {}), ...(ate ? { ate } : {}) });
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setBaixando('');
+    }
+  }
+
   if (!podeVer) return <Navigate to="/" replace />;
 
   return (
@@ -152,7 +167,29 @@ function Relatorios() {
             Limpar período
           </button>
         )}
+
+        <div className="flex gap-2 sm:ml-auto">
+          <button
+            onClick={() => exportar('pdf', '/relatorios/exportar/resumo.pdf')}
+            disabled={Boolean(baixando)}
+            className="bg-navy text-white text-sm rounded px-4 py-2 hover:bg-navy-2 disabled:opacity-50"
+          >
+            {baixando === 'pdf' ? 'Gerando...' : 'Baixar PDF'}
+          </button>
+          <button
+            onClick={() => exportar('csv', '/relatorios/exportar/chamados.csv')}
+            disabled={Boolean(baixando)}
+            className="border border-navy text-navy text-sm rounded px-4 py-2 hover:bg-navy hover:text-white disabled:opacity-50"
+          >
+            {baixando === 'csv' ? 'Gerando...' : 'Baixar planilha'}
+          </button>
+        </div>
       </div>
+
+      <p className="text-xs text-gray-500 -mt-4">
+        O PDF traz este relatório consolidado, pronto para arquivar. A planilha traz uma linha por
+        chamado, para cruzamentos que a tela não prevê. Os dois respeitam o período selecionado.
+      </p>
 
       {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-3">{erro}</div>}
       {carregando && <p className="text-gray-500 text-sm">Carregando...</p>}
@@ -202,7 +239,7 @@ function Relatorios() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 min-w-0">
             <div className="mb-3">
               <h3 className="font-medium text-navy">Por local</h3>
               <p className="text-xs text-gray-500">
@@ -366,7 +403,10 @@ function Relatorios() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          {/* min-w-0: o cartão é item de grid, e sem isso a tabela larga
+              vazava para fora em vez de rolar dentro do overflow-x-auto,
+              levando a página inteira junto no celular. */}
+          <div className="bg-white rounded-lg shadow-sm p-6 min-w-0">
             <h3 className="font-medium text-navy mb-3">Carga por técnico</h3>
             {dados.tecnicos.length === 0 ? (
               <p className="text-sm text-gray-500">Nenhum chamado atribuído no período.</p>

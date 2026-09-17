@@ -42,4 +42,37 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Baixa um arquivo servido pela API.
+ *
+ * Não dá para usar um link direto: a rota exige o cabeçalho de autorização,
+ * que uma navegação do navegador não envia. Então busca-se o blob e entrega-se
+ * ao navegador. O nome vem do Content-Disposition — é o servidor que decide
+ * como o arquivo se chama, e repetir a regra aqui criaria duas verdades.
+ *
+ * Quando o servidor recusa, a resposta é JSON mesmo tendo sido pedida como
+ * blob; sem desembrulhar, o erro chegaria à tela como "[object Blob]".
+ */
+export async function baixarArquivo(caminho, params) {
+  try {
+    const resposta = await api.get(caminho, { params, responseType: 'blob' });
+    const disposicao = resposta.headers['content-disposition'] || '';
+    const nome = /filename="([^"]+)"/.exec(disposicao)?.[1] || 'download';
+
+    const url = URL.createObjectURL(resposta.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nome;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    const corpo = err.response?.data;
+    if (corpo instanceof Blob && corpo.type.includes('json')) {
+      const { erro } = JSON.parse(await corpo.text());
+      throw new Error(erro?.mensagem || 'Não foi possível gerar o arquivo.');
+    }
+    throw new Error(err.response?.data?.erro?.mensagem || 'Não foi possível gerar o arquivo.');
+  }
+}
+
 export default api;

@@ -75,27 +75,31 @@ const ROTULO_LOCAL = `
 async function resumo(filtros = {}) {
   const { where, params } = recorte(filtros);
 
-  const [porEstado, porCategoria, porPrioridade, porLocal, totais] = await emSnapshot((client) =>
-    Promise.all([
-      client.query(
+  // Uma consulta de cada vez, e não Promise.all: as cinco dividem a mesma
+  // conexão, que as executa em fila de qualquer jeito. Disparar todas juntas
+  // não ganhava paralelismo nenhum — só enfileirava no driver, que avisa que
+  // vai deixar de aceitar `client.query()` concorrente no pg 9.
+  const { porEstado, porCategoria, porPrioridade, porLocal, totais } = await emSnapshot(
+    async (client) => ({
+      porEstado: await client.query(
         `SELECT c.estado, count(*)::int AS total FROM chamado c ${where} GROUP BY c.estado ORDER BY total DESC`,
         params
       ),
-      client.query(
+      porCategoria: await client.query(
         `SELECT cat.nome AS categoria, count(*)::int AS total
            FROM chamado c JOIN categoria cat ON cat.id = c.categoria_id
            ${where}
           GROUP BY cat.nome ORDER BY total DESC`,
         params
       ),
-      client.query(
+      porPrioridade: await client.query(
         `SELECT c.prioridade, count(*)::int AS total FROM chamado c ${where} GROUP BY c.prioridade ORDER BY total DESC`,
         params
       ),
       // RF10: o total sozinho diz onde há movimento; o que a gestão precisa
       // saber é onde há demanda parada e vencida, então as três colunas andam
       // juntas.
-      client.query(
+      porLocal: await client.query(
         `SELECT ${ROTULO_LOCAL} AS local,
                 count(*)::int AS total,
                 count(*) FILTER (WHERE c.estado NOT IN ('concluido', 'cancelado'))::int AS em_aberto,
@@ -111,7 +115,7 @@ async function resumo(filtros = {}) {
           LIMIT 20`,
         params
       ),
-      client.query(
+      totais: await client.query(
         `SELECT
            count(*)::int AS total,
            count(*) FILTER (WHERE c.estado = 'concluido')::int AS concluidos,
@@ -120,7 +124,7 @@ async function resumo(filtros = {}) {
          FROM chamado c ${where}`,
         params
       ),
-    ])
+    })
   );
 
   return {
@@ -140,6 +144,14 @@ async function resumo(filtros = {}) {
 const TEMPO_LIQUIDO = `
   EXTRACT(EPOCH FROM (c.data_conclusao - c.data_abertura - c.tempo_suspenso_total))
 `;
+
+// Mesma leitura de atraso que o serviço de chamados faz, com as colunas
+// qualificadas para conviver com os JOINs da exportação.
+const EM_ATRASO_EXPORTACAO = `(
+  c.estado NOT IN ('concluido', 'cancelado')
+  AND c.prazo_estimado IS NOT NULL
+  AND now() > c.prazo_estimado
+)`;
 
 async function desempenho(filtros = {}) {
   const { where, params } = recorte(filtros);
@@ -257,4 +269,95 @@ async function porTecnico(filtros = {}) {
   return rows;
 }
 
-module.exports = { resumo, desempenho, porTecnico };
+// Teto da exportação analítica. Não é um limite de banco, é de memória e de
+// paciência: uma planilha maior que isto não se abre bem no Excel nem se
+// analisa à mão. Truncar em silêncio seria pior — quem recebesse o arquivo
+// pivotaria dados incompletos sem saber —, então a exportação recusa e pede
+// um período menor.
+const LIMITE_EXPORTACAO = 20000;
+const LOTE_EXPORTACAO = 500;
+
+/**
+ * Percorre os chamados do período em lotes, entregando cada lote a
+ * `aoReceberLote`.
+ *
+ * Não devolve tudo de uma vez de propósito: a resposta é escrita conforme os
+ * lotes chegam, então a memória do processo não cresce com o tamanho do
+ * relatório. A paginação é por `id` (keyset) e não por OFFSET, que releria as
+ * mesmas linhas a cada lote e ainda assim poderia pular registros.
+ *
+ * Tudo roda no mesmo snapshot: um chamado aberto no meio da exportação não
+ * aparece no lote 7 de um arquivo cujo lote 1 não o conhecia.
+ */
+async function percorrerChamados(filtros, aoReceberLote) {
+  const { where, params } = recorte(filtros);
+
+  return emSnapshot(async (client) => {
+    const { rows: contagem } = await client.query(
+      `SELECT count(*)::int AS total FROM chamado c ${where}`,
+      params
+    );
+    const total = contagem[0].total;
+
+    if (total > LIMITE_EXPORTACAO) {
+      throw new AppError(
+        `A exportação traria ${total.toLocaleString('pt-BR')} chamados, acima do limite de ` +
+          `${LIMITE_EXPORTACAO.toLocaleString('pt-BR')}. Informe um período menor.`,
+        422,
+        'EXPORTACAO_GRANDE'
+      );
+    }
+
+    const filtroPeriodo = where ? where.replace(/^WHERE /, ' AND ') : '';
+    let ultimoId = 0;
+
+    for (;;) {
+      const { rows } = await client.query(
+        `SELECT c.id,
+                c.protocolo,
+                c.titulo,
+                cat.nome AS categoria,
+                ${ROTULO_LOCAL} AS local,
+                c.estado,
+                c.prioridade,
+                c.prioridade_sugerida,
+                c.urgencia,
+                c.impacto,
+                c.risco,
+                sol.nome AS solicitante,
+                tec.nome AS tecnico,
+                c.data_abertura,
+                c.inicio_execucao,
+                c.data_conclusao,
+                c.prazo_estimado,
+                c.tempo_suspenso_total,
+                c.tempo_empregado_minutos,
+                c.total_reaberturas,
+                ${TEMPO_LIQUIDO} AS tempo_liquido_segundos,
+                CASE
+                  WHEN c.data_conclusao IS NULL OR c.prazo_estimado IS NULL THEN NULL
+                  ELSE c.data_conclusao <= c.prazo_estimado
+                END AS concluido_no_prazo,
+                ${EM_ATRASO_EXPORTACAO} AS em_atraso,
+                a.nota AS nota_avaliacao
+           FROM chamado c
+           JOIN categoria cat ON cat.id = c.categoria_id
+           JOIN local l ON l.id = c.local_id
+           JOIN usuario sol ON sol.id = c.solicitante_id
+           LEFT JOIN usuario tec ON tec.id = c.tecnico_id
+           LEFT JOIN avaliacao a ON a.chamado_id = c.id
+          WHERE c.id > $${params.length + 1}${filtroPeriodo}
+          ORDER BY c.id
+          LIMIT ${LOTE_EXPORTACAO}`,
+        [...params, ultimoId]
+      );
+
+      if (rows.length === 0) return total;
+
+      await aoReceberLote(rows);
+      ultimoId = rows[rows.length - 1].id;
+    }
+  });
+}
+
+module.exports = { resumo, desempenho, porTecnico, percorrerChamados, LIMITE_EXPORTACAO };
