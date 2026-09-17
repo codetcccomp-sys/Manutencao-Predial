@@ -166,6 +166,19 @@ function ChamadoDetalhe() {
         <div className="text-sm grid grid-cols-2 gap-2 text-gray-600">
           <span>Estado: <strong>{chamado.estado}</strong></span>
           <span>Prioridade: <strong>{chamado.prioridade}</strong></span>
+          {chamado.prazo_estimado && (
+            <span className="col-span-2">
+              Prazo:{' '}
+              <strong className={chamado.em_atraso ? 'text-red-700' : ''}>
+                {new Date(chamado.prazo_estimado).toLocaleString('pt-BR')}
+              </strong>
+              {chamado.em_atraso && (
+                <span className="ml-2 text-xs font-medium px-2 py-1 rounded bg-red-100 text-red-700">
+                  Em atraso
+                </span>
+              )}
+            </span>
+          )}
         </div>
       </div>
 

@@ -3,6 +3,13 @@ import { Navigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+const PRIORIDADE_LABEL = {
+  critica: 'Crítica',
+  alta: 'Alta',
+  media: 'Média',
+  baixa: 'Baixa',
+};
+
 const ESTADO_LABEL = {
   aberto: 'Aberto',
   em_triagem: 'Em triagem',
@@ -67,12 +74,14 @@ function Relatorios() {
       api.get('/relatorios/resumo', { params }),
       api.get('/relatorios/desempenho', { params }),
       api.get('/relatorios/tecnicos', { params }),
+      api.get('/sla'),
     ])
-      .then(([resumo, desempenho, tecnicos]) =>
+      .then(([resumo, desempenho, tecnicos, sla]) =>
         setDados({
           resumo: resumo.data,
           desempenho: desempenho.data,
           tecnicos: tecnicos.data.tecnicos,
+          sla: sla.data.sla,
         })
       )
       .catch((err) =>
@@ -84,6 +93,22 @@ function Relatorios() {
   useEffect(() => {
     if (podeVer) carregar();
   }, [carregar, podeVer]);
+
+  // Salva no blur, e só quando o valor mudou de fato: sem essa comparação
+  // qualquer passagem pelo campo dispararia um PATCH sem alteração nenhuma.
+  async function salvarPrazo(prioridade, valor, anterior) {
+    const horas = Number(valor);
+    if (!Number.isInteger(horas) || horas === anterior) return;
+
+    setErro('');
+    try {
+      await api.patch(`/sla/${prioridade}`, { prazo_horas: horas });
+      carregar();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível alterar o prazo.');
+      carregar();
+    }
+  }
 
   if (!podeVer) return <Navigate to="/" replace />;
 
@@ -206,6 +231,71 @@ function Relatorios() {
                     : '—'
                 }
               />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+            <div>
+              <h3 className="font-medium text-navy">Cumprimento de prazo</h3>
+              <p className="text-xs text-gray-500">
+                O prazo é contado a partir da abertura e empurrado pelo tempo em &ldquo;aguardando
+                material&rdquo;, pelo mesmo motivo que o tempo de atendimento o desconta.
+              </p>
+            </div>
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <Cartao
+                rotulo="Concluídos no prazo"
+                valor={
+                  dados.desempenho.prazo.percentual_no_prazo === null
+                    ? '—'
+                    : `${dados.desempenho.prazo.percentual_no_prazo}%`
+                }
+                destaque={
+                  dados.desempenho.prazo.percentual_no_prazo === null
+                    ? undefined
+                    : dados.desempenho.prazo.percentual_no_prazo >= 80
+                      ? 'text-green-700'
+                      : 'text-red-700'
+                }
+              />
+              <Cartao
+                rotulo="Dentro / total"
+                valor={`${dados.desempenho.prazo.concluidos_no_prazo} / ${dados.desempenho.prazo.concluidos_com_prazo}`}
+              />
+              <Cartao rotulo="Em aberto" valor={dados.desempenho.prazo.em_aberto} />
+              <Cartao
+                rotulo="Atrasados agora"
+                valor={dados.desempenho.prazo.em_aberto_atrasados}
+                destaque={dados.desempenho.prazo.em_aberto_atrasados > 0 ? 'text-red-700' : 'text-green-700'}
+              />
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-navy mb-2">Prazos por prioridade</h4>
+              <div className="flex flex-wrap gap-4">
+                {dados.sla.map((s) => (
+                  <label key={s.prioridade} className="text-sm grid gap-1">
+                    <span className="text-gray-600">
+                      {PRIORIDADE_LABEL[s.prioridade] ?? s.prioridade}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={8760}
+                        defaultValue={s.prazo_horas}
+                        onBlur={(e) => salvarPrazo(s.prioridade, e.target.value, s.prazo_horas)}
+                        className="border rounded px-2 py-1 w-24"
+                      />
+                      <span className="text-gray-500 text-xs">horas</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Alterar o prazo vale para chamados abertos daqui em diante; os já existentes mantêm o
+                prazo com que nasceram.
+              </p>
             </div>
           </div>
 

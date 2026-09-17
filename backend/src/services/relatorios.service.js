@@ -85,8 +85,11 @@ const TEMPO_LIQUIDO = `
 async function desempenho(filtros = {}) {
   const { where, params } = recorte(filtros);
   const concluidos = where ? `${where} AND c.estado = 'concluido'` : "WHERE c.estado = 'concluido'";
+  const emAberto = where
+    ? `${where} AND c.estado NOT IN ('concluido','cancelado')`
+    : "WHERE c.estado NOT IN ('concluido','cancelado')";
 
-  const [geral, porCategoria, avaliacoes] = await Promise.all([
+  const [geral, porCategoria, avaliacoes, prazo] = await Promise.all([
     pool.query(
       `SELECT
          count(*)::int AS chamados_concluidos,
@@ -112,12 +115,44 @@ async function desempenho(filtros = {}) {
          FROM avaliacao a JOIN chamado c ON c.id = a.chamado_id ${where}`,
       params
     ),
+    // Cumprimento de prazo em duas leituras que respondem perguntas
+    // diferentes: o que já fechou respeitou o prazo, e o que ainda está em pé
+    // já estourou. Só a primeira serviria de indicador de qualidade sem dizer
+    // o que está pegando fogo agora.
+    Promise.all([
+      pool.query(
+        `SELECT count(*) FILTER (WHERE c.prazo_estimado IS NOT NULL)::int AS com_prazo,
+                count(*) FILTER (WHERE c.prazo_estimado IS NOT NULL
+                                   AND c.data_conclusao <= c.prazo_estimado)::int AS no_prazo
+           FROM chamado c ${concluidos}`,
+        params
+      ),
+      pool.query(
+        `SELECT count(*)::int AS em_aberto,
+                count(*) FILTER (WHERE c.prazo_estimado IS NOT NULL
+                                   AND now() > c.prazo_estimado)::int AS atrasados
+           FROM chamado c ${emAberto}`,
+        params
+      ),
+    ]),
   ]);
+
+  const [fechados, abertos] = prazo;
+  const { com_prazo: comPrazo, no_prazo: noPrazo } = fechados.rows[0];
 
   return {
     geral: geral.rows[0],
     por_categoria: porCategoria.rows,
     avaliacoes: avaliacoes.rows[0],
+    prazo: {
+      concluidos_com_prazo: comPrazo,
+      concluidos_no_prazo: noPrazo,
+      // Sem nenhum chamado concluído com prazo definido não há percentual a
+      // informar; devolver 0 sugeriria que tudo atrasou.
+      percentual_no_prazo: comPrazo > 0 ? Math.round((noPrazo / comPrazo) * 100) : null,
+      em_aberto: abertos.rows[0].em_aberto,
+      em_aberto_atrasados: abertos.rows[0].atrasados,
+    },
   };
 }
 

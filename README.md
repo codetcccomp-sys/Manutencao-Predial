@@ -34,6 +34,28 @@ linha em `historico_chamado`. O tempo parado em `aguardando_material` é
 acumulado à parte e descontado das métricas de atendimento: é espera por
 insumo, não trabalho da equipe.
 
+## Prazo (SLA)
+
+Cada chamado recebe um prazo na abertura, calculado a partir da prioridade
+segundo a tabela `sla` — editável por gestor e administrador na tela de
+relatórios. Os valores iniciais são 4h para crítica, 24h para alta, 72h para
+média e 168h para baixa.
+
+Enquanto o chamado está em `aguardando_material`, o prazo anda junto: ao sair
+desse estado, ele é empurrado exatamente pelo tempo que ficou suspenso. Sem
+isso o sistema descontaria a espera da métrica de tempo de atendimento e
+ainda assim deixaria o relógio do prazo correndo, cobrando duas coisas
+incoerentes.
+
+"Em atraso" é derivado, não um estado da máquina: um chamado está atrasado
+quando não foi concluído nem cancelado e o prazo já passou. Como estado,
+precisaria de transições para dentro e para fora de todos os outros e ainda
+ficaria desatualizado entre uma escrita e outra.
+
+Alterar um prazo vale para chamados abertos daí em diante; os já existentes
+mantêm o prazo com que nasceram, para que uma mudança de política não
+reescreva retroativamente o histórico de cumprimento.
+
 ## Como rodar
 
 Requisitos: Node 22+ e PostgreSQL 16+.
@@ -100,7 +122,7 @@ Todas exigem `Authorization: Bearer <token>`, exceto `/health`, `/health/db`,
 | --- | --- | --- |
 | `POST` | `/auth/registrar` | público (cria `solicitante`) |
 | `POST` | `/auth/login` | público (limitado por tentativa) |
-| `GET` | `/chamados?pagina=&limite=&estado=&categoria_id=` | autenticado, escopo conforme o perfil |
+| `GET` | `/chamados?pagina=&limite=&estado=&categoria_id=&atrasados=` | autenticado, escopo conforme o perfil |
 | `POST` | `/chamados` | solicitante, gestor, administrador |
 | `GET` | `/chamados/:id` | quem tem acesso ao chamado |
 | `PATCH` | `/chamados/:id/atribuir` | gestor, administrador |
@@ -110,6 +132,7 @@ Todas exigem `Authorization: Bearer <token>`, exceto `/health`, `/health/db`,
 | `GET POST DELETE` | `/chamados/:id/anexos` | quem tem acesso ao chamado |
 | `GET` | `/notificacoes` | o próprio usuário |
 | `GET POST PATCH` | `/equipes`, `/materiais` | leitura autenticada, escrita para gestão |
+| `GET PATCH` | `/sla`, `/sla/:prioridade` | leitura autenticada, escrita para gestão |
 | `GET` | `/relatorios/resumo`, `/desempenho`, `/tecnicos` | gestor, administrador |
 
 `GET /health/db` executa uma consulta e devolve 503 quando o banco está
