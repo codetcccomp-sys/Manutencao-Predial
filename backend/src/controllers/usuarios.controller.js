@@ -1,23 +1,13 @@
-const pool = require('../config/db');
+const usuariosService = require('../services/usuarios.service');
 const authService = require('../services/auth.service');
 const { asyncHandler } = require('../utils/asyncHandler');
 
 const listar = asyncHandler(async (req, res) => {
-  const { perfil } = req.query;
-  const condicoes = [];
-  const params = [];
-
-  if (perfil) {
-    params.push(perfil);
-    condicoes.push(`perfil = $${params.length}`);
-  }
-
-  const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
-  const { rows } = await pool.query(
-    `SELECT id, nome, email, perfil, ativo, criado_em FROM usuario ${where} ORDER BY nome`,
-    params
-  );
-  res.json({ usuarios: rows });
+  const usuarios = await usuariosService.listar({
+    perfil: req.query.perfil,
+    incluirInativos: req.query.incluir_inativos === 'true',
+  });
+  res.json({ usuarios });
 });
 
 const criar = asyncHandler(async (req, res) => {
@@ -25,12 +15,14 @@ const criar = asyncHandler(async (req, res) => {
   res.status(201).json({ usuario });
 });
 
-const me = asyncHandler(async (req, res) => {
-  const { rows } = await pool.query(
-    'SELECT id, nome, email, perfil, ativo, criado_em FROM usuario WHERE id = $1',
-    [req.usuario.id]
-  );
-  res.json({ usuario: rows[0] });
+const atualizar = asyncHandler(async (req, res) => {
+  const usuario = await usuariosService.atualizar(req.params.id, req.body, req.usuario);
+  res.json({ usuario });
 });
 
-module.exports = { listar, criar, me };
+const me = asyncHandler(async (req, res) => {
+  const usuario = await usuariosService.buscarPorId(req.usuario.id);
+  res.json({ usuario });
+});
+
+module.exports = { listar, criar, atualizar, me };

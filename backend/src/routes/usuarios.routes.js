@@ -21,4 +21,14 @@ router.post(
   usuariosController.criar
 );
 
+router.patch(
+  '/:id',
+  authorize('administrador'),
+  validate({
+    nome: { tipo: 'string', minLength: 3 },
+    perfil: { enum: ['solicitante', 'tecnico', 'gestor', 'administrador'] },
+  }),
+  usuariosController.atualizar
+);
+
 module.exports = router;
