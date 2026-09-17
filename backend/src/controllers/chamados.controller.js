@@ -33,9 +33,19 @@ const mudarEstado = asyncHandler(async (req, res) => {
   res.json({ chamado });
 });
 
+const priorizar = asyncHandler(async (req, res) => {
+  const resultado = await chamadosService.priorizar(req.params.id, req.body, req.usuario);
+  res.json(resultado);
+});
+
+const registrarExecucao = asyncHandler(async (req, res) => {
+  const chamado = await chamadosService.registrarExecucao(req.params.id, req.body, req.usuario);
+  res.json({ chamado });
+});
+
 const avaliar = asyncHandler(async (req, res) => {
   const avaliacao = await chamadosService.avaliar(req.params.id, req.body, req.usuario);
   res.status(201).json({ avaliacao });
 });
 
-module.exports = { criar, listar, buscarPorId, atribuir, mudarEstado, avaliar };
+module.exports = { criar, listar, buscarPorId, atribuir, mudarEstado, priorizar, registrarExecucao, avaliar };

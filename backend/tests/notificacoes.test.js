@@ -125,7 +125,7 @@ describe('Despacho de e-mail das notificações', () => {
       const resp = await request(app)
         .patch(`/chamados/${chamadoId}/estado`)
         .set('Authorization', `Bearer ${gestor.token}`)
-        .send({ estado: 'concluido' });
+        .send({ estado: 'concluido', servico_realizado: 'Servico executado e registrado conforme o combinado.' });
 
       expect(resp.status).toBe(200);
       expect(resp.body.chamado.estado).toBe('concluido');

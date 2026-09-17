@@ -114,7 +114,10 @@ describe('Atraso', () => {
       .set(comoGestor())
       .send({ tecnico_id: tecnico.usuario.id });
     await request(app).patch(`/chamados/${chamado.id}/estado`).set(comoGestor()).send({ estado: caminho[1] });
-    await request(app).patch(`/chamados/${chamado.id}/estado`).set(comoGestor()).send({ estado: caminho[2] });
+    await request(app)
+      .patch(`/chamados/${chamado.id}/estado`)
+      .set(comoGestor())
+      .send({ estado: caminho[2], servico_realizado: 'Servico executado e registrado conforme o combinado.' });
 
     const detalhe = await request(app)
       .get(`/chamados/${chamado.id}`)

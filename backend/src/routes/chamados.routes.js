@@ -39,8 +39,37 @@ router.patch(
       obrigatorio: true,
       enum: ['em_triagem', 'atribuido', 'em_andamento', 'aguardando_material', 'concluido', 'cancelado'],
     },
+    // Obrigatório só na conclusão (RN07); a checagem condicional fica no
+    // serviço, que é quem conhece o estado de destino.
+    servico_realizado: { tipo: 'string', maxLength: 4000 },
+    observacao: { tipo: 'string', maxLength: 2000 },
   }),
   chamadosController.mudarEstado
+);
+
+// RF07: diagnóstico e tempo empregado, preenchidos ao longo do atendimento.
+router.patch(
+  '/:id/execucao',
+  validate({
+    diagnostico: { tipo: 'string', maxLength: 4000 },
+    tempo_empregado_minutos: { tipo: 'number', min: 1, max: 100000 },
+  }),
+  chamadosController.registrarExecucao
+);
+
+// RF04: registrar os fatores e definir a prioridade. Só gestão — a RN05 diz
+// que somente gestores alteram prioridade.
+router.patch(
+  '/:id/priorizacao',
+  authorize('administrador', 'gestor'),
+  validate({
+    urgencia: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    impacto: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    risco: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    prioridade: { enum: ['baixa', 'media', 'alta', 'critica'] },
+    justificativa: { tipo: 'string', maxLength: 1000 },
+  }),
+  chamadosController.priorizar
 );
 
 router.post(

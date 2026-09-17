@@ -236,6 +236,35 @@ function Relatorios() {
 
           <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
             <div>
+              <h3 className="font-medium text-navy">Marcos do atendimento</h3>
+              <p className="text-xs text-gray-500">
+                Os três intervalos que o processo distingue, para que &ldquo;tempo de
+                atendimento&rdquo; não signifique coisas diferentes em análises diferentes.
+              </p>
+            </div>
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+              <Cartao
+                rotulo="Triagem"
+                valor={formatarDuracao(dados.desempenho.marcos.tempo_triagem_segundos)}
+              />
+              <Cartao
+                rotulo="Até atendimento"
+                valor={formatarDuracao(dados.desempenho.marcos.tempo_ate_atendimento_segundos)}
+              />
+              <Cartao
+                rotulo="Execução"
+                valor={formatarDuracao(dados.desempenho.marcos.tempo_execucao_segundos)}
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Abertura → início da triagem · abertura → início efetivo da execução · início efetivo →
+              conclusão. Baseados em {dados.desempenho.marcos.chamados_triados} chamados triados e{' '}
+              {dados.desempenho.marcos.chamados_iniciados} iniciados no período.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+            <div>
               <h3 className="font-medium text-navy">Cumprimento de prazo</h3>
               <p className="text-xs text-gray-500">
                 O prazo é contado a partir da abertura e empurrado pelo tempo em &ldquo;aguardando

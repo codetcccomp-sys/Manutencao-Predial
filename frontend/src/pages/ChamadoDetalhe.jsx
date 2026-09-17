@@ -3,6 +3,49 @@ import { useParams } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+// Escalas e perguntas orientadoras conforme o §2.5 do Termo de Abertura. As
+// perguntas ficam visíveis de propósito: são elas que tornam a nota menos
+// subjetiva e comparável entre gestores diferentes.
+const FATORES = [
+  {
+    campo: 'urgencia',
+    rotulo: 'Urgência',
+    pergunta: 'Quanto tempo a demanda pode aguardar sem agravar o problema?',
+    escala: ['1 — baixa', '2 — moderada', '3 — alta', '4 — imediata'],
+  },
+  {
+    campo: 'impacto',
+    rotulo: 'Impacto',
+    pergunta: 'Quantos ambientes, usuários ou atividades são afetados?',
+    escala: ['1 — localizado', '2 — setorial', '3 — amplo no bloco', '4 — amplo'],
+  },
+  {
+    campo: 'risco',
+    rotulo: 'Risco',
+    pergunta: 'Há risco relevante à segurança, operação ou patrimônio?',
+    escala: ['1 — mínimo', '2 — moderado', '3 — alto', '4 — grave'],
+  },
+];
+
+const PRIORIDADE_LABEL = {
+  baixa: 'Baixa',
+  media: 'Média',
+  alta: 'Alta',
+  critica: 'Crítica',
+};
+
+const PRIORIDADES = Object.keys(PRIORIDADE_LABEL);
+
+const ESTADO_LABEL = {
+  aberto: 'Aberto',
+  em_triagem: 'Em triagem',
+  atribuido: 'Atribuído',
+  em_andamento: 'Em andamento',
+  aguardando_material: 'Aguardando material',
+  concluido: 'Concluído',
+  cancelado: 'Cancelado',
+};
+
 const PROXIMOS_ESTADOS = {
   aberto: ['em_triagem', 'cancelado'],
   em_triagem: ['atribuido', 'cancelado'],
@@ -23,13 +66,36 @@ function ChamadoDetalhe() {
   const [nota, setNota] = useState(5);
   const [anexos, setAnexos] = useState([]);
   const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  const [fatores, setFatores] = useState({ urgencia: '', impacto: '', risco: '' });
+  const [sugestao, setSugestao] = useState(null);
+  const [prioridadeEscolhida, setPrioridadeEscolhida] = useState('');
+  const [justificativa, setJustificativa] = useState('');
+  const [diagnostico, setDiagnostico] = useState('');
+  const [tempoEmpregado, setTempoEmpregado] = useState('');
+  const [concluindo, setConcluindo] = useState(false);
+  const [servicoRealizado, setServicoRealizado] = useState('');
 
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
   const carregar = useCallback(() => {
     api
       .get(`/chamados/${id}`)
-      .then(({ data }) => setChamado(data.chamado))
+      .then(({ data }) => {
+        setChamado(data.chamado);
+        // Reabre o painel já preenchido quando o chamado foi priorizado antes:
+        // repriorizar é revisar a avaliação anterior, não começar do zero.
+        if (data.chamado.urgencia) {
+          setFatores({
+            urgencia: String(data.chamado.urgencia),
+            impacto: String(data.chamado.impacto),
+            risco: String(data.chamado.risco),
+          });
+        }
+        setDiagnostico(data.chamado.diagnostico ?? '');
+        setTempoEmpregado(
+          data.chamado.tempo_empregado_minutos ? String(data.chamado.tempo_empregado_minutos) : ''
+        );
+      })
       .catch(() => setErro('Não foi possível carregar o chamado.'));
   }, [id]);
 
@@ -55,13 +121,39 @@ function ChamadoDetalhe() {
       .catch(() => setErro('Não foi possível carregar a lista de técnicos.'));
   }, [podeGerenciar]);
 
-  async function mudarEstado(estado) {
+  async function mudarEstado(estado, extras = {}) {
     setErro('');
     try {
-      await api.patch(`/chamados/${id}/estado`, { estado });
+      await api.patch(`/chamados/${id}/estado`, { estado, ...extras });
+      setConcluindo(false);
+      setServicoRealizado('');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível atualizar o estado.');
+    }
+  }
+
+  // Concluir não é um botão só: a RN07 exige a descrição do serviço, então a
+  // ação abre o campo em vez de tentar fechar o chamado e falhar no servidor.
+  function acionarEstado(estado) {
+    if (estado === 'concluido') {
+      setConcluindo(true);
+      return;
+    }
+    mudarEstado(estado);
+  }
+
+  async function salvarExecucao(e) {
+    e.preventDefault();
+    setErro('');
+    try {
+      await api.patch(`/chamados/${id}/execucao`, {
+        diagnostico: diagnostico.trim(),
+        ...(tempoEmpregado ? { tempo_empregado_minutos: Number(tempoEmpregado) } : {}),
+      });
+      carregar();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível registrar a execução.');
     }
   }
 
@@ -84,6 +176,54 @@ function ChamadoDetalhe() {
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível registrar a avaliação.');
+    }
+  }
+
+  // A sugestão é calculada no servidor, com a regra vigente: reproduzir a
+  // fórmula aqui criaria duas verdades que divergem na primeira recalibração.
+  useEffect(() => {
+    const completos = FATORES.every((f) => fatores[f.campo] !== '');
+    if (!podeGerenciar || !completos) {
+      setSugestao(null);
+      return;
+    }
+
+    let cancelado = false;
+    api
+      .post('/regras-priorizacao/simular', {
+        urgencia: Number(fatores.urgencia),
+        impacto: Number(fatores.impacto),
+        risco: Number(fatores.risco),
+      })
+      .then(({ data }) => {
+        if (cancelado) return;
+        setSugestao(data);
+        setPrioridadeEscolhida(data.prioridade);
+      })
+      .catch(() => {
+        if (!cancelado) setSugestao(null);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [fatores, podeGerenciar]);
+
+  async function priorizar(e) {
+    e.preventDefault();
+    setErro('');
+    try {
+      await api.patch(`/chamados/${id}/priorizacao`, {
+        urgencia: Number(fatores.urgencia),
+        impacto: Number(fatores.impacto),
+        risco: Number(fatores.risco),
+        prioridade: prioridadeEscolhida,
+        ...(justificativa.trim() ? { justificativa: justificativa.trim() } : {}),
+      });
+      setJustificativa('');
+      carregar();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível registrar a priorização.');
     }
   }
 
@@ -164,8 +304,12 @@ function ChamadoDetalhe() {
         <h2 className="text-lg font-bold text-navy mb-2">{chamado.titulo}</h2>
         <p className="text-sm text-gray-700 mb-4">{chamado.descricao}</p>
         <div className="text-sm grid grid-cols-2 gap-2 text-gray-600">
-          <span>Estado: <strong>{chamado.estado}</strong></span>
-          <span>Prioridade: <strong>{chamado.prioridade}</strong></span>
+          <span>
+            Estado: <strong>{ESTADO_LABEL[chamado.estado] ?? chamado.estado}</strong>
+          </span>
+          <span>
+            Prioridade: <strong>{PRIORIDADE_LABEL[chamado.prioridade] ?? chamado.prioridade}</strong>
+          </span>
           {chamado.prazo_estimado && (
             <span className="col-span-2">
               Prazo:{' '}
@@ -181,6 +325,126 @@ function ChamadoDetalhe() {
           )}
         </div>
       </div>
+
+      {/* Chamado encerrado vira registro: o que foi apurado e feito precisa
+          continuar visível para quem consultar o histórico depois. */}
+      {(chamado.diagnostico || chamado.servico_realizado) && (
+        <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3 text-sm">
+          <h3 className="font-medium text-navy">Registro do atendimento</h3>
+          {chamado.diagnostico && (
+            <div>
+              <p className="text-gray-600 text-xs uppercase tracking-wide">Diagnóstico</p>
+              <p className="text-gray-800 whitespace-pre-line">{chamado.diagnostico}</p>
+            </div>
+          )}
+          {chamado.servico_realizado && (
+            <div>
+              <p className="text-gray-600 text-xs uppercase tracking-wide">Serviço executado</p>
+              <p className="text-gray-800 whitespace-pre-line">{chamado.servico_realizado}</p>
+            </div>
+          )}
+          {chamado.tempo_empregado_minutos && (
+            <p className="text-gray-600">
+              Tempo empregado: <strong>{chamado.tempo_empregado_minutos} min</strong>
+            </p>
+          )}
+        </div>
+      )}
+
+      {podeGerenciar && !['concluido', 'cancelado'].includes(chamado.estado) && (
+        <form onSubmit={priorizar} className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+          <div>
+            <h3 className="font-medium text-navy">Priorização</h3>
+            <p className="text-xs text-gray-500">
+              Registre os três fatores; o sistema sugere a prioridade pela regra vigente. Você pode
+              decidir diferente, mas aí a exceção precisa ser justificada.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {FATORES.map((f) => (
+              <label key={f.campo} className="grid gap-1 text-sm">
+                <span className="text-gray-700 font-medium">{f.rotulo}</span>
+                <span className="text-xs text-gray-500 min-h-[2.5rem]">{f.pergunta}</span>
+                <select
+                  required
+                  value={fatores[f.campo]}
+                  onChange={(e) => setFatores({ ...fatores, [f.campo]: e.target.value })}
+                  className="border rounded px-3 py-2"
+                >
+                  <option value="">Selecione</option>
+                  {f.escala.map((rotulo, i) => (
+                    <option key={rotulo} value={i + 1}>
+                      {rotulo}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+
+          {sugestao && (
+            <div className="bg-[#EEF1F5] rounded p-3 text-sm grid gap-1">
+              <span>
+                Sugestão:{' '}
+                <strong>{PRIORIDADE_LABEL[sugestao.prioridade] ?? sugestao.prioridade}</strong>{' '}
+                <span className="text-gray-500">(pontuação {sugestao.pontuacao})</span>
+              </span>
+              <span className="text-xs text-gray-600">{sugestao.motivo}</span>
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm">
+              <span className="text-gray-700 font-medium">Prioridade registrada</span>
+              <select
+                value={prioridadeEscolhida}
+                onChange={(e) => setPrioridadeEscolhida(e.target.value)}
+                disabled={!sugestao}
+                className="border rounded px-3 py-2 disabled:opacity-50"
+              >
+                {PRIORIDADES.map((p) => (
+                  <option key={p} value={p}>
+                    {PRIORIDADE_LABEL[p]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {sugestao && prioridadeEscolhida !== sugestao.prioridade && (
+              <label className="grid gap-1 text-sm">
+                <span className="text-gray-700 font-medium">Justificativa da exceção</span>
+                <textarea
+                  required
+                  minLength={10}
+                  rows={2}
+                  value={justificativa}
+                  onChange={(e) => setJustificativa(e.target.value)}
+                  placeholder="Por que a prioridade difere da sugerida?"
+                  className="border rounded px-3 py-2"
+                />
+              </label>
+            )}
+          </div>
+
+          <button
+            disabled={!sugestao}
+            className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2 disabled:opacity-50 justify-self-start px-6"
+          >
+            Registrar priorização
+          </button>
+
+          {chamado.priorizado_em && (
+            <p className="text-xs text-gray-500">
+              Última priorização em {new Date(chamado.priorizado_em).toLocaleString('pt-BR')}
+              {chamado.prioridade_sugerida &&
+                chamado.prioridade !== chamado.prioridade_sugerida &&
+                ` — sugerida "${PRIORIDADE_LABEL[chamado.prioridade_sugerida]}", registrada "${PRIORIDADE_LABEL[chamado.prioridade]}"`}
+              .
+            </p>
+          )}
+        </form>
+      )}
 
       {podeGerenciar && chamado.estado === 'em_triagem' && (
         <form onSubmit={atribuir} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
@@ -212,20 +476,91 @@ function ChamadoDetalhe() {
         </form>
       )}
 
+      {podeMudarEstado && !['concluido', 'cancelado'].includes(chamado.estado) && (
+        <form onSubmit={salvarExecucao} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
+          <h3 className="font-medium text-navy">Execução</h3>
+
+          <label className="grid gap-1 text-sm">
+            <span className="text-gray-600">Diagnóstico</span>
+            <textarea
+              rows={3}
+              value={diagnostico}
+              onChange={(e) => setDiagnostico(e.target.value)}
+              placeholder="O que foi constatado no local"
+              className="border rounded px-3 py-2"
+            />
+          </label>
+
+          <label className="grid gap-1 text-sm max-w-xs">
+            <span className="text-gray-600">Tempo empregado (minutos)</span>
+            <input
+              type="number"
+              min={1}
+              value={tempoEmpregado}
+              onChange={(e) => setTempoEmpregado(e.target.value)}
+              className="border rounded px-3 py-2"
+            />
+          </label>
+
+          <button className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2 justify-self-start px-6">
+            Salvar execução
+          </button>
+        </form>
+      )}
+
       {podeMudarEstado && PROXIMOS_ESTADOS[chamado.estado]?.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="font-medium text-navy mb-3">Mudar estado</h3>
+        <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
+          <h3 className="font-medium text-navy">Mudar estado</h3>
           <div className="flex flex-wrap gap-2">
             {PROXIMOS_ESTADOS[chamado.estado].map((estado) => (
               <button
                 key={estado}
-                onClick={() => mudarEstado(estado)}
+                onClick={() => acionarEstado(estado)}
                 className="bg-amber text-white text-sm rounded px-3 py-2 hover:opacity-90"
               >
-                {estado}
+                {ESTADO_LABEL[estado] ?? estado}
               </button>
             ))}
           </div>
+
+          {concluindo && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                mudarEstado('concluido', { servico_realizado: servicoRealizado.trim() });
+              }}
+              className="grid gap-2 border-t pt-3"
+            >
+              <label className="grid gap-1 text-sm">
+                <span className="text-gray-700 font-medium">Descrição do serviço executado</span>
+                <span className="text-xs text-gray-500">
+                  Obrigatória para concluir (RN07). Registre o que foi feito, não apenas que foi
+                  resolvido.
+                </span>
+                <textarea
+                  required
+                  minLength={10}
+                  rows={3}
+                  autoFocus
+                  value={servicoRealizado}
+                  onChange={(e) => setServicoRealizado(e.target.value)}
+                  className="border rounded px-3 py-2"
+                />
+              </label>
+              <div className="flex gap-2">
+                <button className="bg-navy text-white rounded px-4 py-2 text-sm font-medium hover:bg-navy-2">
+                  Concluir chamado
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConcluindo(false)}
+                  className="text-sm text-gray-600 hover:underline"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
 

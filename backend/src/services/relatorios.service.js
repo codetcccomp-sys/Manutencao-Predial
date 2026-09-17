@@ -89,7 +89,7 @@ async function desempenho(filtros = {}) {
     ? `${where} AND c.estado NOT IN ('concluido','cancelado')`
     : "WHERE c.estado NOT IN ('concluido','cancelado')";
 
-  const [geral, porCategoria, avaliacoes, prazo] = await Promise.all([
+  const [geral, porCategoria, avaliacoes, prazo, marcos] = await Promise.all([
     pool.query(
       `SELECT
          count(*)::int AS chamados_concluidos,
@@ -135,6 +135,26 @@ async function desempenho(filtros = {}) {
         params
       ),
     ]),
+    // Os três marcos que o §2.6 define para desambiguar "tempo de
+    // atendimento". O início da triagem sai do próprio histórico, que é o
+    // registro que sempre existiu para isso — não vale desnormalizar um dado
+    // que já tem dono.
+    pool.query(
+      `SELECT
+         round(avg(EXTRACT(EPOCH FROM (t.triagem_em - c.data_abertura))))::bigint AS tempo_triagem_segundos,
+         count(t.triagem_em)::int AS chamados_triados,
+         round(avg(EXTRACT(EPOCH FROM (c.inicio_execucao - c.data_abertura))))::bigint AS tempo_ate_atendimento_segundos,
+         count(c.inicio_execucao)::int AS chamados_iniciados,
+         round(avg(EXTRACT(EPOCH FROM (c.data_conclusao - c.inicio_execucao))))::bigint AS tempo_execucao_segundos
+       FROM chamado c
+       LEFT JOIN LATERAL (
+         SELECT min(h.data) AS triagem_em
+           FROM historico_chamado h
+          WHERE h.chamado_id = c.id AND h.estado_novo = 'em_triagem'
+       ) t ON TRUE
+       ${where}`,
+      params
+    ),
   ]);
 
   const [fechados, abertos] = prazo;
@@ -142,6 +162,7 @@ async function desempenho(filtros = {}) {
 
   return {
     geral: geral.rows[0],
+    marcos: marcos.rows[0],
     por_categoria: porCategoria.rows,
     avaliacoes: avaliacoes.rows[0],
     prazo: {
