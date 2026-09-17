@@ -74,6 +74,8 @@ function ChamadoDetalhe() {
   const [tempoEmpregado, setTempoEmpregado] = useState('');
   const [concluindo, setConcluindo] = useState(false);
   const [servicoRealizado, setServicoRealizado] = useState('');
+  const [justificativaAtribuicao, setJustificativaAtribuicao] = useState('');
+  const [justificativaReabertura, setJustificativaReabertura] = useState('');
 
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
@@ -161,10 +163,26 @@ function ChamadoDetalhe() {
     e.preventDefault();
     setErro('');
     try {
-      await api.patch(`/chamados/${id}/atribuir`, { tecnico_id: Number(tecnicoId) });
+      await api.patch(`/chamados/${id}/atribuir`, {
+        tecnico_id: Number(tecnicoId),
+        ...(ehReatribuicao ? { justificativa: justificativaAtribuicao.trim() } : {}),
+      });
+      setJustificativaAtribuicao('');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível atribuir o chamado.');
+    }
+  }
+
+  async function reabrir(e) {
+    e.preventDefault();
+    setErro('');
+    try {
+      await api.post(`/chamados/${id}/reabertura`, { justificativa: justificativaReabertura.trim() });
+      setJustificativaReabertura('');
+      carregar();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível reabrir o chamado.');
     }
   }
 
@@ -295,6 +313,27 @@ function ChamadoDetalhe() {
   const podeMudarEstado = podeGerenciar || chamado.tecnico_id === usuario.id;
   const podeAvaliar = usuario.perfil === 'solicitante' && chamado.estado === 'concluido';
 
+  // Estados em que o chamado já tem responsável: distribuir de novo é
+  // reatribuição, que a RF05 manda justificar.
+  const ehReatribuicao = ['atribuido', 'em_andamento', 'aguardando_material'].includes(chamado.estado);
+  const podeDistribuir = podeGerenciar && (chamado.estado === 'em_triagem' || ehReatribuicao);
+
+  // Quem já está no chamado não é opção de reatribuição; o servidor recusa a
+  // troca para o mesmo técnico, e oferecer a opção seria convidar ao erro.
+  const tecnicosDisponiveis = tecnicos.filter((t) => t.id !== chamado.tecnico_id);
+
+  // RN09: a janela de 48 horas é conferida no servidor; aqui ela apenas
+  // decide se vale mostrar o formulário, para não oferecer uma ação que já
+  // seria recusada.
+  const horasDesdeConclusao = chamado.data_conclusao
+    ? (Date.now() - new Date(chamado.data_conclusao).getTime()) / 3_600_000
+    : null;
+  const podeReabrir =
+    chamado.estado === 'concluido' &&
+    horasDesdeConclusao !== null &&
+    horasDesdeConclusao <= 48 &&
+    (podeGerenciar || chamado.solicitante_id === usuario.id);
+
   return (
     <div className="grid gap-6">
       {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-3">{erro}</div>}
@@ -310,6 +349,13 @@ function ChamadoDetalhe() {
           <span>
             Prioridade: <strong>{PRIORIDADE_LABEL[chamado.prioridade] ?? chamado.prioridade}</strong>
           </span>
+          {chamado.total_reaberturas > 0 && (
+            <span className="col-span-2 text-red-700">
+              Reaberto {chamado.total_reaberturas}{' '}
+              {chamado.total_reaberturas === 1 ? 'vez' : 'vezes'} — está no ciclo{' '}
+              {chamado.total_reaberturas + 1} de atendimento.
+            </span>
+          )}
           {chamado.prazo_estimado && (
             <span className="col-span-2">
               Prazo:{' '}
@@ -446,12 +492,46 @@ function ChamadoDetalhe() {
         </form>
       )}
 
-      {podeGerenciar && chamado.estado === 'em_triagem' && (
+      {podeReabrir && (
+        <form onSubmit={reabrir} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
+          <div>
+            <h3 className="font-medium text-navy">Reabrir chamado</h3>
+            <p className="text-xs text-gray-500">
+              Disponível por 48 horas após a conclusão (RN09). A reabertura preserva todo o
+              histórico e inicia um novo ciclo de atendimento, com prazo próprio.
+            </p>
+          </div>
+          <textarea
+            required
+            minLength={10}
+            rows={2}
+            value={justificativaReabertura}
+            onChange={(e) => setJustificativaReabertura(e.target.value)}
+            placeholder="Por que o atendimento não resolveu?"
+            className="border rounded px-3 py-2"
+          />
+          <button className="bg-amber text-white rounded py-2 font-medium hover:opacity-90 justify-self-start px-6">
+            Reabrir
+          </button>
+        </form>
+      )}
+
+      {podeDistribuir && (
         <form onSubmit={atribuir} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-          <h3 className="font-medium text-navy">Atribuir técnico</h3>
-          {tecnicos.length === 0 ? (
+          <h3 className="font-medium text-navy">
+            {ehReatribuicao ? 'Reatribuir técnico' : 'Atribuir técnico'}
+          </h3>
+          {ehReatribuicao && (
+            <p className="text-xs text-gray-500">
+              O chamado já tem responsável. Trocar exige justificativa, e o estado do atendimento é
+              preservado.
+            </p>
+          )}
+          {tecnicosDisponiveis.length === 0 ? (
             <p className="text-sm text-gray-500">
-              Nenhum técnico cadastrado. Cadastre um usuário com perfil técnico para poder atribuir.
+              {tecnicos.length === 0
+                ? 'Nenhum técnico cadastrado. Cadastre um usuário com perfil técnico para poder atribuir.'
+                : 'Não há outro técnico ativo para assumir este chamado. Cadastre ou reative um técnico antes de reatribuir.'}
             </p>
           ) : (
             <>
@@ -462,14 +542,27 @@ function ChamadoDetalhe() {
                 className="border rounded px-3 py-2"
               >
                 <option value="">Selecione o técnico</option>
-                {tecnicos.map((t) => (
+                {tecnicosDisponiveis.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.nome} — {t.email}
                   </option>
                 ))}
               </select>
+
+              {ehReatribuicao && (
+                <textarea
+                  required
+                  minLength={10}
+                  rows={2}
+                  value={justificativaAtribuicao}
+                  onChange={(e) => setJustificativaAtribuicao(e.target.value)}
+                  placeholder="Por que o responsável está mudando?"
+                  className="border rounded px-3 py-2"
+                />
+              )}
+
               <button className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2">
-                Atribuir
+                {ehReatribuicao ? 'Reatribuir' : 'Atribuir'}
               </button>
             </>
           )}

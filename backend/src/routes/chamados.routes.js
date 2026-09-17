@@ -29,7 +29,22 @@ router.get('/:id', chamadosController.buscarPorId);
 router.patch(
   '/:id/atribuir',
   authorize('administrador', 'gestor'),
+  validate({
+    tecnico_id: { tipo: 'number' },
+    equipe_id: { tipo: 'number' },
+    // Obrigatória só na reatribuição; quem sabe se é o caso é o serviço, que
+    // conhece o estado atual do chamado.
+    justificativa: { tipo: 'string', maxLength: 1000 },
+  }),
   chamadosController.atribuir
+);
+
+// RN09: reabertura tem regras próprias — quem pode, janela de tempo e
+// justificativa —, por isso não é apenas mais uma transição de estado.
+router.post(
+  '/:id/reabertura',
+  validate({ justificativa: { obrigatorio: true, tipo: 'string', minLength: 10, maxLength: 1000 } }),
+  chamadosController.reabrir
 );
 
 router.patch(
