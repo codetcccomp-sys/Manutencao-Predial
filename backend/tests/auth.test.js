@@ -2,6 +2,12 @@ const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
 
+const { ipDaSuite } = require('./apoio/ip');
+
+// Ver tests/apoio/ip.js: cada suíte se apresenta ao login como um cliente
+// distinto, para não dividir a cota por IP com as suítes que rodam em paralelo.
+const IP = ipDaSuite(__filename);
+
 afterAll(async () => {
   await pool.end();
 });
@@ -40,14 +46,14 @@ describe('POST /auth/login', () => {
   });
 
   it('autentica com credenciais corretas e retorna token', async () => {
-    const resposta = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+    const resposta = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
     expect(resposta.status).toBe(200);
     expect(resposta.body.token).toBeDefined();
     expect(resposta.body.usuario.email).toBe(email);
   });
 
   it('rejeita senha incorreta', async () => {
-    const resposta = await request(app).post('/auth/login').send({ email, senha: 'errada' });
+    const resposta = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'errada' });
     expect(resposta.status).toBe(401);
   });
 });

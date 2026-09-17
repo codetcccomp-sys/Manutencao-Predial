@@ -2,6 +2,12 @@ const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
 
+const { ipDaSuite } = require('./apoio/ip');
+
+// Ver tests/apoio/ip.js: cada suíte se apresenta ao login como um cliente
+// distinto, para não dividir a cota por IP com as suítes que rodam em paralelo.
+const IP = ipDaSuite(__filename);
+
 let gestor;
 let tecnico;
 let outroTecnico;
@@ -18,7 +24,7 @@ async function criarUsuarioELogar(perfil) {
   if (perfil !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
   }
-  const login = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
   return { token: login.body.token, usuario: login.body.usuario };
 }
 

@@ -8,11 +8,27 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', locaisController.listar);
+
+const CAMPOS_LOCAL = {
+  unidade: { tipo: 'string', minLength: 2, maxLength: 150 },
+  bloco: { tipo: 'string', maxLength: 100 },
+  pavimento: { tipo: 'string', maxLength: 100 },
+  setor: { tipo: 'string', maxLength: 100 },
+  ambiente: { tipo: 'string', maxLength: 150 },
+};
+
 router.post(
   '/',
   authorize('administrador', 'gestor'),
-  validate({ unidade: { obrigatorio: true, tipo: 'string', minLength: 2 } }),
+  validate({ ...CAMPOS_LOCAL, unidade: { ...CAMPOS_LOCAL.unidade, obrigatorio: true } }),
   locaisController.criar
+);
+
+router.patch(
+  '/:id',
+  authorize('administrador', 'gestor'),
+  validate(CAMPOS_LOCAL),
+  locaisController.atualizar
 );
 
 module.exports = router;

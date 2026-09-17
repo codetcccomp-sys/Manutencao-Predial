@@ -37,41 +37,100 @@ function recorte({ de, ate }) {
   };
 }
 
+/**
+ * Roda as consultas de um relatório sobre o mesmo instante do banco.
+ *
+ * Os recortes (por estado, por categoria, por local) e o total são consultas
+ * separadas. Com `pool.query` cada uma pega sua conexão e enxerga o banco um
+ * instante depois da anterior: basta um chamado nascer no meio para que as
+ * partes não fechem com o total — e quem lê não tem como saber que a diferença
+ * veio do relógio, não dos dados. Um relatório um segundo mais velho é melhor
+ * que um que se contradiz.
+ */
+async function emSnapshot(executar) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    const resultado = await executar(client);
+    await client.query('COMMIT');
+    return resultado;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// O local é hierárquico no papel e plano na tabela; enquanto for assim, o
+// rótulo legível é montado na consulta, ignorando os níveis não preenchidos.
+const ROTULO_LOCAL = `
+  l.unidade
+  || coalesce(' / ' || l.bloco, '')
+  || coalesce(' / ' || l.pavimento, '')
+  || coalesce(' / ' || l.setor, '')
+  || coalesce(' / ' || l.ambiente, '')
+`;
+
 async function resumo(filtros = {}) {
   const { where, params } = recorte(filtros);
 
-  const [porEstado, porCategoria, porPrioridade, totais] = await Promise.all([
-    pool.query(
-      `SELECT c.estado, count(*)::int AS total FROM chamado c ${where} GROUP BY c.estado ORDER BY total DESC`,
-      params
-    ),
-    pool.query(
-      `SELECT cat.nome AS categoria, count(*)::int AS total
-         FROM chamado c JOIN categoria cat ON cat.id = c.categoria_id
-         ${where}
-        GROUP BY cat.nome ORDER BY total DESC`,
-      params
-    ),
-    pool.query(
-      `SELECT c.prioridade, count(*)::int AS total FROM chamado c ${where} GROUP BY c.prioridade ORDER BY total DESC`,
-      params
-    ),
-    pool.query(
-      `SELECT
-         count(*)::int AS total,
-         count(*) FILTER (WHERE c.estado = 'concluido')::int AS concluidos,
-         count(*) FILTER (WHERE c.estado = 'cancelado')::int AS cancelados,
-         count(*) FILTER (WHERE c.estado NOT IN ('concluido', 'cancelado'))::int AS em_aberto
-       FROM chamado c ${where}`,
-      params
-    ),
-  ]);
+  const [porEstado, porCategoria, porPrioridade, porLocal, totais] = await emSnapshot((client) =>
+    Promise.all([
+      client.query(
+        `SELECT c.estado, count(*)::int AS total FROM chamado c ${where} GROUP BY c.estado ORDER BY total DESC`,
+        params
+      ),
+      client.query(
+        `SELECT cat.nome AS categoria, count(*)::int AS total
+           FROM chamado c JOIN categoria cat ON cat.id = c.categoria_id
+           ${where}
+          GROUP BY cat.nome ORDER BY total DESC`,
+        params
+      ),
+      client.query(
+        `SELECT c.prioridade, count(*)::int AS total FROM chamado c ${where} GROUP BY c.prioridade ORDER BY total DESC`,
+        params
+      ),
+      // RF10: o total sozinho diz onde há movimento; o que a gestão precisa
+      // saber é onde há demanda parada e vencida, então as três colunas andam
+      // juntas.
+      client.query(
+        `SELECT ${ROTULO_LOCAL} AS local,
+                count(*)::int AS total,
+                count(*) FILTER (WHERE c.estado NOT IN ('concluido', 'cancelado'))::int AS em_aberto,
+                count(*) FILTER (
+                  WHERE c.estado NOT IN ('concluido', 'cancelado')
+                    AND c.prazo_estimado IS NOT NULL
+                    AND now() > c.prazo_estimado
+                )::int AS atrasados
+           FROM chamado c JOIN local l ON l.id = c.local_id
+           ${where}
+          GROUP BY ${ROTULO_LOCAL}
+          ORDER BY total DESC, local
+          LIMIT 20`,
+        params
+      ),
+      client.query(
+        `SELECT
+           count(*)::int AS total,
+           count(*) FILTER (WHERE c.estado = 'concluido')::int AS concluidos,
+           count(*) FILTER (WHERE c.estado = 'cancelado')::int AS cancelados,
+           count(*) FILTER (WHERE c.estado NOT IN ('concluido', 'cancelado'))::int AS em_aberto
+         FROM chamado c ${where}`,
+        params
+      ),
+    ])
+  );
 
   return {
     totais: totais.rows[0],
     por_estado: porEstado.rows,
     por_categoria: porCategoria.rows,
     por_prioridade: porPrioridade.rows,
+    // Limitado aos 20 locais com mais chamados: uma instituição tem centenas
+    // de ambientes, e a lista completa aqui seria ruído, não informação.
+    por_local: porLocal.rows,
   };
 }
 

@@ -22,6 +22,11 @@ function Layout() {
                 Relatórios
               </Link>
             )}
+            {podeVerRelatorios && (
+              <Link to="/cadastros" className="text-sm text-amber shrink-0 hover:underline">
+                Cadastros
+              </Link>
+            )}
             {ehAdministrador && (
               <Link to="/usuarios" className="text-sm text-amber shrink-0 hover:underline">
                 Usuários

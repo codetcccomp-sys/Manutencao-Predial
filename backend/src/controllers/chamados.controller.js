@@ -7,11 +7,12 @@ const criar = asyncHandler(async (req, res) => {
 });
 
 const listar = asyncHandler(async (req, res) => {
-  const { estado, categoria_id, atrasados, pagina, limite } = req.query;
+  const { estado, categoria_id, atrasados, busca, pagina, limite } = req.query;
   const resultado = await chamadosService.listar(req.usuario, {
     estado,
     categoria_id,
     atrasados,
+    busca,
     pagina,
     limite,
   });
@@ -30,6 +31,11 @@ const atribuir = asyncHandler(async (req, res) => {
 
 const mudarEstado = asyncHandler(async (req, res) => {
   const chamado = await chamadosService.mudarEstado(req.params.id, req.body, req.usuario);
+  res.json({ chamado });
+});
+
+const editar = asyncHandler(async (req, res) => {
+  const chamado = await chamadosService.editar(req.params.id, req.body, req.usuario);
   res.json({ chamado });
 });
 
@@ -53,4 +59,4 @@ const avaliar = asyncHandler(async (req, res) => {
   res.status(201).json({ avaliacao });
 });
 
-module.exports = { criar, listar, buscarPorId, atribuir, mudarEstado, priorizar, registrarExecucao, reabrir, avaliar };
+module.exports = { criar, listar, buscarPorId, atribuir, mudarEstado, editar, priorizar, registrarExecucao, reabrir, avaliar };

@@ -92,6 +92,12 @@ async function listar(usuario, filtros = {}) {
   if (filtros.atrasados === 'true') {
     condicoes.push(EM_ATRASO);
   }
+  // RF03 pede protocolo pesquisável. Buscar também no título custa nada e é
+  // o que a pessoa tenta primeiro quando não anotou o número.
+  if (filtros.busca && filtros.busca.trim()) {
+    params.push(`%${filtros.busca.trim()}%`);
+    condicoes.push(`(protocolo ILIKE $${params.length} OR titulo ILIKE $${params.length})`);
+  }
 
   const { pagina, limite } = normalizarPaginacao(filtros);
   const offset = (pagina - 1) * limite;
@@ -443,6 +449,84 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
   return resultado;
 }
 
+// Estados em que o chamado ainda não tem responsável designado. É a janela
+// em que a RN03 deixa o solicitante corrigir o que escreveu.
+const ESTADOS_SEM_RESPONSAVEL = ['aberto', 'em_triagem'];
+
+const CAMPOS_EDITAVEIS = ['titulo', 'descricao', 'categoria_id', 'local_id'];
+
+/**
+ * Corrige os dados do chamado (RN03).
+ *
+ * A regra diz "enquanto ele estiver aberto e ainda não tiver sido atribuído".
+ * As duas condições só não são redundantes se "aberto" quiser dizer "não
+ * encerrado" — por isso a janela do solicitante vai até a triagem, e não só
+ * até a primeira mudança de estado. A gestão edita enquanto o chamado viver,
+ * como "ação autorizada" prevista na mesma regra.
+ */
+async function editar(id, dados, usuario) {
+  return transacao(async (client) => {
+    const chamado = await bloquearChamado(client, id);
+
+    if (['concluido', 'cancelado'].includes(chamado.estado)) {
+      throw new AppError('Chamado encerrado não pode ser editado.', 409, 'ESTADO_INVALIDO');
+    }
+
+    const ehGestao = ['administrador', 'gestor'].includes(usuario.perfil);
+
+    if (!ehGestao) {
+      if (chamado.solicitante_id !== usuario.id) {
+        throw new AppError('Apenas o solicitante ou a gestão podem editar este chamado.', 403, 'ACESSO_NEGADO');
+      }
+      if (!ESTADOS_SEM_RESPONSAVEL.includes(chamado.estado)) {
+        throw new AppError(
+          'O chamado já foi atribuído. A partir daqui, alterações só pela gestão.',
+          409,
+          'JANELA_ENCERRADA'
+        );
+      }
+    }
+
+    const campos = [];
+    const params = [];
+    const alteracoes = [];
+
+    for (const campo of CAMPOS_EDITAVEIS) {
+      if (dados[campo] === undefined) continue;
+      if (dados[campo] === chamado[campo]) continue;
+
+      params.push(dados[campo]);
+      campos.push(`${campo} = $${params.length}`);
+      alteracoes.push(campo);
+    }
+
+    if (campos.length === 0) {
+      throw new AppError('Nenhuma alteração informada.', 422, 'NADA_A_ATUALIZAR');
+    }
+
+    params.push(id);
+    const { rows } = await client.query(
+      `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length}
+       RETURNING *, ${EM_ATRASO} AS em_atraso`,
+      params
+    );
+
+    // Editar não move o chamado no fluxo, mas altera o que a equipe vai
+    // atender: sem registro, o técnico veria uma descrição diferente da que
+    // motivou a triagem, sem saber que mudou.
+    await registrarHistorico(
+      client,
+      id,
+      usuario.id,
+      chamado.estado,
+      chamado.estado,
+      `Chamado editado (${alteracoes.join(', ')}).`
+    );
+
+    return rows[0];
+  });
+}
+
 /**
  * Registra o que foi apurado e executado no chamado (RF07).
  *
@@ -660,6 +744,7 @@ module.exports = {
   priorizar,
   registrarExecucao,
   reabrir,
+  editar,
   garantirLeitura,
   garantirExecucao,
 };

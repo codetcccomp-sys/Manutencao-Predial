@@ -2,6 +2,12 @@ const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
 
+const { ipDaSuite } = require('./apoio/ip');
+
+// Ver tests/apoio/ip.js: cada suíte se apresenta ao login como um cliente
+// distinto, para não dividir a cota por IP com as suítes que rodam em paralelo.
+const IP = ipDaSuite(__filename);
+
 afterAll(async () => {
   await pool.end();
 });
@@ -20,7 +26,7 @@ describe('E-mail insensível a maiúsculas', () => {
 
   it('autentica com qualquer combinação de maiúsculas', async () => {
     for (const variacao of [base, base.toLowerCase(), base.toUpperCase()]) {
-      const resp = await request(app).post('/auth/login').send({ email: variacao, senha: 'senha123' });
+      const resp = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email: variacao, senha: 'senha123' });
       expect(resp.status).toBe(200);
       expect(resp.body.usuario.email).toBe(base.toLowerCase());
     }
@@ -37,7 +43,7 @@ describe('E-mail insensível a maiúsculas', () => {
 
   it('ignora espaços em volta do e-mail', async () => {
     const resp = await request(app)
-      .post('/auth/login')
+      .post('/auth/login').set('X-Real-IP', IP)
       .send({ email: `  ${base}  `, senha: 'senha123' });
 
     expect(resp.status).toBe(200);

@@ -2,6 +2,12 @@ const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
 
+const { ipDaSuite } = require('./apoio/ip');
+
+// Ver tests/apoio/ip.js: cada suíte se apresenta ao login como um cliente
+// distinto, para não dividir a cota por IP com as suítes que rodam em paralelo.
+const IP = ipDaSuite(__filename);
+
 const TOTAL_CHAMADOS = 25;
 
 let solicitante;
@@ -11,7 +17,7 @@ let categoriaId;
 beforeAll(async () => {
   const email = `paginacao_${Date.now()}@exemplo.com`;
   await request(app).post('/auth/registrar').send({ nome: 'Paginação', email, senha: 'senha123' });
-  const login = await request(app).post('/auth/login').send({ email, senha: 'senha123' });
+  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
   solicitante = { token: login.body.token, usuario: login.body.usuario };
 
   const local = await pool.query("INSERT INTO local (unidade) VALUES ('Unidade Paginação') RETURNING id");

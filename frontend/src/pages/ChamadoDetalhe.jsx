@@ -76,6 +76,10 @@ function ChamadoDetalhe() {
   const [servicoRealizado, setServicoRealizado] = useState('');
   const [justificativaAtribuicao, setJustificativaAtribuicao] = useState('');
   const [justificativaReabertura, setJustificativaReabertura] = useState('');
+  const [editando, setEditando] = useState(false);
+  const [edicao, setEdicao] = useState(null);
+  const [categorias, setCategorias] = useState([]);
+  const [locais, setLocais] = useState([]);
 
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
@@ -122,6 +126,45 @@ function ChamadoDetalhe() {
       .then(({ data }) => setTecnicos(data.usuarios))
       .catch(() => setErro('Não foi possível carregar a lista de técnicos.'));
   }, [podeGerenciar]);
+
+  // Categoria e local só interessam a quem vai de fato editar: carregar as
+  // duas listas em toda visita custaria duas consultas por chamado aberto.
+  function abrirEdicao() {
+    setErro('');
+    setEdicao({
+      titulo: chamado.titulo,
+      descricao: chamado.descricao,
+      categoria_id: String(chamado.categoria_id ?? ''),
+      local_id: String(chamado.local_id ?? ''),
+    });
+    setEditando(true);
+
+    if (categorias.length === 0 || locais.length === 0) {
+      Promise.all([api.get('/categorias'), api.get('/locais')])
+        .then(([c, l]) => {
+          setCategorias(c.data.categorias);
+          setLocais(l.data.locais);
+        })
+        .catch(() => setErro('Não foi possível carregar categorias e locais.'));
+    }
+  }
+
+  async function salvarEdicao(e) {
+    e.preventDefault();
+    setErro('');
+    try {
+      await api.patch(`/chamados/${id}`, {
+        titulo: edicao.titulo.trim(),
+        descricao: edicao.descricao.trim(),
+        categoria_id: Number(edicao.categoria_id),
+        local_id: Number(edicao.local_id),
+      });
+      setEditando(false);
+      carregar();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível salvar a correção.');
+    }
+  }
 
   async function mudarEstado(estado, extras = {}) {
     setErro('');
@@ -328,6 +371,17 @@ function ChamadoDetalhe() {
   const horasDesdeConclusao = chamado.data_conclusao
     ? (Date.now() - new Date(chamado.data_conclusao).getTime()) / 3_600_000
     : null;
+  // RN03: o solicitante corrige o que escreveu enquanto o chamado não saiu da
+  // triagem; depois disso o texto já orientou a distribuição, e mudá-lo é ação
+  // da gestão. O servidor confere de novo — aqui é só para não oferecer um
+  // botão que seria recusado.
+  const encerrado = ['concluido', 'cancelado'].includes(chamado.estado);
+  const podeEditar =
+    !encerrado &&
+    (podeGerenciar ||
+      (chamado.solicitante_id === usuario.id &&
+        ['aberto', 'em_triagem'].includes(chamado.estado)));
+
   const podeReabrir =
     chamado.estado === 'concluido' &&
     horasDesdeConclusao !== null &&
@@ -340,8 +394,99 @@ function ChamadoDetalhe() {
 
       <div className="bg-white rounded-lg shadow-sm p-6">
         <p className="text-xs text-gray-500">{chamado.protocolo}</p>
-        <h2 className="text-lg font-bold text-navy mb-2">{chamado.titulo}</h2>
-        <p className="text-sm text-gray-700 mb-4">{chamado.descricao}</p>
+
+        {editando && edicao ? (
+          <form onSubmit={salvarEdicao} className="grid gap-3 mt-2 mb-4">
+            <label className="grid gap-1 text-sm">
+              <span className="text-gray-600">Título</span>
+              <input
+                type="text"
+                required
+                minLength={5}
+                value={edicao.titulo}
+                onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })}
+                className="border rounded px-3 py-2"
+              />
+            </label>
+
+            <label className="grid gap-1 text-sm">
+              <span className="text-gray-600">Descrição</span>
+              <textarea
+                required
+                minLength={10}
+                rows={4}
+                value={edicao.descricao}
+                onChange={(e) => setEdicao({ ...edicao, descricao: e.target.value })}
+                className="border rounded px-3 py-2"
+              />
+            </label>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm">
+                <span className="text-gray-600">Categoria</span>
+                <select
+                  required
+                  value={edicao.categoria_id}
+                  onChange={(e) => setEdicao({ ...edicao, categoria_id: e.target.value })}
+                  className="border rounded px-3 py-2"
+                >
+                  {categorias.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-1 text-sm">
+                <span className="text-gray-600">Local</span>
+                <select
+                  required
+                  value={edicao.local_id}
+                  onChange={(e) => setEdicao({ ...edicao, local_id: e.target.value })}
+                  className="border rounded px-3 py-2"
+                >
+                  {locais.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {[l.unidade, l.bloco, l.pavimento, l.setor, l.ambiente]
+                        .filter(Boolean)
+                        .join(' / ')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex gap-3 items-center">
+              <button className="bg-navy text-white rounded px-6 py-2 text-sm font-medium hover:bg-navy-2">
+                Salvar correção
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditando(false)}
+                className="text-sm text-gray-600 hover:underline"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h2 className="text-lg font-bold text-navy">{chamado.titulo}</h2>
+              {podeEditar && (
+                <button
+                  onClick={abrirEdicao}
+                  className="text-sm text-navy hover:underline shrink-0"
+                >
+                  Corrigir
+                </button>
+              )}
+            </div>
+            <p className="text-sm text-gray-700 mb-4 whitespace-pre-line">{chamado.descricao}</p>
+          </>
+        )}
+
         <div className="text-sm grid grid-cols-2 gap-2 text-gray-600">
           <span>
             Estado: <strong>{ESTADO_LABEL[chamado.estado] ?? chamado.estado}</strong>
