@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 function Layout() {
   const { usuario, logout } = useAuth();
   const podeVerRelatorios = ['administrador', 'gestor'].includes(usuario?.perfil);
+  const ehAdministrador = usuario?.perfil === 'administrador';
 
   return (
     <div className="min-h-screen bg-[#EEF1F5]">
@@ -19,6 +20,11 @@ function Layout() {
             {podeVerRelatorios && (
               <Link to="/relatorios" className="text-sm text-amber shrink-0 hover:underline">
                 Relatórios
+              </Link>
+            )}
+            {ehAdministrador && (
+              <Link to="/usuarios" className="text-sm text-amber shrink-0 hover:underline">
+                Usuários
               </Link>
             )}
           </div>

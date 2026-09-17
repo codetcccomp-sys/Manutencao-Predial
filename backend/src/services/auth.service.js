@@ -11,8 +11,19 @@ const SALT_ROUNDS = 10;
 // descobrir quais e-mails têm conta antes de tentar qualquer senha.
 const HASH_FICTICIO = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
+// A caixa do e-mail não identifica ninguém: "Joao@empresa.com" e
+// "joao@empresa.com" são a mesma pessoa. Sem normalizar, quem se cadastrou de
+// um jeito não conseguia entrar digitando do outro, e o UNIQUE da coluna
+// deixava as duas contas coexistirem. Aplicado em toda escrita e toda busca;
+// o CHECK na tabela garante o mesmo para quem escrever por fora do código.
+function normalizarEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
 async function criarUsuario({ nome, email, senha, perfil }) {
-  const existente = await pool.query('SELECT id FROM usuario WHERE email = $1', [email]);
+  const emailNormalizado = normalizarEmail(email);
+
+  const existente = await pool.query('SELECT id FROM usuario WHERE email = $1', [emailNormalizado]);
   if (existente.rows.length > 0) {
     throw new AppError('Já existe um usuário cadastrado com este e-mail.', 409, 'EMAIL_EM_USO');
   }
@@ -23,7 +34,7 @@ async function criarUsuario({ nome, email, senha, perfil }) {
     `INSERT INTO usuario (nome, email, senha_hash, perfil)
      VALUES ($1, $2, $3, $4)
      RETURNING id, nome, email, perfil, ativo, criado_em`,
-    [nome, email, senhaHash, perfil]
+    [nome, emailNormalizado, senhaHash, perfil]
   );
 
   return rows[0];
@@ -40,7 +51,7 @@ async function registrar({ nome, email, senha }) {
 async function login({ email, senha }) {
   const { rows } = await pool.query(
     'SELECT id, nome, email, senha_hash, perfil, ativo FROM usuario WHERE email = $1',
-    [email]
+    [normalizarEmail(email)]
   );
   const usuario = rows[0];
 
@@ -66,4 +77,4 @@ async function login({ email, senha }) {
   };
 }
 
-module.exports = { registrar, login, criarUsuario };
+module.exports = { registrar, login, criarUsuario, normalizarEmail };

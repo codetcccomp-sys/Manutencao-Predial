@@ -5,6 +5,15 @@ function validate(schema) {
     const erros = [];
 
     for (const [campo, regras] of Object.entries(schema)) {
+      // Espaço em volta de um e-mail é quase sempre resíduo de copiar e colar,
+      // não intenção. Antes isso batia na regra de formato e voltava "deve ser
+      // um e-mail válido", mensagem que não ajuda quem não vê o espaço. O
+      // valor é aparado aqui, na fronteira, para que o resto da requisição já
+      // trabalhe com a forma limpa.
+      if (regras.email && typeof req.body[campo] === 'string') {
+        req.body[campo] = req.body[campo].trim();
+      }
+
       const valor = req.body[campo];
 
       if (regras.obrigatorio && (valor === undefined || valor === null || valor === '')) {

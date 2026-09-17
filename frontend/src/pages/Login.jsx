@@ -7,7 +7,7 @@ function Login() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
-  const { login } = useAuth();
+  const { login, sessaoExpirada } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
@@ -29,6 +29,14 @@ function Login() {
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
         <h1 className="text-xl font-bold text-navy mb-1">Sistema de Manutenção Predial</h1>
         <p className="text-sm text-gray-500 mb-6">Entre com sua conta</p>
+
+        {/* Quem caiu aqui por token vencido merece saber o motivo, em vez de
+            simplesmente reencontrar a tela de login sem explicação. */}
+        {sessaoExpirada && !erro && (
+          <div className="bg-amber/10 text-amber text-sm rounded p-2 mb-4">
+            Sua sessão expirou. Entre novamente para continuar.
+          </div>
+        )}
 
         {erro && (
           <div className="bg-red-50 text-red-700 text-sm rounded p-2 mb-4">{erro}</div>
