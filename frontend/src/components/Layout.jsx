@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 
 function Layout() {
   const { usuario, logout } = useAuth();
+  const podeVerRelatorios = ['administrador', 'gestor'].includes(usuario?.perfil);
 
   return (
     <div className="min-h-screen bg-[#EEF1F5]">
@@ -11,9 +12,16 @@ function Layout() {
           Abaixo de sm eles viram duas linhas; a partir de sm voltam lado a lado. */}
       <header className="bg-navy text-white">
         <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <Link to="/" className="font-bold leading-tight">
-            Sistema de Manutenção Predial
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/" className="font-bold leading-tight">
+              Sistema de Manutenção Predial
+            </Link>
+            {podeVerRelatorios && (
+              <Link to="/relatorios" className="text-sm text-amber shrink-0 hover:underline">
+                Relatórios
+              </Link>
+            )}
+          </div>
           <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
             <span className="truncate">
               {usuario?.nome} <span className="text-amber">({usuario?.perfil})</span>

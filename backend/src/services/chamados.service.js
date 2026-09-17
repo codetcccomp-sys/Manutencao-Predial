@@ -2,6 +2,7 @@ const pool = require('../config/db');
 const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { gerarProtocolo } = require('../utils/protocolo');
+const notificacoesService = require('./notificacoes.service');
 
 // Transições de estado permitidas (RN implícitas no fluxo de atendimento).
 const TRANSICOES = {
@@ -33,6 +34,22 @@ async function criar({ titulo, descricao, categoria_id, local_id, prioridade }, 
   });
 }
 
+const LIMITE_PADRAO = 20;
+const LIMITE_MAXIMO = 100;
+
+// Um parâmetro de paginação inválido ("abc", -5, 10000) não é motivo para
+// recusar o pedido, mas também não pode virar um SELECT sem teto: cai no
+// padrão ou no extremo mais próximo.
+function normalizarPaginacao({ pagina, limite } = {}) {
+  const limiteNum = Number.parseInt(limite, 10);
+  const paginaNum = Number.parseInt(pagina, 10);
+
+  return {
+    limite: Number.isNaN(limiteNum) ? LIMITE_PADRAO : Math.min(Math.max(limiteNum, 1), LIMITE_MAXIMO),
+    pagina: Number.isNaN(paginaNum) ? 1 : Math.max(paginaNum, 1),
+  };
+}
+
 async function listar(usuario, filtros = {}) {
   const condicoes = [];
   const params = [];
@@ -55,21 +72,52 @@ async function listar(usuario, filtros = {}) {
     condicoes.push(`categoria_id = $${params.length}`);
   }
 
+  const { pagina, limite } = normalizarPaginacao(filtros);
+  const offset = (pagina - 1) * limite;
+
   const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
+
+  // count(*) OVER () traz o total junto com a página, numa varredura só, em
+  // vez de repetir o mesmo WHERE num SELECT count separado.
+  params.push(limite, offset);
   const { rows } = await pool.query(
-    `SELECT * FROM chamado ${where} ORDER BY data_abertura DESC`,
+    `SELECT *, count(*) OVER () AS total_registros
+       FROM chamado
+       ${where}
+      ORDER BY data_abertura DESC, id DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
-  return rows;
+
+  // A janela só devolve o total quando há pelo menos uma linha. Numa página
+  // além do fim isso daria total 0, como se o filtro não tivesse achado nada
+  // — então nesse caso (e só nele) vale a contagem separada.
+  let total;
+  if (rows.length > 0) {
+    total = Number(rows[0].total_registros);
+  } else {
+    const contagem = await pool.query(
+      `SELECT count(*) AS total FROM chamado ${where}`,
+      params.slice(0, -2)
+    );
+    total = Number(contagem.rows[0].total);
+  }
+
+  const chamados = rows.map(({ total_registros, ...chamado }) => chamado);
+
+  return {
+    chamados,
+    paginacao: { pagina, limite, total, paginas: Math.ceil(total / limite) },
+  };
 }
 
-async function buscarPorId(id, usuario) {
-  const { rows } = await pool.query('SELECT * FROM chamado WHERE id = $1', [id]);
-  const chamado = rows[0];
-
-  if (!chamado) {
-    throw new AppError('Chamado não encontrado.', 404, 'CHAMADO_NAO_ENCONTRADO');
-  }
+/**
+ * Quem enxerga o chamado: gestão vê todos; solicitante vê o que abriu;
+ * técnico vê o que lhe foi designado. Usado também por anexos e materiais,
+ * para que as rotas filhas não reimplementem (e não divirjam d)essa regra.
+ */
+async function garantirLeitura(id, usuario) {
+  const chamado = await buscarChamadoBruto(id);
 
   const podeVer =
     usuario.perfil === 'administrador' ||
@@ -80,6 +128,35 @@ async function buscarPorId(id, usuario) {
   if (!podeVer) {
     throw new AppError('Você não tem acesso a este chamado.', 403, 'ACESSO_NEGADO');
   }
+
+  return chamado;
+}
+
+/**
+ * Quem registra execução (material consumido) no chamado: a gestão e o
+ * técnico designado. O solicitante enxerga o chamado, mas não executa nele.
+ */
+async function garantirExecucao(id, usuario) {
+  const chamado = await buscarChamadoBruto(id);
+
+  const podeExecutar =
+    usuario.perfil === 'administrador' ||
+    usuario.perfil === 'gestor' ||
+    chamado.tecnico_id === usuario.id;
+
+  if (!podeExecutar) {
+    throw new AppError(
+      'Apenas a gestão ou o técnico designado podem registrar execução neste chamado.',
+      403,
+      'ACESSO_NEGADO'
+    );
+  }
+
+  return chamado;
+}
+
+async function buscarPorId(id, usuario) {
+  const chamado = await garantirLeitura(id, usuario);
 
   const historico = await pool.query(
     'SELECT * FROM historico_chamado WHERE chamado_id = $1 ORDER BY data',
@@ -94,9 +171,9 @@ async function atribuir(id, { tecnico_id, equipe_id }, usuario) {
     throw new AppError('Apenas gestores ou administradores podem atribuir chamados.', 403, 'ACESSO_NEGADO');
   }
 
-  return transacao(async (client) => {
-    const chamado = await bloquearChamado(client, id);
-    validarTransicao(chamado.estado, 'atribuido');
+  const { chamado, notificacaoId } = await transacao(async (client) => {
+    const atual = await bloquearChamado(client, id);
+    validarTransicao(atual.estado, 'atribuido');
 
     const { rows } = await client.query(
       `UPDATE chamado SET tecnico_id = $1, equipe_id = $2, estado = 'atribuido'
@@ -108,25 +185,33 @@ async function atribuir(id, { tecnico_id, equipe_id }, usuario) {
       client,
       id,
       usuario.id,
-      chamado.estado,
+      atual.estado,
       'atribuido',
       'Chamado atribuído a técnico/equipe.'
     );
 
+    let notificacao;
     if (tecnico_id) {
-      await client.query(
+      notificacao = await client.query(
         `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
-         VALUES ($1, $2, 'atribuicao', $3)`,
-        [tecnico_id, id, `Você foi designado para o chamado ${chamado.protocolo}.`]
+         VALUES ($1, $2, 'atribuicao', $3) RETURNING id`,
+        [tecnico_id, id, `Você foi designado para o chamado ${atual.protocolo}.`]
       );
     }
 
-    return rows[0];
+    return { chamado: rows[0], notificacaoId: notificacao?.rows[0]?.id };
   });
+
+  // Fora da transação: enquanto ela está aberta a notificação ainda pode
+  // sumir num rollback, e avisar sobre algo que não aconteceu é pior que
+  // não avisar.
+  await notificacoesService.despacharVarios([notificacaoId]);
+
+  return chamado;
 }
 
 async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
-  return transacao(async (client) => {
+  const { atualizado, notificacaoId } = await transacao(async (client) => {
     const chamado = await bloquearChamado(client, id);
 
     const podeAlterar =
@@ -166,9 +251,9 @@ async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
 
     await registrarHistorico(client, id, usuario.id, chamado.estado, novoEstado, observacao);
 
-    await client.query(
+    const notificacao = await client.query(
       `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
-       VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4) RETURNING id`,
       [
         chamado.solicitante_id,
         id,
@@ -177,8 +262,12 @@ async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
       ]
     );
 
-    return rows[0];
+    return { atualizado: rows[0], notificacaoId: notificacao.rows[0].id };
   });
+
+  await notificacoesService.despacharVarios([notificacaoId]);
+
+  return atualizado;
 }
 
 async function avaliar(id, { nota, comentario }, usuario) {
@@ -239,4 +328,13 @@ async function buscarChamadoBruto(id) {
   return rows[0];
 }
 
-module.exports = { criar, listar, buscarPorId, atribuir, mudarEstado, avaliar };
+module.exports = {
+  criar,
+  listar,
+  buscarPorId,
+  atribuir,
+  mudarEstado,
+  avaliar,
+  garantirLeitura,
+  garantirExecucao,
+};
