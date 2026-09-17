@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (testes)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: smp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+        working-directory: backend
+
+      # Carrega o schema pelo próprio driver pg, já instalado pelo npm ci, em vez
+      # de depender do psql estar presente na imagem do runner.
+      - name: Criar schema
+        working-directory: backend
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: smp_test
+        run: |
+          node -e "
+          const fs = require('fs');
+          const { Client } = require('pg');
+          const c = new Client();
+          c.connect()
+            .then(() => c.query(fs.readFileSync('database/schema.sql', 'utf8')))
+            .then(() => c.end())
+            .then(() => console.log('schema aplicado'))
+            .catch((e) => { console.error('falhou:', e.message); process.exit(1); });
+          "
+
+      # DATABASE_URL não é usada aqui de propósito: esse caminho do db.js força
+      # SSL (para o pooler do Supabase) e o Postgres do runner não atende SSL.
+      - name: Testes
+        working-directory: backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_NAME: smp_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          JWT_SECRET: segredo_de_teste_ci
+          JWT_EXPIRES_IN: 1h
+        run: npm test -- --runInBand
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+        working-directory: frontend
+
+      - run: npm run build
+        working-directory: frontend
