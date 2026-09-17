@@ -4,6 +4,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const { gerarProtocolo } = require('../utils/protocolo');
 const notificacoesService = require('./notificacoes.service');
 const slaService = require('./sla.service');
+const priorizacaoService = require('./priorizacao.service');
 
 // "Em atraso" não é um estado da máquina, é uma leitura do relógio sobre o
 // estado atual: vira e desvira sozinho quando o prazo passa ou quando o
@@ -297,6 +298,89 @@ async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
   return atualizado;
 }
 
+/**
+ * Registra os fatores de priorização e define a prioridade do chamado (RF04).
+ *
+ * A sugestão vem da regra vigente; o gestor pode discordar, mas aí precisa
+ * dizer por quê (§2.5). A justificativa é o que transforma uma exceção em
+ * decisão auditável em vez de preferência pessoal.
+ */
+async function priorizar(id, { urgencia, impacto, risco, prioridade, justificativa }, usuario) {
+  priorizacaoService.validarFatores({ urgencia, impacto, risco });
+
+  const resultado = await transacao(async (client) => {
+    const chamado = await bloquearChamado(client, id);
+
+    if (['concluido', 'cancelado'].includes(chamado.estado)) {
+      throw new AppError(
+        'Não é possível repriorizar um chamado concluído ou cancelado.',
+        409,
+        'ESTADO_INVALIDO'
+      );
+    }
+
+    const regra = await priorizacaoService.regraVigente(client);
+    const sugestao = priorizacaoService.calcular({ urgencia, impacto, risco }, regra);
+    const escolhida = prioridade || sugestao.prioridade;
+    const divergiu = escolhida !== sugestao.prioridade;
+
+    if (divergiu && (!justificativa || justificativa.trim().length < 10)) {
+      throw new AppError(
+        `A prioridade sugerida é "${sugestao.prioridade}". Para registrar "${escolhida}" é necessária uma justificativa de ao menos 10 caracteres.`,
+        422,
+        'JUSTIFICATIVA_OBRIGATORIA'
+      );
+    }
+
+    // O prazo acompanha a prioridade: mudar a classificação sem mudar o prazo
+    // deixaria um chamado crítico com o relógio de um chamado baixo. A conta
+    // parte da abertura e devolve o tempo já suspenso, para não consumir
+    // prazo com espera por insumo.
+    const prazoHoras = await slaService.calcularPrazo(client, escolhida);
+
+    const { rows } = await client.query(
+      `UPDATE chamado SET
+         urgencia = $1, impacto = $2, risco = $3,
+         prioridade_sugerida = $4::prioridade_chamado,
+         prioridade = $5::prioridade_chamado,
+         prioridade_justificativa = $6,
+         regra_priorizacao_id = $7,
+         priorizado_em = now(),
+         priorizado_por = $8,
+         prazo_estimado = CASE
+           WHEN $9::int IS NULL THEN prazo_estimado
+           ELSE data_abertura + ($9::int * interval '1 hour') + tempo_suspenso_total
+         END
+       WHERE id = $10
+       RETURNING *`,
+      [
+        urgencia,
+        impacto,
+        risco,
+        sugestao.prioridade,
+        escolhida,
+        divergiu ? justificativa.trim() : null,
+        regra.id,
+        usuario.id,
+        prazoHoras,
+        id,
+      ]
+    );
+
+    const observacao = divergiu
+      ? `Priorização: ${sugestao.motivo} Gestor registrou "${escolhida}". Justificativa: ${justificativa.trim()}`
+      : `Priorização: ${sugestao.motivo}`;
+
+    // Sem estado_novo próprio: priorizar não move o chamado no fluxo, mas é
+    // uma alteração relevante e a RN05 exige que fique registrada.
+    await registrarHistorico(client, id, usuario.id, chamado.estado, chamado.estado, observacao);
+
+    return { chamado: rows[0], sugestao, prioridade_anterior: chamado.prioridade };
+  });
+
+  return resultado;
+}
+
 async function avaliar(id, { nota, comentario }, usuario) {
   const chamado = await buscarChamadoBruto(id);
 
@@ -365,6 +449,7 @@ module.exports = {
   atribuir,
   mudarEstado,
   avaliar,
+  priorizar,
   garantirLeitura,
   garantirExecucao,
 };

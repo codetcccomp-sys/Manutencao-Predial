@@ -59,6 +59,7 @@ app.use('/materiais', require('./routes/materiais.routes'));
 app.use('/relatorios', require('./routes/relatorios.routes'));
 app.use('/notificacoes', require('./routes/notificacoes.routes'));
 app.use('/sla', require('./routes/sla.routes'));
+app.use('/regras-priorizacao', require('./routes/priorizacao.routes'));
 
 app.use((req, res) => {
   res.status(404).json({ erro: { mensagem: 'Rota não encontrada.' } });

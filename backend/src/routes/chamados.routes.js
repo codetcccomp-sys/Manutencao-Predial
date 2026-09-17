@@ -43,6 +43,21 @@ router.patch(
   chamadosController.mudarEstado
 );
 
+// RF04: registrar os fatores e definir a prioridade. Só gestão — a RN05 diz
+// que somente gestores alteram prioridade.
+router.patch(
+  '/:id/priorizacao',
+  authorize('administrador', 'gestor'),
+  validate({
+    urgencia: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    impacto: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    risco: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    prioridade: { enum: ['baixa', 'media', 'alta', 'critica'] },
+    justificativa: { tipo: 'string', maxLength: 1000 },
+  }),
+  chamadosController.priorizar
+);
+
 router.post(
   '/:id/avaliacao',
   authorize('solicitante'),
