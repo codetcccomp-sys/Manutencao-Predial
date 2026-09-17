@@ -69,6 +69,12 @@ function Login() {
         </button>
 
         <p className="text-sm text-gray-500 mt-4 text-center">
+          <Link to="/recuperar-senha" className="text-amber font-medium">
+            Esqueci minha senha
+          </Link>
+        </p>
+
+        <p className="text-sm text-gray-500 mt-2 text-center">
           Não tem conta?{' '}
           <Link to="/cadastro" className="text-amber font-medium">
             Cadastre-se

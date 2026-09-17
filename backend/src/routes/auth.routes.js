@@ -27,4 +27,20 @@ router.post(
   authController.login
 );
 
+// RF01: recuperação segura de senha.
+router.post(
+  '/recuperar-senha',
+  validate({ email: { obrigatorio: true, tipo: 'string', email: true } }),
+  authController.solicitarRecuperacao
+);
+
+router.post(
+  '/redefinir-senha',
+  validate({
+    token: { obrigatorio: true, tipo: 'string', minLength: 32, maxLength: 128 },
+    senha: { obrigatorio: true, tipo: 'string', minLength: 6, maxLength: 200 },
+  }),
+  authController.redefinirSenha
+);
+
 module.exports = router;
