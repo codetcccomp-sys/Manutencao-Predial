@@ -19,7 +19,10 @@ function ChamadoDetalhe() {
   const [chamado, setChamado] = useState(null);
   const [erro, setErro] = useState('');
   const [tecnicoId, setTecnicoId] = useState('');
+  const [tecnicos, setTecnicos] = useState([]);
   const [nota, setNota] = useState(5);
+
+  const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
   const carregar = useCallback(() => {
     api
@@ -31,6 +34,16 @@ function ChamadoDetalhe() {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  // Só administrador e gestor atribuem chamados — e só eles têm permissão de
+  // listar usuários, então a busca fica condicionada ao perfil.
+  useEffect(() => {
+    if (!podeGerenciar) return;
+    api
+      .get('/usuarios', { params: { perfil: 'tecnico' } })
+      .then(({ data }) => setTecnicos(data.usuarios))
+      .catch(() => setErro('Não foi possível carregar a lista de técnicos.'));
+  }, [podeGerenciar]);
 
   async function mudarEstado(estado) {
     setErro('');
@@ -72,7 +85,6 @@ function ChamadoDetalhe() {
     );
   }
 
-  const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
   const podeMudarEstado = podeGerenciar || chamado.tecnico_id === usuario.id;
   const podeAvaliar = usuario.perfil === 'solicitante' && chamado.estado === 'concluido';
 
@@ -93,17 +105,30 @@ function ChamadoDetalhe() {
       {podeGerenciar && chamado.estado === 'em_triagem' && (
         <form onSubmit={atribuir} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
           <h3 className="font-medium text-navy">Atribuir técnico</h3>
-          <input
-            required
-            type="number"
-            placeholder="ID do técnico"
-            value={tecnicoId}
-            onChange={(e) => setTecnicoId(e.target.value)}
-            className="border rounded px-3 py-2"
-          />
-          <button className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2">
-            Atribuir
-          </button>
+          {tecnicos.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              Nenhum técnico cadastrado. Cadastre um usuário com perfil técnico para poder atribuir.
+            </p>
+          ) : (
+            <>
+              <select
+                required
+                value={tecnicoId}
+                onChange={(e) => setTecnicoId(e.target.value)}
+                className="border rounded px-3 py-2"
+              >
+                <option value="">Selecione o técnico</option>
+                {tecnicos.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nome} — {t.email}
+                  </option>
+                ))}
+              </select>
+              <button className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2">
+                Atribuir
+              </button>
+            </>
+          )}
         </form>
       )}
 
