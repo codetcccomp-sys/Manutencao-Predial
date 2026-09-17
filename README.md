@@ -24,11 +24,13 @@ por um administrador autenticado — do contrário bastaria mandar
 
 ```
 aberto → em_triagem → atribuido → em_andamento → concluido
-                                       ↕
-                              aguardando_material
+             ↑                         ↕              │
+             │                aguardando_material     │
+             └──────── reabertura (até 48h) ──────────┘
 ```
 
-Qualquer estado (menos `concluido`) pode ir para `cancelado`. As transições
+Qualquer estado (menos `concluido`) pode ir para `cancelado`, e cancelar um
+serviço já em execução exige justificativa. As transições
 são validadas no servidor, não só na interface, e cada mudança grava uma
 linha em `historico_chamado`. O tempo parado em `aguardando_material` é
 acumulado à parte e descontado das métricas de atendimento: é espera por
@@ -122,17 +124,22 @@ Todas exigem `Authorization: Bearer <token>`, exceto `/health`, `/health/db`,
 | --- | --- | --- |
 | `POST` | `/auth/registrar` | público (cria `solicitante`) |
 | `POST` | `/auth/login` | público (limitado por tentativa) |
+| `POST` | `/auth/recuperar-senha`, `/auth/redefinir-senha` | público (token de uso único, 60 min) |
 | `GET` | `/chamados?pagina=&limite=&estado=&categoria_id=&atrasados=` | autenticado, escopo conforme o perfil |
 | `POST` | `/chamados` | solicitante, gestor, administrador |
 | `GET` | `/chamados/:id` | quem tem acesso ao chamado |
 | `PATCH` | `/chamados/:id/atribuir` | gestor, administrador |
+| `PATCH` | `/chamados/:id/priorizacao` | gestor, administrador |
 | `PATCH` | `/chamados/:id/estado` | gestão ou técnico designado |
+| `PATCH` | `/chamados/:id/execucao` | gestão ou técnico designado |
+| `POST` | `/chamados/:id/reabertura` | solicitante do chamado ou gestão, em até 48h |
 | `POST` | `/chamados/:id/avaliacao` | solicitante, chamado concluído |
 | `GET POST DELETE` | `/chamados/:id/materiais` | gestão ou técnico designado (leitura: quem vê o chamado) |
 | `GET POST DELETE` | `/chamados/:id/anexos` | quem tem acesso ao chamado |
 | `GET` | `/notificacoes` | o próprio usuário |
 | `GET POST PATCH` | `/equipes`, `/materiais` | leitura autenticada, escrita para gestão |
 | `GET PATCH` | `/sla`, `/sla/:prioridade` | leitura autenticada, escrita para gestão |
+| `GET POST` | `/regras-priorizacao` | leitura da vigente autenticada, versão nova para administrador |
 | `GET` | `/relatorios/resumo`, `/desempenho`, `/tecnicos` | gestor, administrador |
 
 `GET /health/db` executa uma consulta e devolve 503 quando o banco está
@@ -147,6 +154,33 @@ conteúdo fica em `bytea` no próprio banco, porque o sistema de arquivos das
 funções serverless é efêmero — um caminho gravado em disco apontaria para um
 arquivo que já não existe na requisição seguinte. Se o volume crescer, o
 passo seguinte é migrar para armazenamento de objetos.
+
+## Priorização
+
+O gestor registra três fatores na triagem — urgência, impacto e risco, em
+escala de 1 a 4 — e o sistema sugere a prioridade por uma regra versionada
+(tabela `regra_priorizacao`), combinando pesos e limiares. Risco que atinge o
+mínimo configurado impõe prioridade crítica, prevalecendo sobre o cálculo.
+
+O gestor pode registrar prioridade diferente da sugerida, mas aí a exceção
+exige justificativa: ficam gravados o que foi sugerido, o que foi registrado,
+por quem, quando e sob qual versão da regra. Publicar uma versão nova encerra
+a vigência da anterior, que continua existindo para explicar decisões antigas.
+
+Os pesos e limiares iniciais são um ponto de partida com pesos neutros,
+pendente de validação institucional — não uma calibração pronta.
+
+## Ciclos de atendimento
+
+Um chamado concluído pode ser reaberto pelo solicitante ou pela gestão em até
+48 horas, com justificativa. A reabertura preserva todo o histórico, move a
+descrição do serviço do ciclo anterior para lá e inicia um novo ciclo com
+prazo próprio: o prazo anterior já foi gasto, e o que sinaliza a falha do
+atendimento é a contagem de reaberturas.
+
+Reatribuir um chamado já distribuído mantém o estado do atendimento e exige
+justificativa. Cancelar um serviço já em execução é exceção administrativa e
+também exige motivo registrado.
 
 ## Notificações
 

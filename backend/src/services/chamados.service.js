@@ -40,7 +40,7 @@ async function criar({ titulo, descricao, categoria_id, local_id, prioridade }, 
       `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, solicitante_id, prioridade, prazo_estimado)
        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::prioridade_chamado, 'baixa'),
                CASE WHEN $8::int IS NULL THEN NULL ELSE now() + ($8::int * interval '1 hour') END)
-       RETURNING *`,
+       RETURNING *, ${EM_ATRASO} AS em_atraso`,
       [protocolo, titulo, descricao, categoria_id, local_id, solicitanteId, prioridade, prazoHoras]
     );
 
@@ -187,19 +187,45 @@ async function buscarPorId(id, usuario) {
   return { ...chamado, historico: historico.rows };
 }
 
-async function atribuir(id, { tecnico_id, equipe_id }, usuario) {
+// Estados em que o chamado já tem responsável: atribuir de novo aqui é
+// reatribuição, não a primeira distribuição.
+const ESTADOS_COM_RESPONSAVEL = ['atribuido', 'em_andamento', 'aguardando_material'];
+
+async function atribuir(id, { tecnico_id, equipe_id, justificativa }, usuario) {
   if (!['administrador', 'gestor'].includes(usuario.perfil)) {
     throw new AppError('Apenas gestores ou administradores podem atribuir chamados.', 403, 'ACESSO_NEGADO');
   }
 
   const { chamado, notificacaoId } = await transacao(async (client) => {
     const atual = await bloquearChamado(client, id);
-    validarTransicao(atual.estado, 'atribuido');
+
+    // RF05: reatribuir mantém o estado e exige justificativa. Antes, como só
+    // existia a transição "em triagem → atribuído", trocar o técnico de um
+    // chamado já distribuído era simplesmente impossível — e a alternativa
+    // na prática era cancelar e reabrir outro, perdendo o histórico.
+    const ehReatribuicao = ESTADOS_COM_RESPONSAVEL.includes(atual.estado);
+
+    if (ehReatribuicao) {
+      if (!justificativa || justificativa.trim().length < 10) {
+        throw new AppError(
+          'Reatribuir um chamado já distribuído exige justificativa de ao menos 10 caracteres.',
+          422,
+          'JUSTIFICATIVA_OBRIGATORIA'
+        );
+      }
+      if (tecnico_id && tecnico_id === atual.tecnico_id) {
+        throw new AppError('O chamado já está atribuído a este técnico.', 409, 'SEM_MUDANCA');
+      }
+    } else {
+      validarTransicao(atual.estado, 'atribuido');
+    }
+
+    const novoEstado = ehReatribuicao ? atual.estado : 'atribuido';
 
     const { rows } = await client.query(
-      `UPDATE chamado SET tecnico_id = $1, equipe_id = $2, estado = 'atribuido'
-       WHERE id = $3 RETURNING *`,
-      [tecnico_id || null, equipe_id || null, id]
+      `UPDATE chamado SET tecnico_id = $1, equipe_id = $2, estado = $3::estado_chamado
+       WHERE id = $4 RETURNING *, ${EM_ATRASO} AS em_atraso`,
+      [tecnico_id || null, equipe_id || null, novoEstado, id]
     );
 
     await registrarHistorico(
@@ -207,8 +233,10 @@ async function atribuir(id, { tecnico_id, equipe_id }, usuario) {
       id,
       usuario.id,
       atual.estado,
-      'atribuido',
-      'Chamado atribuído a técnico/equipe.'
+      novoEstado,
+      ehReatribuicao
+        ? `Chamado reatribuído. Justificativa: ${justificativa.trim()}`
+        : 'Chamado atribuído a técnico/equipe.'
     );
 
     let notificacao;
@@ -245,6 +273,21 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
     }
 
     validarTransicao(chamado.estado, novoEstado);
+
+    // O §2.4 autoriza cancelar a partir de aberto, em triagem e atribuído.
+    // Cancelar um serviço já em execução é exceção administrativa, que o
+    // mesmo parágrafo permite desde que registrada e justificada — daí
+    // manter a transição e cobrar o motivo, em vez de proibir e empurrar a
+    // gestão para uma gambiarra fora do sistema.
+    if (novoEstado === 'cancelado' && ESTADOS_COM_RESPONSAVEL.slice(1).includes(chamado.estado)) {
+      if (!observacao || observacao.trim().length < 10) {
+        throw new AppError(
+          'Cancelar um chamado já em execução é exceção administrativa e exige justificativa de ao menos 10 caracteres.',
+          422,
+          'JUSTIFICATIVA_OBRIGATORIA'
+        );
+      }
+    }
 
     const campos = ['estado = $1'];
     const params = [novoEstado];
@@ -292,7 +335,7 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
 
     params.push(id);
     const { rows } = await client.query(
-      `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length} RETURNING *, ${EM_ATRASO} AS em_atraso`,
       params
     );
 
@@ -371,7 +414,7 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
            ELSE data_abertura + ($9::int * interval '1 hour') + tempo_suspenso_total
          END
        WHERE id = $10
-       RETURNING *`,
+       RETURNING *, ${EM_ATRASO} AS em_atraso`,
       [
         urgencia,
         impacto,
@@ -444,6 +487,108 @@ async function registrarExecucao(id, { diagnostico, tempo_empregado_minutos }, u
   return rows[0];
 }
 
+// RN09: janela de reabertura contada a partir da conclusão.
+const HORAS_PARA_REABRIR = 48;
+
+/**
+ * Reabre um chamado concluído, iniciando novo ciclo de atendimento (RN09).
+ *
+ * Endpoint próprio, e não mais uma transição em mudarEstado, porque as regras
+ * são outras: quem pode é o solicitante ou a gestão (não o técnico), há
+ * janela de tempo, a justificativa é obrigatória e há estado a reiniciar.
+ */
+async function reabrir(id, { justificativa }, usuario) {
+  if (!justificativa || justificativa.trim().length < 10) {
+    throw new AppError(
+      'A reabertura exige justificativa de ao menos 10 caracteres.',
+      422,
+      'JUSTIFICATIVA_OBRIGATORIA'
+    );
+  }
+
+  const { chamado, notificacaoId } = await transacao(async (client) => {
+    const atual = await bloquearChamado(client, id);
+
+    if (atual.estado !== 'concluido') {
+      throw new AppError('Apenas chamados concluídos podem ser reabertos.', 409, 'ESTADO_INVALIDO');
+    }
+
+    const ehGestao = ['administrador', 'gestor'].includes(usuario.perfil);
+    if (!ehGestao && atual.solicitante_id !== usuario.id) {
+      throw new AppError(
+        'Apenas o solicitante do chamado ou a gestão podem reabri-lo.',
+        403,
+        'ACESSO_NEGADO'
+      );
+    }
+
+    const horasDesdeConclusao =
+      (Date.now() - new Date(atual.data_conclusao).getTime()) / 3_600_000;
+    if (horasDesdeConclusao > HORAS_PARA_REABRIR) {
+      throw new AppError(
+        `A janela de ${HORAS_PARA_REABRIR} horas para reabertura expirou. Abra um novo chamado referenciando o protocolo ${atual.protocolo}.`,
+        409,
+        'JANELA_EXPIRADA'
+      );
+    }
+
+    // O prazo do ciclo anterior já foi gasto; o novo ciclo recebe prazo
+    // próprio contado a partir de agora. O que sinaliza a falha do primeiro
+    // atendimento é a contagem de reaberturas, não um prazo vencido herdado.
+    const prazoHoras = await slaService.calcularPrazo(client, atual.prioridade);
+
+    const { rows } = await client.query(
+      `UPDATE chamado SET
+         estado = 'em_triagem',
+         data_conclusao = NULL,
+         -- A descrição do serviço vai para o histórico e sai do chamado: o
+         -- novo ciclo precisa da sua própria, e mantê-la aqui deixaria a
+         -- conclusão seguinte passar pela RN07 com texto do ciclo anterior.
+         servico_realizado = NULL,
+         total_reaberturas = total_reaberturas + 1,
+         reaberto_em = now(),
+         inicio_execucao = NULL,
+         prazo_estimado = CASE
+           WHEN $1::int IS NULL THEN NULL
+           ELSE now() + ($1::int * interval '1 hour')
+         END
+       WHERE id = $2
+       RETURNING *, ${EM_ATRASO} AS em_atraso`,
+      [prazoHoras, id]
+    );
+
+    await registrarHistorico(
+      client,
+      id,
+      usuario.id,
+      'concluido',
+      'em_triagem',
+      `Chamado reaberto (ciclo ${rows[0].total_reaberturas + 1}). Justificativa: ${justificativa.trim()}` +
+        (atual.servico_realizado ? ` | Serviço registrado no ciclo anterior: ${atual.servico_realizado}` : '')
+    );
+
+    // Avisa quem atendeu, que é quem precisa saber que o serviço voltou.
+    let notificacao;
+    if (atual.tecnico_id) {
+      notificacao = await client.query(
+        `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
+         VALUES ($1, $2, 'reabertura', $3) RETURNING id`,
+        [
+          atual.tecnico_id,
+          id,
+          `O chamado ${atual.protocolo} foi reaberto: ${justificativa.trim()}`,
+        ]
+      );
+    }
+
+    return { chamado: rows[0], notificacaoId: notificacao?.rows[0]?.id };
+  });
+
+  await notificacoesService.despacharVarios([notificacaoId]);
+
+  return chamado;
+}
+
 async function avaliar(id, { nota, comentario }, usuario) {
   const chamado = await buscarChamadoBruto(id);
 
@@ -514,6 +659,7 @@ module.exports = {
   avaliar,
   priorizar,
   registrarExecucao,
+  reabrir,
   garantirLeitura,
   garantirExecucao,
 };
