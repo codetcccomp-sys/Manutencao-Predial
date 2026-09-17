@@ -231,7 +231,7 @@ async function atribuir(id, { tecnico_id, equipe_id }, usuario) {
   return chamado;
 }
 
-async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
+async function mudarEstado(id, { estado: novoEstado, observacao, servico_realizado }, usuario) {
   const { atualizado, notificacaoId } = await transacao(async (client) => {
     const chamado = await bloquearChamado(client, id);
 
@@ -253,6 +253,29 @@ async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
       campos.push('aguardando_material_desde = now()');
     }
 
+    // Início efetivo da execução (§2.6). COALESCE porque voltar de
+    // "aguardando material" é retomar, não recomeçar: sobrescrever aqui
+    // encolheria o "tempo até atendimento" a cada espera por insumo.
+    if (novoEstado === 'em_andamento') {
+      campos.push('inicio_execucao = COALESCE(inicio_execucao, now())');
+    }
+
+    if (novoEstado === 'concluido') {
+      // RN07: sem descrição do serviço não há conclusão. A validação fica
+      // aqui, e não só na rota, porque é regra de negócio — vale para
+      // qualquer caminho que chegue a este serviço.
+      if (!servico_realizado || servico_realizado.trim().length < 10) {
+        throw new AppError(
+          'A conclusão exige a descrição do serviço executado (ao menos 10 caracteres).',
+          422,
+          'SERVICO_OBRIGATORIO'
+        );
+      }
+      params.push(servico_realizado.trim());
+      campos.push(`servico_realizado = $${params.length}`);
+      campos.push('data_conclusao = now()');
+    }
+
     if (chamado.estado === 'aguardando_material' && novoEstado !== 'aguardando_material') {
       campos.push(
         "tempo_suspenso_total = tempo_suspenso_total + COALESCE(now() - aguardando_material_desde, '0 seconds')"
@@ -265,10 +288,6 @@ async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
       campos.push(
         "prazo_estimado = prazo_estimado + COALESCE(now() - aguardando_material_desde, '0 seconds')"
       );
-    }
-
-    if (novoEstado === 'concluido') {
-      campos.push('data_conclusao = now()');
     }
 
     params.push(id);
@@ -381,6 +400,50 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
   return resultado;
 }
 
+/**
+ * Registra o que foi apurado e executado no chamado (RF07).
+ *
+ * Separado da mudança de estado porque diagnóstico e tempo empregado são
+ * preenchidos ao longo do atendimento, não num instante de transição: o
+ * técnico anota o diagnóstico ao chegar e ajusta o tempo conforme trabalha.
+ */
+async function registrarExecucao(id, { diagnostico, tempo_empregado_minutos }, usuario) {
+  const chamado = await garantirExecucao(id, usuario);
+
+  if (['concluido', 'cancelado'].includes(chamado.estado)) {
+    throw new AppError(
+      'Não é possível registrar execução em chamado concluído ou cancelado.',
+      409,
+      'ESTADO_INVALIDO'
+    );
+  }
+
+  const campos = [];
+  const params = [];
+
+  if (diagnostico !== undefined) {
+    params.push(diagnostico);
+    campos.push(`diagnostico = $${params.length}`);
+  }
+  if (tempo_empregado_minutos !== undefined) {
+    params.push(tempo_empregado_minutos);
+    campos.push(`tempo_empregado_minutos = $${params.length}`);
+  }
+
+  if (campos.length === 0) {
+    throw new AppError('Informe diagnóstico ou tempo empregado.', 422, 'NADA_A_ATUALIZAR');
+  }
+
+  params.push(id);
+  const { rows } = await pool.query(
+    `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length}
+     RETURNING *, ${EM_ATRASO} AS em_atraso`,
+    params
+  );
+
+  return rows[0];
+}
+
 async function avaliar(id, { nota, comentario }, usuario) {
   const chamado = await buscarChamadoBruto(id);
 
@@ -450,6 +513,7 @@ module.exports = {
   mudarEstado,
   avaliar,
   priorizar,
+  registrarExecucao,
   garantirLeitura,
   garantirExecucao,
 };

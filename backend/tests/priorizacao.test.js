@@ -212,7 +212,7 @@ describe('PATCH /chamados/:id/priorizacao', () => {
       .set(auth)
       .send({ tecnico_id: gestor.usuario.id });
     await request(app).patch(`/chamados/${chamado.id}/estado`).set(auth).send({ estado: 'em_andamento' });
-    await request(app).patch(`/chamados/${chamado.id}/estado`).set(auth).send({ estado: 'concluido' });
+    await request(app).patch(`/chamados/${chamado.id}/estado`).set(auth).send({ estado: 'concluido', servico_realizado: 'Servico executado e registrado conforme o combinado.' });
 
     const resp = await request(app)
       .patch(`/chamados/${chamado.id}/priorizacao`)
