@@ -33,6 +33,22 @@ async function criar({ titulo, descricao, categoria_id, local_id, prioridade }, 
   });
 }
 
+const LIMITE_PADRAO = 20;
+const LIMITE_MAXIMO = 100;
+
+// Um parâmetro de paginação inválido ("abc", -5, 10000) não é motivo para
+// recusar o pedido, mas também não pode virar um SELECT sem teto: cai no
+// padrão ou no extremo mais próximo.
+function normalizarPaginacao({ pagina, limite } = {}) {
+  const limiteNum = Number.parseInt(limite, 10);
+  const paginaNum = Number.parseInt(pagina, 10);
+
+  return {
+    limite: Number.isNaN(limiteNum) ? LIMITE_PADRAO : Math.min(Math.max(limiteNum, 1), LIMITE_MAXIMO),
+    pagina: Number.isNaN(paginaNum) ? 1 : Math.max(paginaNum, 1),
+  };
+}
+
 async function listar(usuario, filtros = {}) {
   const condicoes = [];
   const params = [];
@@ -55,12 +71,43 @@ async function listar(usuario, filtros = {}) {
     condicoes.push(`categoria_id = $${params.length}`);
   }
 
+  const { pagina, limite } = normalizarPaginacao(filtros);
+  const offset = (pagina - 1) * limite;
+
   const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
+
+  // count(*) OVER () traz o total junto com a página, numa varredura só, em
+  // vez de repetir o mesmo WHERE num SELECT count separado.
+  params.push(limite, offset);
   const { rows } = await pool.query(
-    `SELECT * FROM chamado ${where} ORDER BY data_abertura DESC`,
+    `SELECT *, count(*) OVER () AS total_registros
+       FROM chamado
+       ${where}
+      ORDER BY data_abertura DESC, id DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
-  return rows;
+
+  // A janela só devolve o total quando há pelo menos uma linha. Numa página
+  // além do fim isso daria total 0, como se o filtro não tivesse achado nada
+  // — então nesse caso (e só nele) vale a contagem separada.
+  let total;
+  if (rows.length > 0) {
+    total = Number(rows[0].total_registros);
+  } else {
+    const contagem = await pool.query(
+      `SELECT count(*) AS total FROM chamado ${where}`,
+      params.slice(0, -2)
+    );
+    total = Number(contagem.rows[0].total);
+  }
+
+  const chamados = rows.map(({ total_registros, ...chamado }) => chamado);
+
+  return {
+    chamados,
+    paginacao: { pagina, limite, total, paginas: Math.ceil(total / limite) },
+  };
 }
 
 async function buscarPorId(id, usuario) {

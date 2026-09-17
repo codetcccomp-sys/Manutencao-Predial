@@ -5,6 +5,12 @@ const { AppError } = require('../middlewares/errorHandler');
 
 const SALT_ROUNDS = 10;
 
+// Hash descartável, de uma senha que ninguém usa, comparado quando o e-mail
+// não existe. Sem isso, "usuário inexistente" responde na hora e "senha
+// errada" leva o tempo do bcrypt: a diferença é mensurável de fora e permite
+// descobrir quais e-mails têm conta antes de tentar qualquer senha.
+const HASH_FICTICIO = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+
 async function criarUsuario({ nome, email, senha, perfil }) {
   const existente = await pool.query('SELECT id FROM usuario WHERE email = $1', [email]);
   if (existente.rows.length > 0) {
@@ -39,6 +45,7 @@ async function login({ email, senha }) {
   const usuario = rows[0];
 
   if (!usuario || !usuario.ativo) {
+    await bcrypt.compare(senha, HASH_FICTICIO);
     throw new AppError('E-mail ou senha inválidos.', 401, 'CREDENCIAIS_INVALIDAS');
   }
 

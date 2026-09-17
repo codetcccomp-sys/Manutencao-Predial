@@ -36,26 +36,17 @@ jobs:
       - run: npm ci
         working-directory: backend
 
-      # Carrega o schema pelo próprio driver pg, já instalado pelo npm ci, em vez
-      # de depender do psql estar presente na imagem do runner.
-      - name: Criar schema
+      # O mesmo aplicador de migrações usado em produção, para que o banco
+      # dos testes seja construído pelo caminho que precisa funcionar de verdade.
+      - name: Aplicar migrações
         working-directory: backend
         env:
-          PGHOST: localhost
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          PGDATABASE: smp_test
-        run: |
-          node -e "
-          const fs = require('fs');
-          const { Client } = require('pg');
-          const c = new Client();
-          c.connect()
-            .then(() => c.query(fs.readFileSync('database/schema.sql', 'utf8')))
-            .then(() => c.end())
-            .then(() => console.log('schema aplicado'))
-            .catch((e) => { console.error('falhou:', e.message); process.exit(1); });
-          "
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_NAME: smp_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: npm run migrate
 
       # DATABASE_URL não é usada aqui de propósito: esse caminho do db.js força
       # SSL (para o pooler do Supabase) e o Postgres do runner não atende SSL.

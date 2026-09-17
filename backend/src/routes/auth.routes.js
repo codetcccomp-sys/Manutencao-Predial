@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const authController = require('../controllers/auth.controller');
 const { validate } = require('../validators/validate');
+const { limitarLogin } = require('../middlewares/rateLimit');
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.post(
     email: { obrigatorio: true, tipo: 'string', email: true },
     senha: { obrigatorio: true, tipo: 'string' },
   }),
+  limitarLogin,
   authController.login
 );
 
