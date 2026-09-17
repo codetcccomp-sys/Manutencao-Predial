@@ -21,6 +21,8 @@ function ChamadoDetalhe() {
   const [tecnicoId, setTecnicoId] = useState('');
   const [tecnicos, setTecnicos] = useState([]);
   const [nota, setNota] = useState(5);
+  const [anexos, setAnexos] = useState([]);
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
 
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
@@ -31,9 +33,17 @@ function ChamadoDetalhe() {
       .catch(() => setErro('Não foi possível carregar o chamado.'));
   }, [id]);
 
+  const carregarAnexos = useCallback(() => {
+    api
+      .get(`/chamados/${id}/anexos`)
+      .then(({ data }) => setAnexos(data.anexos))
+      .catch(() => setErro('Não foi possível carregar os anexos.'));
+  }, [id]);
+
   useEffect(() => {
     carregar();
-  }, [carregar]);
+    carregarAnexos();
+  }, [carregar, carregarAnexos]);
 
   // Só administrador e gestor atribuem chamados — e só eles têm permissão de
   // listar usuários, então a busca fica condicionada ao perfil.
@@ -75,6 +85,63 @@ function ChamadoDetalhe() {
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível registrar a avaliação.');
     }
+  }
+
+  async function enviarAnexo(e) {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo) return;
+
+    setErro('');
+    setEnviandoAnexo(true);
+    const dados = new FormData();
+    dados.append('arquivo', arquivo);
+
+    try {
+      await api.post(`/chamados/${id}/anexos`, dados);
+      carregarAnexos();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível enviar o anexo.');
+    } finally {
+      setEnviandoAnexo(false);
+      // Limpa o input para que escolher o mesmo arquivo de novo dispare
+      // outro onChange.
+      e.target.value = '';
+    }
+  }
+
+  // O download precisa do cabeçalho de autorização, então não dá para usar um
+  // link direto: busca pelo axios e entrega o blob ao navegador.
+  async function baixarAnexo(anexo) {
+    setErro('');
+    try {
+      const { data } = await api.get(`/chamados/${id}/anexos/${anexo.id}/conteudo`, {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = anexo.nome_arquivo;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setErro('Não foi possível baixar o anexo.');
+    }
+  }
+
+  async function removerAnexo(anexoId) {
+    setErro('');
+    try {
+      await api.delete(`/chamados/${id}/anexos/${anexoId}`);
+      carregarAnexos();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível remover o anexo.');
+    }
+  }
+
+  function formatarTamanho(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
 
   if (!chamado) {
@@ -162,6 +229,57 @@ function ChamadoDetalhe() {
           </button>
         </form>
       )}
+
+      <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
+        <h3 className="font-medium text-navy">Anexos</h3>
+
+        {anexos.length === 0 ? (
+          <p className="text-sm text-gray-500">Nenhum anexo neste chamado.</p>
+        ) : (
+          <ul className="grid gap-2">
+            {anexos.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-3 border rounded px-3 py-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <button
+                    onClick={() => baixarAnexo(a)}
+                    className="text-navy font-medium hover:underline truncate block max-w-full text-left"
+                  >
+                    {a.nome_arquivo}
+                  </button>
+                  <span className="text-xs text-gray-500">
+                    {formatarTamanho(a.tamanho_bytes)} · {a.usuario_nome} ·{' '}
+                    {new Date(a.data_upload).toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                {(podeGerenciar || a.usuario_id === usuario.id) && (
+                  <button
+                    onClick={() => removerAnexo(a.id)}
+                    className="text-xs text-red-600 hover:underline shrink-0"
+                  >
+                    Remover
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <label className="text-sm">
+          <span className="text-gray-600">
+            {enviandoAnexo ? 'Enviando...' : 'Adicionar anexo (JPEG, PNG, WebP ou PDF, até 4 MB)'}
+          </span>
+          <input
+            type="file"
+            onChange={enviarAnexo}
+            disabled={enviandoAnexo}
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            className="mt-1 block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-navy file:px-3 file:py-2 file:text-white hover:file:bg-navy-2 disabled:opacity-50"
+          />
+        </label>
+      </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h3 className="font-medium text-navy mb-3">Histórico</h3>

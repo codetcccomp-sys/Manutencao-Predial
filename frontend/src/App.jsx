@@ -7,6 +7,7 @@ import Cadastro from './pages/Cadastro';
 import Dashboard from './pages/Dashboard';
 import NovoChamado from './pages/NovoChamado';
 import ChamadoDetalhe from './pages/ChamadoDetalhe';
+import Relatorios from './pages/Relatorios';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/chamados/novo" element={<NovoChamado />} />
             <Route path="/chamados/:id" element={<ChamadoDetalhe />} />
+            <Route path="/relatorios" element={<Relatorios />} />
           </Route>
         </Routes>
       </AuthProvider>

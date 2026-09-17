@@ -26,6 +26,18 @@ function validate(schema) {
       if (regras.minLength && typeof valor === 'string' && valor.length < regras.minLength) {
         erros.push(`Campo "${campo}" deve ter ao menos ${regras.minLength} caracteres.`);
       }
+      if (regras.maxLength && typeof valor === 'string' && valor.length > regras.maxLength) {
+        erros.push(`Campo "${campo}" deve ter no máximo ${regras.maxLength} caracteres.`);
+      }
+      // Faixa numérica: sem isso, um valor fora do permitido só era barrado
+      // pelo CHECK do banco, que chega aqui como erro interno (500) em vez
+      // de erro de validação (422).
+      if (regras.min !== undefined && typeof valor === 'number' && valor < regras.min) {
+        erros.push(`Campo "${campo}" deve ser no mínimo ${regras.min}.`);
+      }
+      if (regras.max !== undefined && typeof valor === 'number' && valor > regras.max) {
+        erros.push(`Campo "${campo}" deve ser no máximo ${regras.max}.`);
+      }
       if (regras.email && typeof valor === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) {
         erros.push(`Campo "${campo}" deve ser um e-mail válido.`);
       }

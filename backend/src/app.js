@@ -42,7 +42,10 @@ app.use('/chamados', require('./routes/chamados.routes'));
 app.use('/usuarios', require('./routes/usuarios.routes'));
 app.use('/locais', require('./routes/locais.routes'));
 app.use('/categorias', require('./routes/categorias.routes'));
-// app.use('/relatorios', require('./routes/relatorios.routes'));
+app.use('/equipes', require('./routes/equipes.routes'));
+app.use('/materiais', require('./routes/materiais.routes'));
+app.use('/relatorios', require('./routes/relatorios.routes'));
+app.use('/notificacoes', require('./routes/notificacoes.routes'));
 
 app.use((req, res) => {
   res.status(404).json({ erro: { mensagem: 'Rota não encontrada.' } });

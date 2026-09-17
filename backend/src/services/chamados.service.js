@@ -2,6 +2,7 @@ const pool = require('../config/db');
 const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { gerarProtocolo } = require('../utils/protocolo');
+const notificacoesService = require('./notificacoes.service');
 
 // Transições de estado permitidas (RN implícitas no fluxo de atendimento).
 const TRANSICOES = {
@@ -110,13 +111,13 @@ async function listar(usuario, filtros = {}) {
   };
 }
 
-async function buscarPorId(id, usuario) {
-  const { rows } = await pool.query('SELECT * FROM chamado WHERE id = $1', [id]);
-  const chamado = rows[0];
-
-  if (!chamado) {
-    throw new AppError('Chamado não encontrado.', 404, 'CHAMADO_NAO_ENCONTRADO');
-  }
+/**
+ * Quem enxerga o chamado: gestão vê todos; solicitante vê o que abriu;
+ * técnico vê o que lhe foi designado. Usado também por anexos e materiais,
+ * para que as rotas filhas não reimplementem (e não divirjam d)essa regra.
+ */
+async function garantirLeitura(id, usuario) {
+  const chamado = await buscarChamadoBruto(id);
 
   const podeVer =
     usuario.perfil === 'administrador' ||
@@ -127,6 +128,35 @@ async function buscarPorId(id, usuario) {
   if (!podeVer) {
     throw new AppError('Você não tem acesso a este chamado.', 403, 'ACESSO_NEGADO');
   }
+
+  return chamado;
+}
+
+/**
+ * Quem registra execução (material consumido) no chamado: a gestão e o
+ * técnico designado. O solicitante enxerga o chamado, mas não executa nele.
+ */
+async function garantirExecucao(id, usuario) {
+  const chamado = await buscarChamadoBruto(id);
+
+  const podeExecutar =
+    usuario.perfil === 'administrador' ||
+    usuario.perfil === 'gestor' ||
+    chamado.tecnico_id === usuario.id;
+
+  if (!podeExecutar) {
+    throw new AppError(
+      'Apenas a gestão ou o técnico designado podem registrar execução neste chamado.',
+      403,
+      'ACESSO_NEGADO'
+    );
+  }
+
+  return chamado;
+}
+
+async function buscarPorId(id, usuario) {
+  const chamado = await garantirLeitura(id, usuario);
 
   const historico = await pool.query(
     'SELECT * FROM historico_chamado WHERE chamado_id = $1 ORDER BY data',
@@ -141,9 +171,9 @@ async function atribuir(id, { tecnico_id, equipe_id }, usuario) {
     throw new AppError('Apenas gestores ou administradores podem atribuir chamados.', 403, 'ACESSO_NEGADO');
   }
 
-  return transacao(async (client) => {
-    const chamado = await bloquearChamado(client, id);
-    validarTransicao(chamado.estado, 'atribuido');
+  const { chamado, notificacaoId } = await transacao(async (client) => {
+    const atual = await bloquearChamado(client, id);
+    validarTransicao(atual.estado, 'atribuido');
 
     const { rows } = await client.query(
       `UPDATE chamado SET tecnico_id = $1, equipe_id = $2, estado = 'atribuido'
@@ -155,25 +185,33 @@ async function atribuir(id, { tecnico_id, equipe_id }, usuario) {
       client,
       id,
       usuario.id,
-      chamado.estado,
+      atual.estado,
       'atribuido',
       'Chamado atribuído a técnico/equipe.'
     );
 
+    let notificacao;
     if (tecnico_id) {
-      await client.query(
+      notificacao = await client.query(
         `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
-         VALUES ($1, $2, 'atribuicao', $3)`,
-        [tecnico_id, id, `Você foi designado para o chamado ${chamado.protocolo}.`]
+         VALUES ($1, $2, 'atribuicao', $3) RETURNING id`,
+        [tecnico_id, id, `Você foi designado para o chamado ${atual.protocolo}.`]
       );
     }
 
-    return rows[0];
+    return { chamado: rows[0], notificacaoId: notificacao?.rows[0]?.id };
   });
+
+  // Fora da transação: enquanto ela está aberta a notificação ainda pode
+  // sumir num rollback, e avisar sobre algo que não aconteceu é pior que
+  // não avisar.
+  await notificacoesService.despacharVarios([notificacaoId]);
+
+  return chamado;
 }
 
 async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
-  return transacao(async (client) => {
+  const { atualizado, notificacaoId } = await transacao(async (client) => {
     const chamado = await bloquearChamado(client, id);
 
     const podeAlterar =
@@ -213,9 +251,9 @@ async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
 
     await registrarHistorico(client, id, usuario.id, chamado.estado, novoEstado, observacao);
 
-    await client.query(
+    const notificacao = await client.query(
       `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
-       VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4) RETURNING id`,
       [
         chamado.solicitante_id,
         id,
@@ -224,8 +262,12 @@ async function mudarEstado(id, { estado: novoEstado, observacao }, usuario) {
       ]
     );
 
-    return rows[0];
+    return { atualizado: rows[0], notificacaoId: notificacao.rows[0].id };
   });
+
+  await notificacoesService.despacharVarios([notificacaoId]);
+
+  return atualizado;
 }
 
 async function avaliar(id, { nota, comentario }, usuario) {
@@ -286,4 +328,13 @@ async function buscarChamadoBruto(id) {
   return rows[0];
 }
 
-module.exports = { criar, listar, buscarPorId, atribuir, mudarEstado, avaliar };
+module.exports = {
+  criar,
+  listar,
+  buscarPorId,
+  atribuir,
+  mudarEstado,
+  avaliar,
+  garantirLeitura,
+  garantirExecucao,
+};
