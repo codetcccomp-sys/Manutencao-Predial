@@ -224,12 +224,28 @@ describe('Marcos temporais do §2.6 nos relatórios', () => {
   });
 
   it('não confunde chamado sem execução com execução instantânea', async () => {
-    // Um chamado que nunca entrou em andamento não pode entrar na média
-    // como se tivesse levado zero: a contagem é sobre quem de fato começou.
-    const antes = await request(app).get('/relatorios/desempenho').set(auth(gestor));
-    await abrirEAtribuir();
-    const depois = await request(app).get('/relatorios/desempenho').set(auth(gestor));
+    // Um chamado que nunca entrou em andamento não pode entrar na média como
+    // se tivesse levado zero: a contagem é sobre quem de fato começou.
+    //
+    // O chamado é recuado para um dia que só este teste usa, e o relatório é
+    // pedido com esse recorte. Comparar a contagem global antes e depois
+    // parecia mais direto, mas as suítes rodam em paralelo: bastava outra
+    // iniciar a execução de um chamado entre as duas leituras para a asserção
+    // falhar por um motivo que nada tem a ver com o que ela verifica.
+    const DIA_SO_DESTE_TESTE = '2001-03-04';
+    const id = await abrirEAtribuir();
+    await pool.query(
+      "UPDATE chamado SET data_abertura = $1::date + interval '10 hours' WHERE id = $2",
+      [DIA_SO_DESTE_TESTE, id]
+    );
 
-    expect(depois.body.marcos.chamados_iniciados).toBe(antes.body.marcos.chamados_iniciados);
+    const resp = await request(app)
+      .get(`/relatorios/desempenho?de=${DIA_SO_DESTE_TESTE}&ate=${DIA_SO_DESTE_TESTE}`)
+      .set(auth(gestor));
+
+    expect(resp.body.marcos.chamados_iniciados).toBe(0);
+    // Nulo, e não zero: "ninguém começou" e "todos começaram na hora" são
+    // respostas diferentes, e só uma delas é verdade aqui.
+    expect(resp.body.marcos.tempo_ate_atendimento_segundos).toBeNull();
   });
 });

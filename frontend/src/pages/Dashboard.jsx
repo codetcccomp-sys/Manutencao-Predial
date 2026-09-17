@@ -150,12 +150,16 @@ function Dashboard() {
         </p>
       )}
 
+      {/* min-w-0 no cartão: item de grid não encolhe abaixo do próprio
+          conteúdo por padrão, então um título longo — que o truncate deveria
+          cortar — esticava a página inteira e dava rolagem horizontal no
+          celular. */}
       <div className="grid gap-3">
         {chamados.map((c) => (
           <Link
             key={c.id}
             to={`/chamados/${c.id}`}
-            className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between gap-3 hover:shadow-md transition"
+            className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between gap-3 min-w-0 hover:shadow-md transition"
           >
             <div className="min-w-0">
               <p className="font-medium text-navy truncate">{c.titulo}</p>
