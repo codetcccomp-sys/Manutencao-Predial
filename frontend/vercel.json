@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://manutencao-predial-backend-git-claude-project-a-c4f733-tec-code.vercel.app/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
