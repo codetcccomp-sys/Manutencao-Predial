@@ -7,6 +7,10 @@ const app = express();
 const ORIGENS_PERMITIDAS = [
   /^https:\/\/manutencao-predial-frontend(-[a-z0-9]+)?(-git-[a-z0-9-]+)?-tec-code\.vercel\.app$/,
   'http://localhost:5173',
+  // O `vite preview`, que serve a build. É por ele que os testes de ponta a
+  // ponta rodam: testar o servidor de desenvolvimento deixaria de fora tudo
+  // que só aparece depois do empacotamento.
+  'http://localhost:4173',
 ];
 
 app.use(

@@ -51,8 +51,11 @@ function NovoChamado() {
         {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-2">{erro}</div>}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+          <label htmlFor="titulo" className="block text-sm font-medium text-gray-700 mb-1">
+            Título
+          </label>
           <input
+            id="titulo"
             required
             value={form.titulo}
             onChange={(e) => atualizarCampo('titulo', e.target.value)}
@@ -61,8 +64,11 @@ function NovoChamado() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+          <label htmlFor="descricao" className="block text-sm font-medium text-gray-700 mb-1">
+            Descrição
+          </label>
           <textarea
+            id="descricao"
             required
             rows={4}
             value={form.descricao}
@@ -73,8 +79,11 @@ function NovoChamado() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+            <label htmlFor="categoria" className="block text-sm font-medium text-gray-700 mb-1">
+              Categoria
+            </label>
             <select
+              id="categoria"
               required
               value={form.categoria_id}
               onChange={(e) => atualizarCampo('categoria_id', e.target.value)}
@@ -90,8 +99,11 @@ function NovoChamado() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+            <label htmlFor="prioridade" className="block text-sm font-medium text-gray-700 mb-1">
+              Prioridade
+            </label>
             <select
+              id="prioridade"
               value={form.prioridade}
               onChange={(e) => atualizarCampo('prioridade', e.target.value)}
               className="w-full border rounded px-3 py-2"
@@ -105,8 +117,11 @@ function NovoChamado() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Local</label>
+          <label htmlFor="local" className="block text-sm font-medium text-gray-700 mb-1">
+            Local
+          </label>
           <select
+            id="local"
             required
             value={form.local_id}
             onChange={(e) => atualizarCampo('local_id', e.target.value)}

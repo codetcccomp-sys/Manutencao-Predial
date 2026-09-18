@@ -101,19 +101,84 @@ aplicadas sem executá-las.
 
 ## Testes
 
+São três camadas, com propósitos distintos.
+
+### Backend
+
 ```bash
 cd backend
 npm test -- --runInBand
 ```
 
-Os testes rodam contra um PostgreSQL de verdade, não contra mocks: o que está
-sendo verificado inclui transação, bloqueio de linha, restrição de chave e
+Rodam contra um PostgreSQL de verdade, não contra mocks: o que está sendo
+verificado inclui transação, bloqueio de linha, restrição de chave e
 permissão — coisas que um mock de driver só simularia. `--runInBand` evita
 que as suítes disputem o mesmo banco.
 
-O CI (`.github/workflows/ci.yml`) sobe um PostgreSQL de serviço, aplica as
-migrações pelo mesmo `npm run migrate` e roda a suíte, além de compilar o
-frontend.
+### Frontend: componentes
+
+```bash
+cd frontend
+npm test
+```
+
+Vitest com jsdom. Sem banco e sem servidor, em segundos: é a rede fina, e
+pega a maior parte das regressões de comportamento — o interceptor de sessão,
+o nome do arquivo baixado, o contador do sino, a espera da busca, a janela da
+RN03. Um teste aqui roda por commit sem custo.
+
+### Frontend: ponta a ponta
+
+```bash
+cd frontend
+npm run e2e
+```
+
+Playwright contra a **build**, não contra o servidor de desenvolvimento: é a
+build que vai para produção, e testar o `vite dev` deixaria de fora tudo que
+só aparece depois do empacotamento. O `playwright.config.js` sobe o backend e
+o `vite preview` sozinho, e roda tudo em dois tamanhos de tela — computador e
+celular.
+
+Esta camada existe por um motivo específico: **geometria**. Todos os defeitos
+de responsividade deste projeto — o cartão de chamado esticando a página, as
+tabelas vazando do cartão, o painel de avisos saindo pela esquerda no celular,
+o select de técnico crescendo com o e-mail mais longo — passaram por build
+verde e por teste de componente. O jsdom devolve zero em
+`getBoundingClientRect`: não existe como medi-los fora de um navegador.
+
+O cenário de cada execução é semeado pela própria API, não por SQL. Inserir
+direto no banco criaria estados que a aplicação nunca produz — um chamado sem
+histórico, uma senha sem hash — e o teste passaria a verificar uma realidade
+que não existe. A única exceção é o primeiro administrador
+(`backend/database/semear-admin.js`), porque o cadastro público só cria
+solicitante (RN01); esse script recusa rodar com `NODE_ENV=production`.
+
+### Teste de mutação
+
+```bash
+cd frontend
+npm run mutacao            # todas
+npm run mutacao vitest     # só as rápidas
+```
+
+Um teste que passa não prova nada sozinho: ele pode estar passando pelo motivo
+errado. A ferramenta quebra um comportamento específico de cada vez e confere
+que a suíte acusa. Foi assim que se descobriu que a exceção do `/auth/login`
+no interceptor de sessão podia ser apagada sem nenhum teste reclamar — o teste
+que a cobria não guardava token, então passava por um caminho que não era o
+verificado.
+
+Não roda no CI: leva o tempo da suíte multiplicado pelo número de mutações. É
+ferramenta de quem escreve ou revisa teste.
+
+### No CI
+
+`.github/workflows/ci.yml` tem três jobs: backend (PostgreSQL de serviço,
+migrações pelo mesmo `npm run migrate`, suíte), frontend (testes de componente
+e build) e ponta a ponta (PostgreSQL, migrações, administrador semeado,
+Chromium e a suíte do Playwright). O relatório do Playwright fica guardado
+como artefato quando algo falha.
 
 ## Rotas
 
