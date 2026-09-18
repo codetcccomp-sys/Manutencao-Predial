@@ -190,3 +190,52 @@ SMTP, o envio vira registro em log e nada mais no sistema muda. O despacho
 acontece depois do commit da transação: enquanto ela está aberta a
 notificação ainda pode desaparecer num rollback, e avisar sobre algo que não
 aconteceu é pior que não avisar.
+
+Os dois canais previstos pela RF08 existem: o aviso interno, no sino do
+cabeçalho, e o e-mail. O interno não depende de nada estar configurado, e é
+o que sobra quando não há SMTP.
+
+### Aviso de atraso
+
+O atraso é a única notificação que não nasce de uma ação de usuário: ninguém
+clica em "passou do prazo". Ela depende de um gatilho de tempo, que é um
+agendador externo batendo numa rota:
+
+```
+POST /tarefas/notificar-atrasos
+Authorization: Bearer <CRON_SECRET>
+```
+
+A rota varre os chamados em aberto com prazo vencido, grava o aviso para o
+solicitante e para o técnico designado — ou para a gestão, quando não há
+técnico, que é o caso em que ninguém mais pode agir — e marca o chamado como
+avisado **para aquele prazo**. Se o prazo mudar depois (repriorização, tempo
+suspenso devolvido, reabertura), um novo estouro volta a avisar; enquanto o
+prazo for o mesmo, o aviso sai uma vez só, por mais vezes que a varredura
+rode.
+
+Configuração:
+
+1. Defina `CRON_SECRET` nas variáveis de ambiente (Vercel → Settings →
+   Environment Variables) com um valor aleatório longo, e **redeploy** — as
+   variáveis são congeladas na build. Sem essa variável a rota responde 503:
+   ela falha fechada, para que esquecer a configuração num ambiente novo não
+   deixe um gatilho de trabalho aberto na internet.
+2. Aponte um agendador para a rota a cada 15 minutos. Serviços gratuitos como
+   o cron-job.org servem; o cron da Vercel no plano Hobby roda uma vez por
+   dia, o que chegaria tarde demais para um chamado crítico de 4 horas.
+3. O segredo vai no cabeçalho `Authorization`, nunca na query string. URL
+   aparece em log de acesso, em histórico de proxy e no cabeçalho `Referer`:
+   segredo que trafega na URL vaza sozinho, sem ninguém atacar nada. A rota
+   recusa o segredo por query de propósito.
+
+Para conferir sem disparar nada, `GET /tarefas/atrasos-pendentes` (mesmo
+cabeçalho) devolve quantos chamados estão vencidos sem aviso. A varredura
+responde quantos chamados notificou, quantos avisos gerou e se sobrou
+trabalho para a próxima passagem — sem esse retorno, um agendamento quebrado
+e um agendamento sem nada a fazer seriam indistinguíveis dos dois lados.
+
+Cada execução tem teto: o alcance é chamados × destinatários, não a soma, e
+uma varredura sem limite poderia gerar milhares de avisos numa transação só,
+dentro de uma função com limite de tempo. O que passar do teto fica para a
+passagem seguinte — a marcação é persistente, nada se perde.

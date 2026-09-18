@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Avisos from './Avisos';
 
 function Layout() {
   const { usuario, logout } = useAuth();
@@ -37,6 +38,7 @@ function Layout() {
             <span className="truncate">
               {usuario?.nome} <span className="text-amber">({usuario?.perfil})</span>
             </span>
+            <Avisos />
             <button
               onClick={logout}
               className="bg-navy-2 rounded px-3 py-1 shrink-0 hover:opacity-90"
