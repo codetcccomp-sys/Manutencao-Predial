@@ -49,8 +49,20 @@ async function despacharEmail(notificacaoId) {
   }
 }
 
-async function despacharVarios(ids) {
-  for (const id of ids.filter(Boolean)) {
+/**
+ * Teto de envios por requisição.
+ *
+ * O envio é sequencial e cada um tem timeout de 5 s, então uma notificação
+ * que alcance muita gente — um comentário num chamado sem técnico avisa toda
+ * a gestão — seguraria a resposta por minutos e estouraria o limite de tempo
+ * da função. O aviso em tela não depende do e-mail: o que passa do teto fica
+ * registrado com email_enviado_em nulo, visível no sistema, que é o outro
+ * canal previsto pela RF08.
+ */
+const LIMITE_ENVIOS = 40;
+
+async function despacharVarios(ids, limite = LIMITE_ENVIOS) {
+  for (const id of ids.filter(Boolean).slice(0, limite)) {
     await despacharEmail(id);
   }
 }
@@ -78,4 +90,10 @@ async function marcarComoLida(notificacaoId, usuarioId) {
   return rows.length > 0;
 }
 
-module.exports = { despacharEmail, despacharVarios, listarDoUsuario, marcarComoLida };
+module.exports = {
+  despacharEmail,
+  despacharVarios,
+  listarDoUsuario,
+  marcarComoLida,
+  LIMITE_ENVIOS,
+};

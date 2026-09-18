@@ -182,6 +182,35 @@ Reatribuir um chamado já distribuído mantém o estado do atendimento e exige
 justificativa. Cancelar um serviço já em execução é exceção administrativa e
 também exige motivo registrado.
 
+## Comentários
+
+A RN03 fecha a janela de edição do solicitante quando o chamado é atribuído,
+mas não fecha a porta: dali em diante "alterações deverão ocorrer por
+comentário ou ação autorizada". O comentário é essa porta — é como quem abriu
+acrescenta o que faltou sem mexer no texto que já orientou a triagem, e como
+quem atende pede informação sem mudar o estado do chamado.
+
+Quem enxerga o chamado enxerga a conversa dele: a autorização é a mesma da
+leitura, e não um controle próprio, porque dois critérios de visibilidade para
+o mesmo chamado divergiriam na primeira mudança. Cada comentário avisa os
+demais envolvidos — nunca quem escreveu — e, sem técnico designado, a gestão
+entra no lugar, que é quem responde pelo chamado enquanto ele não tem dono.
+
+Comentário não entra no histórico. O histórico registra transição de estado
+(anterior → novo), e um comentário não é transição: forçá-lo lá exigiria
+colunas de estado nulas e faria a auditoria de fluxo conviver com conversa.
+
+Não há edição nem exclusão de comentário, por decisão: é registro do
+atendimento, como o histórico. Um texto que some depois de lido tiraria do
+registro justamente a parte que alguém quis apagar. Chamado encerrado também
+não recebe comentário novo — quem discorda do desfecho reabre, que tem janela
+e justificativa próprias —, mas a conversa continua legível.
+
+Não existe comentário interno, visível só para a equipe. O Termo não pede, e
+um eixo de visibilidade pela metade é pior que nenhum: toda leitura do chamado
+teria de respeitá-lo, e esquecer uma delas vaza justamente o que deveria ser
+reservado.
+
 ## Notificações
 
 Cada atribuição e cada mudança de estado grava uma notificação para o

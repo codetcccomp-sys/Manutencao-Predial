@@ -2,6 +2,7 @@ const { Router } = require('express');
 const chamadosController = require('../controllers/chamados.controller');
 const materiaisController = require('../controllers/materiais.controller');
 const anexosController = require('../controllers/anexos.controller');
+const comentariosController = require('../controllers/comentarios.controller');
 const { authenticate, authorize } = require('../middlewares/auth');
 const { receberArquivo } = require('../middlewares/upload');
 const { validate } = require('../validators/validate');
@@ -123,6 +124,18 @@ router.post(
 );
 
 router.delete('/:id/materiais/:materialId', materiaisController.removerDoChamado);
+
+// Comentários (RF08 e a segunda metade da RN03: depois que a janela de edição
+// fecha, é por aqui que o solicitante acrescenta o que faltou). Como nos
+// materiais, quem autoriza é a relação com o chamado, não o perfil — a
+// checagem fica no serviço, que reaproveita a mesma regra de leitura.
+router.get('/:id/comentarios', comentariosController.listar);
+
+router.post(
+  '/:id/comentarios',
+  validate({ texto: { obrigatorio: true, tipo: 'string', minLength: 2, maxLength: 4000 } }),
+  comentariosController.criar
+);
 
 // Anexos. Como nos materiais, quem autoriza é a relação com o chamado, então
 // a checagem fica no controller.
