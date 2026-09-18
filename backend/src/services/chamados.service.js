@@ -479,8 +479,13 @@ async function editar(id, dados, usuario) {
         throw new AppError('Apenas o solicitante ou a gestão podem editar este chamado.', 403, 'ACESSO_NEGADO');
       }
       if (!ESTADOS_SEM_RESPONSAVEL.includes(chamado.estado)) {
+        // A RN03 não fecha a porta, muda a porta: depois da atribuição as
+        // alterações acontecem "por comentário ou ação autorizada". Dizer só
+        // que não pode mais editar deixaria a pessoa sem saber por onde
+        // acrescentar o que faltou.
         throw new AppError(
-          'O chamado já foi atribuído. A partir daqui, alterações só pela gestão.',
+          'O chamado já foi atribuído. Para acrescentar informação, use os comentários; ' +
+            'alterações no texto, a partir daqui, só pela gestão.',
           409,
           'JANELA_ENCERRADA'
         );

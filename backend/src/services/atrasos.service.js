@@ -18,10 +18,11 @@ const MAXIMO_CHAMADOS = 200;
 // orçamento. Travar isso exigiria deixar o chamado sem aviso, que é pior.
 const ORCAMENTO_AVISOS = 500;
 
-// E-mail é o passo lento: cada envio tem timeout de 5 s. O aviso em tela não
-// depende dele, então o envio é limitado e o excedente fica registrado como
-// não enviado — visível no sistema, que é o outro canal previsto pela RF08.
-const MAXIMO_EMAILS = 40;
+// E-mail é o passo lento: cada envio tem timeout de 5 s. O teto vive no
+// serviço de notificações, que é quem envia, para valer também para os outros
+// avisos — este aqui só o repete para poder informar na resposta quantos
+// envios foram tentados.
+const MAXIMO_EMAILS = notificacoesService.LIMITE_ENVIOS;
 
 /**
  * Quem é avisado, além de quem já está no chamado.
@@ -148,7 +149,7 @@ async function notificarAtrasados() {
   // Fora da transação: enquanto ela está aberta, a notificação ainda pode
   // sumir num rollback, e avisar de algo que não aconteceu é pior que não
   // avisar.
-  await notificacoesService.despacharVarios(notificacaoIds.slice(0, MAXIMO_EMAILS));
+  await notificacoesService.despacharVarios(notificacaoIds);
 
   return {
     chamados_notificados: chamados.length,

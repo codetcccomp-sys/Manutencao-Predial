@@ -76,6 +76,9 @@ function ChamadoDetalhe() {
   const [servicoRealizado, setServicoRealizado] = useState('');
   const [justificativaAtribuicao, setJustificativaAtribuicao] = useState('');
   const [justificativaReabertura, setJustificativaReabertura] = useState('');
+  const [comentarios, setComentarios] = useState([]);
+  const [novoComentario, setNovoComentario] = useState('');
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [editando, setEditando] = useState(false);
   const [edicao, setEdicao] = useState(null);
   const [categorias, setCategorias] = useState([]);
@@ -112,10 +115,18 @@ function ChamadoDetalhe() {
       .catch(() => setErro('Não foi possível carregar os anexos.'));
   }, [id]);
 
+  const carregarComentarios = useCallback(() => {
+    api
+      .get(`/chamados/${id}/comentarios`)
+      .then(({ data }) => setComentarios(data.comentarios))
+      .catch(() => setErro('Não foi possível carregar os comentários.'));
+  }, [id]);
+
   useEffect(() => {
     carregar();
     carregarAnexos();
-  }, [carregar, carregarAnexos]);
+    carregarComentarios();
+  }, [carregar, carregarAnexos, carregarComentarios]);
 
   // Só administrador e gestor atribuem chamados — e só eles têm permissão de
   // listar usuários, então a busca fica condicionada ao perfil.
@@ -163,6 +174,26 @@ function ChamadoDetalhe() {
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível salvar a correção.');
+    }
+  }
+
+  async function comentar(e) {
+    e.preventDefault();
+    setErro('');
+    setEnviandoComentario(true);
+    try {
+      const { data } = await api.post(`/chamados/${id}/comentarios`, {
+        texto: novoComentario.trim(),
+      });
+      // Acrescenta o que voltou do servidor em vez de recarregar a lista: o
+      // servidor é quem define id, data e autor, e recarregar perderia o
+      // texto se a rede falhasse no meio.
+      setComentarios((atuais) => [...atuais, data.comentario]);
+      setNovoComentario('');
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível enviar o comentário.');
+    } finally {
+      setEnviandoComentario(false);
     }
   }
 
@@ -865,6 +896,65 @@ function ChamadoDetalhe() {
             className="mt-1 block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-navy file:px-3 file:py-2 file:text-white hover:file:bg-navy-2 disabled:opacity-50"
           />
         </label>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+        <div>
+          <h3 className="font-medium text-navy">Comentários</h3>
+          <p className="text-xs text-gray-500">
+            {encerrado
+              ? 'O chamado está encerrado: a conversa fica registrada, mas não recebe novos comentários.'
+              : 'É por aqui que se acrescenta informação sem mexer no que já orientou a triagem. Quem participa do chamado é avisado.'}
+          </p>
+        </div>
+
+        {comentarios.length === 0 ? (
+          <p className="text-sm text-gray-500">Nenhum comentário ainda.</p>
+        ) : (
+          <ul className="grid gap-3">
+            {comentarios.map((c) => (
+              <li
+                key={c.id}
+                className={`border rounded px-3 py-2 ${
+                  c.usuario_id === usuario.id ? 'bg-[#EEF1F5]' : ''
+                }`}
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs mb-1">
+                  <span className="font-medium text-navy">
+                    {c.usuario_nome}
+                    <span className="text-gray-500 font-normal"> ({c.usuario_perfil})</span>
+                  </span>
+                  <span className="text-gray-500">{new Date(c.data).toLocaleString('pt-BR')}</span>
+                </div>
+                <p className="text-sm text-gray-800 whitespace-pre-line">{c.texto}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {!encerrado && (
+          <form onSubmit={comentar} className="grid gap-2">
+            <label className="grid gap-1 text-sm">
+              <span className="sr-only">Novo comentário</span>
+              <textarea
+                required
+                minLength={2}
+                maxLength={4000}
+                rows={3}
+                value={novoComentario}
+                onChange={(e) => setNovoComentario(e.target.value)}
+                placeholder="Escreva um comentário"
+                className="border rounded px-3 py-2"
+              />
+            </label>
+            <button
+              disabled={enviandoComentario || !novoComentario.trim()}
+              className="bg-navy text-white rounded py-2 px-6 text-sm font-medium hover:bg-navy-2 disabled:opacity-50 justify-self-start"
+            >
+              {enviandoComentario ? 'Enviando...' : 'Comentar'}
+            </button>
+          </form>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6">
