@@ -11,3 +11,8 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Artefatos das suítes de teste do frontend.
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/

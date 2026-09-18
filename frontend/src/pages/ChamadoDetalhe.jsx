@@ -87,7 +87,9 @@ function ChamadoDetalhe() {
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
   const carregar = useCallback(() => {
-    api
+    // Devolve a promessa: quem chama na montagem precisa saber se o chamado
+    // carregou antes de pedir anexos e comentários.
+    return api
       .get(`/chamados/${id}`)
       .then(({ data }) => {
         setChamado(data.chamado);
@@ -105,7 +107,13 @@ function ChamadoDetalhe() {
           data.chamado.tempo_empregado_minutos ? String(data.chamado.tempo_empregado_minutos) : ''
         );
       })
-      .catch(() => setErro('Não foi possível carregar o chamado.'));
+      .then(() => true)
+      .catch(() => {
+        setErro('Não foi possível carregar o chamado.');
+        // Devolve false em vez de rejeitar: `carregar` é chamado solto depois
+        // de cada ação da tela, e uma rejeição ali viraria erro não tratado.
+        return false;
+      });
   }, [id]);
 
   const carregarAnexos = useCallback(() => {
@@ -123,9 +131,16 @@ function ChamadoDetalhe() {
   }, [id]);
 
   useEffect(() => {
-    carregar();
-    carregarAnexos();
-    carregarComentarios();
+    // Anexos e comentários só depois do chamado, e não em paralelo. Quem não
+    // pode ler o chamado também não pode ler o resto: as três chamadas
+    // falhariam juntas, e a última a responder deixava na tela "não foi
+    // possível carregar os anexos" — uma explicação errada para um acesso
+    // negado ao chamado. Duas requisições a menos, de quebra.
+    carregar().then((carregou) => {
+      if (!carregou) return;
+      carregarAnexos();
+      carregarComentarios();
+    });
   }, [carregar, carregarAnexos, carregarComentarios]);
 
   // Só administrador e gestor atribuem chamados — e só eles têm permissão de
@@ -693,7 +708,7 @@ function ChamadoDetalhe() {
       )}
 
       {podeDistribuir && (
-        <form onSubmit={atribuir} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
+        <form onSubmit={atribuir} className="bg-white rounded-lg shadow-sm p-6 grid gap-3 min-w-0">
           <h3 className="font-medium text-navy">
             {ehReatribuicao ? 'Reatribuir técnico' : 'Atribuir técnico'}
           </h3>
@@ -715,7 +730,11 @@ function ChamadoDetalhe() {
                 required
                 value={tecnicoId}
                 onChange={(e) => setTecnicoId(e.target.value)}
-                className="border rounded px-3 py-2"
+                /* w-full e min-w-0: a largura natural de um select é a da
+                   opção mais larga, e as opções trazem nome e e-mail. Como
+                   item de grid ele não encolhia abaixo disso, e um e-mail
+                   comprido esticava a página inteira no celular. */
+                className="border rounded px-3 py-2 w-full min-w-0"
               >
                 <option value="">Selecione o técnico</option>
                 {tecnicosDisponiveis.map((t) => (
