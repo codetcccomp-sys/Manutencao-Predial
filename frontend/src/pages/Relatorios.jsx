@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import api, { baixarArquivo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { rotuloEstado, rotuloPrioridade } from '../dominio/rotulos';
+import Tabela from '../components/ui/Tabela';
 
 // O backend devolve segundos; quem lê o relatório pensa em horas e dias.
 function formatarDuracao(segundos) {
@@ -231,34 +232,30 @@ function Relatorios() {
                 concentra e onde ela está vencendo o prazo.
               </p>
             </div>
-            {dados.resumo.por_local.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhum chamado no período.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-500 border-b">
-                      <th className="py-2 pr-4 font-medium">Local</th>
-                      <th className="py-2 pr-4 font-medium">Total</th>
-                      <th className="py-2 pr-4 font-medium">Em aberto</th>
-                      <th className="py-2 font-medium">Atrasados</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dados.resumo.por_local.map((l) => (
-                      <tr key={l.local} className="border-b last:border-0">
-                        <td className="py-2 pr-4 text-navy">{l.local}</td>
-                        <td className="py-2 pr-4">{l.total}</td>
-                        <td className="py-2 pr-4">{l.em_aberto}</td>
-                        <td className={`py-2 ${l.atrasados > 0 ? 'text-red-700 font-medium' : ''}`}>
-                          {l.atrasados}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <Tabela
+              legenda="Chamados por local no período"
+              ordenavel
+              chaveDaLinha={(l) => l.local}
+              linhas={dados.resumo.por_local}
+              vazio={<p className="text-sm text-tinta-2">Nenhum chamado no período.</p>}
+              colunas={[
+                { chave: 'local', rotulo: 'Local', principal: true },
+                { chave: 'total', rotulo: 'Total', numerica: true },
+                { chave: 'em_aberto', rotulo: 'Em aberto', numerica: true },
+                {
+                  chave: 'atrasados',
+                  rotulo: 'Atrasados',
+                  numerica: true,
+                  // Zero atrasado não precisa gritar; o que precisa saltar é o
+                  // local que está vencendo prazo.
+                  conteudo: (l) => (
+                    <span className={l.atrasados > 0 ? 'font-medium text-erro' : ''}>
+                      {l.atrasados}
+                    </span>
+                  ),
+                },
+              ]}
+            />
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
@@ -392,34 +389,27 @@ function Relatorios() {
               levando a página inteira junto no celular. */}
           <div className="bg-white rounded-lg shadow-sm p-6 min-w-0">
             <h3 className="font-medium text-navy mb-3">Carga por técnico</h3>
-            {dados.tecnicos.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhum chamado atribuído no período.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-500 border-b">
-                      <th className="py-2 pr-4 font-medium">Técnico</th>
-                      <th className="py-2 pr-4 font-medium">Atribuídos</th>
-                      <th className="py-2 pr-4 font-medium">Concluídos</th>
-                      <th className="py-2 pr-4 font-medium">Em aberto</th>
-                      <th className="py-2 font-medium">Tempo médio</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dados.tecnicos.map((t) => (
-                      <tr key={t.tecnico_id} className="border-b last:border-0">
-                        <td className="py-2 pr-4 text-navy">{t.nome}</td>
-                        <td className="py-2 pr-4">{t.atribuidos}</td>
-                        <td className="py-2 pr-4">{t.concluidos}</td>
-                        <td className="py-2 pr-4">{t.em_aberto}</td>
-                        <td className="py-2">{formatarDuracao(t.tempo_medio_segundos)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <Tabela
+              legenda="Carga de chamados por técnico no período"
+              ordenavel
+              chaveDaLinha={(t) => t.tecnico_id}
+              linhas={dados.tecnicos}
+              vazio={
+                <p className="text-sm text-tinta-2">Nenhum chamado atribuído no período.</p>
+              }
+              colunas={[
+                { chave: 'nome', rotulo: 'Técnico', principal: true },
+                { chave: 'atribuidos', rotulo: 'Atribuídos', numerica: true },
+                { chave: 'concluidos', rotulo: 'Concluídos', numerica: true },
+                { chave: 'em_aberto', rotulo: 'Em aberto', numerica: true },
+                {
+                  chave: 'tempo_medio_segundos',
+                  rotulo: 'Tempo médio',
+                  numerica: true,
+                  conteudo: (t) => formatarDuracao(t.tempo_medio_segundos),
+                },
+              ]}
+            />
           </div>
         </>
       )}

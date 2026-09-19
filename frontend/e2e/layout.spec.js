@@ -84,7 +84,7 @@ test('o painel de avisos abre inteiro dentro da tela', async ({ page }) => {
   );
 });
 
-test('as tabelas de relatório rolam dentro do cartão, não levam a página', async ({ page }) => {
+test('o relatório cabe na tela em qualquer largura', async ({ page }) => {
   await entrar(page, cenario.pessoas.gestor);
   await page.goto('/relatorios');
   await page.waitForSelector('h3:has-text("Carga por técnico")');
@@ -153,4 +153,54 @@ test('o conteúdo aproveita a largura do monitor', async ({ page }) => {
   } else {
     expect(larguraConteudo).toBeGreaterThan(larguraTela - 48);
   }
+});
+
+test('o mesmo dado sai como tabela no monitor e como blocos no celular', async ({ page }, info) => {
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto('/relatorios');
+  await page.waitForSelector('h3:has-text("Por local")');
+
+  const tabela = page.getByRole('table', { name: 'Chamados por local no período' });
+
+  if (info.project.name === 'celular') {
+    // Cinco colunas de números num aparelho de 393px só se leem rolando para
+    // o lado, e comparar linhas — que é para o que serve a tabela — deixa de
+    // ser possível de qualquer jeito. Então não é a tabela encolhida: é outro
+    // arranjo, um registro por vez.
+    await expect(tabela).toBeHidden();
+    await expect(page.getByText('Em aberto').first()).toBeVisible();
+  } else {
+    await expect(tabela).toBeVisible();
+
+    // A legenda nomeia a tabela para quem não vê o título do cartão acima
+    // dela — e é ela que faz o getByRole acima encontrar a tabela pelo nome.
+    const colunas = await tabela.locator('thead th[scope="col"]').count();
+    expect(colunas).toBe(4);
+
+    // scope="row" na coluna de identidade é o que faz o leitor de tela dizer
+    // "Local: Prédio A, Atrasados: 3" em vez de só "3".
+    expect(await tabela.locator('tbody th[scope="row"]').count()).toBeGreaterThan(0);
+  }
+});
+
+test('ordenar a tabela reordena e anuncia a direção', async ({ page }, info) => {
+  test.skip(info.project.name === 'celular', 'a ordenação é do cabeçalho da tabela, que só existe a partir de sm');
+
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto('/relatorios');
+  await page.waitForSelector('h3:has-text("Carga por técnico")');
+
+  const tabela = page.getByRole('table', { name: 'Carga de chamados por técnico no período' });
+  const cabecalho = tabela.locator('th', { hasText: 'Técnico' });
+
+  // Sem ordenação nenhuma, nada foi escolhido ainda.
+  await expect(cabecalho).toHaveAttribute('aria-sort', 'none');
+
+  await cabecalho.getByRole('button').click();
+  await expect(cabecalho).toHaveAttribute('aria-sort', 'ascending');
+
+  // Clicar de novo inverte, em vez de reordenar igual: é o que a pessoa
+  // espera do segundo clique.
+  await cabecalho.getByRole('button').click();
+  await expect(cabecalho).toHaveAttribute('aria-sort', 'descending');
 });

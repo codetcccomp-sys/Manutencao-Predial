@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Tabela from '../components/ui/Tabela';
+import Botao from '../components/ui/Botao';
+import { Esqueleto, Regiao } from '../components/ui/Estados';
 
 const PERFIS = [
   { valor: 'solicitante', rotulo: 'Solicitante' },
@@ -156,69 +159,90 @@ function Usuarios() {
       <div className="bg-white rounded-lg shadow-sm p-6 min-w-0">
         <h3 className="font-medium text-navy mb-3">Cadastrados</h3>
 
+        <Regiao carregando={carregando}>
         {carregando ? (
-          <p className="text-sm text-gray-500">Carregando...</p>
+          <Esqueleto linhas={3} altura="h-10" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b">
-                  <th className="py-2 pr-4 font-medium">Nome</th>
-                  <th className="py-2 pr-4 font-medium">E-mail</th>
-                  <th className="py-2 pr-4 font-medium">Perfil</th>
-                  <th className="py-2 pr-4 font-medium">Situação</th>
-                  <th className="py-2 font-medium">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usuarios.map((u) => {
-                  const ehEu = u.id === usuario.id;
-                  return (
-                    <tr key={u.id} className={`border-b last:border-0 ${u.ativo ? '' : 'opacity-60'}`}>
-                      <td className="py-2 pr-4 text-navy">
-                        {u.nome}
-                        {ehEu && <span className="text-xs text-gray-500"> (você)</span>}
-                      </td>
-                      <td className="py-2 pr-4 text-gray-600">{u.email}</td>
-                      <td className="py-2 pr-4">
-                        <select
-                          value={u.perfil}
-                          disabled={ehEu}
-                          onChange={(e) => alterar(u.id, { perfil: e.target.value })}
-                          className={`text-xs rounded px-2 py-1 ${PERFIL_COR[u.perfil]} disabled:cursor-not-allowed`}
-                          title={ehEu ? 'Não é possível alterar o próprio perfil.' : undefined}
-                        >
-                          {PERFIS.map((p) => (
-                            <option key={p.valor} value={p.valor}>
-                              {p.rotulo}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-2 pr-4">
-                        {u.ativo ? (
-                          <span className="text-green-700">Ativo</span>
-                        ) : (
-                          <span className="text-gray-500">Desligado</span>
-                        )}
-                      </td>
-                      <td className="py-2">
-                        <button
-                          onClick={() => alterar(u.id, { ativo: !u.ativo })}
-                          disabled={ehEu}
-                          className="text-xs text-navy hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
-                          title={ehEu ? 'Não é possível desativar a própria conta.' : undefined}
-                        >
-                          {u.ativo ? 'Desligar' : 'Reativar'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        <Tabela
+          legenda="Usuários cadastrados no sistema"
+          chaveDaLinha={(u) => u.id}
+          linhas={usuarios}
+          vazio={<p className="text-sm text-tinta-2">Nenhum usuário cadastrado.</p>}
+          colunas={[
+            {
+              chave: 'nome',
+              rotulo: 'Nome',
+              principal: true,
+              conteudo: (u) => (
+                <span className={u.ativo ? '' : 'opacity-60'}>
+                  {u.nome}
+                  {u.id === usuario.id && <span className="text-xs text-tinta-2"> (você)</span>}
+                </span>
+              ),
+            },
+            {
+              chave: 'email',
+              rotulo: 'E-mail',
+              conteudo: (u) => <span className="text-tinta-2 break-all">{u.email}</span>,
+            },
+            {
+              chave: 'perfil',
+              rotulo: 'Perfil',
+              conteudo: (u) => (
+                <>
+                  {/* O seletor não tem rótulo visível — a coluna já diz o que
+                      é —, mas precisa de nome acessível próprio: numa tela com
+                      vinte usuários, um leitor de tela anunciaria vinte
+                      "caixas de seleção" idênticas. */}
+                  <label className="sr-only" htmlFor={`perfil-${u.id}`}>
+                    Perfil de {u.nome}
+                  </label>
+                  <select
+                    id={`perfil-${u.id}`}
+                    value={u.perfil}
+                    disabled={u.id === usuario.id}
+                    onChange={(e) => alterar(u.id, { perfil: e.target.value })}
+                    className={`rounded px-2 py-1 text-xs ${PERFIL_COR[u.perfil]} disabled:cursor-not-allowed`}
+                    title={u.id === usuario.id ? 'Não é possível alterar o próprio perfil.' : undefined}
+                  >
+                    {PERFIS.map((p) => (
+                      <option key={p.valor} value={p.valor}>
+                        {p.rotulo}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ),
+            },
+            {
+              chave: 'ativo',
+              rotulo: 'Situação',
+              conteudo: (u) =>
+                u.ativo ? (
+                  <span className="text-sucesso">Ativo</span>
+                ) : (
+                  <span className="text-tinta-2">Desligado</span>
+                ),
+            },
+            {
+              chave: 'acoes',
+              rotulo: 'Ações',
+              conteudo: (u) => (
+                <Botao
+                  variante="discreta"
+                  tamanho="sm"
+                  disabled={u.id === usuario.id}
+                  onClick={() => alterar(u.id, { ativo: !u.ativo })}
+                  title={u.id === usuario.id ? 'Não é possível desativar a própria conta.' : undefined}
+                >
+                  {u.ativo ? 'Desligar' : 'Reativar'}
+                </Botao>
+              ),
+            },
+          ]}
+        />
         )}
+        </Regiao>
       </div>
     </div>
   );
