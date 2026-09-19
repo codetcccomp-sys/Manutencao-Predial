@@ -74,6 +74,12 @@ aviso mede o processo errado.
    execução automática e confira o `200` **dela** no histórico — é o que prova
    que o que está gravado funciona.
 
+   E, depois de corrigir qualquer coisa aqui, confira se o agendamento ainda
+   está de pé: o agendador desativa o job sozinho após falhas seguidas. Um
+   histórico que para de registrar — sem sequer uma linha de erro — é isso, e
+   parece saúde: ninguém reclama porque ninguém está chamando. Corrigir o
+   backend não reativa o job; ele precisa ser religado.
+
    Um `503` com `CRON_SEM_SEGREDO` significa que o processo não enxerga a
    variável, e isso tem três causas, em ordem de frequência: o nome está
    diferente de `CRON_SECRET` (um caractere basta), o deploy que atende o
@@ -219,11 +225,13 @@ Uma rotina semanal curta, sempre no mesmo dia:
 
 1. Abrir o resumo e olhar **por local**: onde há demanda parada é onde o
    problema está, não onde há mais chamados.
-2. Conferir que o agendador de atraso rodou (o painel do serviço mostra o
-   histórico de chamadas; erros seguidos significam que ninguém está sendo
-   avisado). Com a notificação de falha ligada, isso vira conferência de
-   rotina em vez de vigilância — mas ela avisa sobre chamada que falha, não
-   sobre chamada que deixou de acontecer, então a olhada continua valendo.
+2. Conferir que o agendador de atraso rodou. No histórico do serviço, olhe a
+   **última linha**, não a cor delas: erros seguidos significam que ninguém
+   está sendo avisado, e um histórico que simplesmente parou significa a mesma
+   coisa, de forma mais discreta. Com a notificação de falha ligada, isso vira
+   conferência de rotina em vez de vigilância — mas ela avisa sobre chamada
+   que falha, não sobre chamada que deixou de acontecer, então a olhada
+   continua valendo.
 3. Exportar a planilha do período e guardar. É o dado bruto do piloto; se algo
    for reconfigurado no meio do caminho, a série exportada preserva o que
    havia.
