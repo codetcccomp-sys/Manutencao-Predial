@@ -50,7 +50,10 @@ aviso mede o processo errado.
    `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 2. Cadastre-o como `CRON_SECRET` nas variáveis de ambiente do projeto
    `manutencao-predial-backend` na Vercel e **redeploy** — variável nova só
-   vale a partir do próximo deploy.
+   vale a partir do próximo deploy. Confira o nome caractere a caractere: a
+   Vercel aceita qualquer nome sem reclamar, e uma variável marcada como
+   *Sensitive* depois **não pode ser renomeada** — corrigir exige apagar e
+   recriar, porque o valor não é mais legível nem para quem o cadastrou.
 3. Aponte um agendador externo (cron-job.org, EasyCron, o que preferir) para:
    ```
    POST https://manutencao-predial-backend-delta.vercel.app/tarefas/notificar-atrasos
@@ -58,8 +61,14 @@ aviso mede o processo errado.
    a cada 15 minutos
    ```
 4. Confira: a primeira chamada deve devolver `200` com um resumo. Sem o
-   cabeçalho, deve devolver `401`; se devolver `503` com `CRON_SEM_SEGREDO`, a
-   variável não chegou ao deploy.
+   cabeçalho, deve devolver `401`.
+
+   Um `503` com `CRON_SEM_SEGREDO` significa que o processo não enxerga a
+   variável, e isso tem três causas, em ordem de frequência: o nome está
+   diferente de `CRON_SECRET` (um caractere basta), o deploy que atende o
+   domínio é anterior ao cadastro, ou ela foi cadastrada em Preview em vez de
+   Production. Nenhuma delas se distingue da outra pelo código — confira o
+   nome primeiro, que é o mais fácil de errar e o mais difícil de ver.
 
 > O segredo é seu e não deve passar por conversa, log ou commit. A rota é
 > fail-closed: sem `CRON_SECRET` configurado ela recusa (503) em vez de ficar
