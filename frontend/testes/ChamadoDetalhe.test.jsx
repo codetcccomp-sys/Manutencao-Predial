@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -19,6 +19,7 @@ vi.mock('../src/context/AuthContext', () => ({
 
 import api from '../src/api/client';
 import ChamadoDetalhe from '../src/pages/ChamadoDetalhe';
+import { conferirCabecalhos } from './apoio/cabecalhos';
 
 const SOLICITANTE = { id: 10, nome: 'Maria', perfil: 'solicitante' };
 const TECNICO = { id: 20, nome: 'João', perfil: 'tecnico' };
@@ -311,5 +312,157 @@ describe('Onde é o problema', () => {
 
     await screen.findByRole('heading', { name: 'Infiltração no auditório' });
     expect(screen.queryByText(/^Local:/)).toBeNull();
+  });
+});
+
+describe('Histórico', () => {
+  const COM_HISTORICO = [
+    { id: 1, estado_novo: 'em_triagem', data: '2026-01-02T10:00:00Z', observacao: null },
+    {
+      id: 2,
+      estado_novo: 'aguardando_material',
+      data: '2026-01-03T10:00:00Z',
+      observacao: 'Chamado editado: titulo',
+    },
+  ];
+
+  it('escreve os estados por extenso, como o resto do sistema', async () => {
+    const { container } = montar({ como: GESTOR, dados: chamado({ historico: COM_HISTORICO }) });
+
+    // Escopado ao painel: a tela tem botões de mudança de estado com os mesmos
+    // nomes, e uma busca solta acharia os dois.
+    await screen.findByText(/2 registros/);
+    const painel = within(container.querySelector('details'));
+
+    // O histórico mostrava a chave crua do banco — "em_triagem",
+    // "aguardando_material" — enquanto todo o resto da tela já escrevia por
+    // extenso. Mesmo dado, duas grafias, na mesma página.
+    expect(painel.getByText('Em triagem')).toBeInTheDocument();
+    expect(painel.getByText('Aguardando material')).toBeInTheDocument();
+    expect(painel.queryByText('em_triagem')).toBeNull();
+  });
+
+  it('vem recolhido, dizendo quantos registros guarda', async () => {
+    montar({ como: GESTOR, dados: chamado({ historico: COM_HISTORICO }) });
+
+    // Recolhido, mas anunciando o tamanho: "Histórico" sozinho não diz se vale
+    // o clique. E é registro de auditoria — fica à mão, não no caminho.
+    const detalhes = await screen.findByText(/2 registros/);
+    expect(detalhes.closest('details')).not.toHaveAttribute('open');
+  });
+
+  it('a contagem concorda em singular', async () => {
+    montar({ como: GESTOR, dados: chamado({ historico: [COM_HISTORICO[0]] }) });
+    expect(await screen.findByText(/1 registro\b/)).toBeInTheDocument();
+  });
+});
+
+describe('Hierarquia de cabeçalhos', () => {
+  it('o título do chamado é o h1 e os painéis ficam um nível abaixo', async () => {
+    // Como gestor e com o chamado em andamento: é o recorte em que mais
+    // painéis aparecem de uma vez, e portanto o que mais tem a errar.
+    const { container } = montar({
+      como: GESTOR,
+      dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }),
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    const niveis = conferirCabecalhos(container);
+
+    // A regra de "não pular nível" sozinha não prende o painel: descer de h2
+    // para h3 é um passo legal, e um painel afundado um nível vira subdivisão
+    // do painel anterior para quem navega por cabeçalhos. Nesta tela não há
+    // subdivisão nenhuma — todo painel é irmão dos outros.
+    expect(
+      niveis.filter((h) => h.nivel > 2),
+      'nenhum painel do chamado é subdivisão de outro: todos ficam em h2'
+    ).toEqual([]);
+  });
+});
+
+describe('Confirmação antes do que não tem volta', () => {
+  it('cancelar o chamado pergunta antes, e o botão sozinho não cancela nada', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: GESTOR, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    await usuario.click(screen.getByRole('button', { name: 'Cancelado' }));
+
+    // §2.4: cancelado não tem estado seguinte. O clique abre a pergunta; quem
+    // muda o chamado é a resposta.
+    expect(api.patch).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Cancelar este chamado?');
+
+    await usuario.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(api.patch).not.toHaveBeenCalled();
+
+    await usuario.click(screen.getByRole('button', { name: 'Cancelado' }));
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar o chamado' }));
+
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith('/chamados/7/estado', { estado: 'cancelado' })
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('os outros estados seguem num clique só', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: GESTOR, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    // Perguntar em tudo treina a pessoa a responder "sim" sem ler — e aí a
+    // pergunta que importa também passa batida. "Aguardando material" se
+    // desfaz voltando para "em andamento".
+    await usuario.click(screen.getByRole('button', { name: 'Aguardando material' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith('/chamados/7/estado', {
+        estado: 'aguardando_material',
+      })
+    );
+  });
+
+  it('remover um anexo pergunta antes, e diz qual arquivo some', async () => {
+    const usuario = userEvent.setup();
+    api.get.mockImplementation(async (caminho) => {
+      if (caminho === '/chamados/7') return { data: { chamado: chamado() } };
+      if (caminho === '/chamados/7/anexos')
+        return {
+          data: {
+            anexos: [
+              {
+                id: 3,
+                nome_arquivo: 'foto-da-infiltracao.jpg',
+                tamanho_bytes: 2048,
+                usuario_id: GESTOR.id,
+                usuario_nome: 'Gestor',
+                data_upload: '2025-01-01T12:00:00Z',
+              },
+            ],
+          },
+        };
+      if (caminho === '/chamados/7/comentarios') return { data: { comentarios: [] } };
+      return { data: { usuarios: [], categorias: [], locais: [] } };
+    });
+
+    render(
+      <MemoryRouter>
+        <ChamadoDetalhe />
+      </MemoryRouter>
+    );
+    await screen.findByText('foto-da-infiltracao.jpg');
+
+    await usuario.click(screen.getByRole('button', { name: 'Remover' }));
+
+    // O nome do arquivo na pergunta é o que evita apagar o anexo errado numa
+    // lista de vários.
+    expect(api.delete).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveAccessibleDescription(
+      /"foto-da-infiltracao\.jpg" será apagado/
+    );
+
+    await usuario.click(screen.getAllByRole('button', { name: 'Remover' })[1]);
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/chamados/7/anexos/3'));
   });
 });

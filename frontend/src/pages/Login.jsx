@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Campo } from '../components/ui/Campo';
+import Botao from '../components/ui/Botao';
+import Aviso from '../components/ui/Aviso';
+import Marca from '../components/ui/Marca';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -25,69 +29,62 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#EEF1F5] flex items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-navy mb-1">Sistema de Manutenção Predial</h1>
-        <p className="text-sm text-gray-500 mb-6">Entre com sua conta</p>
+    <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4"
+      >
+        <div>
+          {/* A marca é o <h1> da tela, não um enfeite acima dele: esta página
+              não tem outro título, e um h1 escondido atrás de uma logomarca
+              seria um título duplicado para quem navega por cabeçalhos. */}
+          <h1>
+            <Marca tamanho="destaque" comDescritor />
+          </h1>
+          <p className="text-sm text-tinta-2 mt-3">Entre com sua conta</p>
+        </div>
 
         {/* Quem caiu aqui por token vencido merece saber o motivo, em vez de
             simplesmente reencontrar a tela de login sem explicação. */}
         {sessaoExpirada && !erro && (
-          <div className="bg-amber/10 text-amber text-sm rounded p-2 mb-4">
-            Sua sessão expirou. Entre novamente para continuar.
-          </div>
+          <Aviso tipo="atencao">Sua sessão expirou. Entre novamente para continuar.</Aviso>
         )}
 
-        {erro && (
-          <div className="bg-red-50 text-red-700 text-sm rounded p-2 mb-4">{erro}</div>
-        )}
+        {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-        {/* htmlFor/id: sem o par, o rótulo fica só desenhado ao lado — quem
-            usa leitor de tela ouve "caixa de edição" sem saber do quê. */}
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          E-mail
-        </label>
-        <input
-          id="email"
+        <Campo
+          rotulo="E-mail"
           type="email"
-          required
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-navy"
         />
 
-        <label htmlFor="senha" className="block text-sm font-medium text-gray-700 mb-1">
-          Senha
-        </label>
-        <input
-          id="senha"
+        <Campo
+          rotulo="Senha"
           type="password"
-          required
+          autoComplete="current-password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          className="w-full border rounded px-3 py-2 mb-6 focus:outline-none focus:ring-2 focus:ring-navy"
         />
 
-        <button
-          type="submit"
-          disabled={carregando}
-          className="w-full bg-navy text-white rounded py-2 font-medium hover:bg-navy-2 disabled:opacity-60"
-        >
+        <Botao type="submit" variante="primaria" carregando={carregando} larguraTotal>
           {carregando ? 'Entrando...' : 'Entrar'}
-        </button>
+        </Botao>
 
-        <p className="text-sm text-gray-500 mt-4 text-center">
-          <Link to="/recuperar-senha" className="text-amber font-medium">
-            Esqueci minha senha
-          </Link>
-        </p>
-
-        <p className="text-sm text-gray-500 mt-2 text-center">
-          Não tem conta?{' '}
-          <Link to="/cadastro" className="text-amber font-medium">
-            Cadastre-se
-          </Link>
-        </p>
+        <div className="grid gap-1 text-center text-sm text-tinta-2">
+          <p>
+            <Link to="/recuperar-senha" className="font-medium text-navy hover:underline">
+              Esqueci minha senha
+            </Link>
+          </p>
+          <p>
+            Não tem conta?{' '}
+            <Link to="/cadastro" className="font-medium text-navy hover:underline">
+              Cadastre-se
+            </Link>
+          </p>
+        </div>
       </form>
     </div>
   );

@@ -1,26 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
-
-const ESTADO_LABEL = {
-  aberto: 'Aberto',
-  em_triagem: 'Em triagem',
-  atribuido: 'Atribuído',
-  em_andamento: 'Em andamento',
-  aguardando_material: 'Aguardando material',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-};
-
-const ESTADO_COR = {
-  aberto: 'bg-gray-200 text-gray-800',
-  em_triagem: 'bg-amber/20 text-amber',
-  atribuido: 'bg-blue-100 text-blue-700',
-  em_andamento: 'bg-blue-100 text-blue-700',
-  aguardando_material: 'bg-yellow-100 text-yellow-700',
-  concluido: 'bg-green-100 text-green-700',
-  cancelado: 'bg-red-100 text-red-700',
-};
+import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../components/ui/Badge';
+import { ESTADOS, ORDEM_ESTADOS } from '../dominio/rotulos';
+import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
+import Aviso from '../components/ui/Aviso';
+import Botao from '../components/ui/Botao';
+import { EstadoVazio, Esqueleto, Regiao } from '../components/ui/Estados';
+import Icone from '../components/ui/Icone';
 
 function Dashboard() {
   const [chamados, setChamados] = useState([]);
@@ -79,131 +66,190 @@ function Dashboard() {
     setPagina(1);
   }
 
+  function limparFiltros() {
+    setBusca('');
+    setEstado('');
+    setSomenteAtrasados(false);
+    setPagina(1);
+  }
+
+  const temFiltro = Boolean(buscaAplicada || estado || somenteAtrasados);
   const primeiro = paginacao.total === 0 ? 0 : (paginacao.pagina - 1) * paginacao.limite + 1;
   const ultimo = Math.min(paginacao.pagina * paginacao.limite, paginacao.total);
 
   return (
     <div>
-      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-bold text-navy">Chamados</h2>
-        <Link
-          to="/chamados/novo"
-          className="bg-amber text-white text-sm font-medium rounded px-4 py-2 hover:opacity-90 text-center"
-        >
-          + Novo chamado
-        </Link>
-      </div>
+      <CabecalhoDePagina
+        titulo="Chamados"
+        acao={
+          <Link
+            to="/chamados/novo"
+            className="alvo-toque inline-flex items-center justify-center gap-2 rounded bg-navy px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2"
+          >
+            + Novo chamado
+          </Link>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-4 mb-4">
-        <div className="flex-1 min-w-[16rem]">
+      {/* Os filtros numa faixa própria, separados da lista por borda em vez de
+          cartão: são controles, não conteúdo, e um cartão a mais só somaria
+          moldura ao redor de três campos. */}
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-borda bg-superficie p-3">
+        <div className="min-w-[14rem] flex-1">
           <label className="sr-only" htmlFor="busca">
             Buscar
           </label>
-          <input
-            id="busca"
-            type="search"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por protocolo ou título"
-            className="border rounded px-3 py-2 text-sm bg-white w-full"
-          />
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-tinta-2">
+              <Icone nome="busca" />
+            </span>
+            <input
+              id="busca"
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por protocolo ou título"
+              className="w-full min-w-0 rounded border border-borda-forte bg-superficie py-2 pl-9 pr-3 text-sm placeholder:text-tinta-2"
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="text-sm text-gray-600 mr-2" htmlFor="filtro-estado">
+        <div className="min-w-0">
+          <label className="mr-2 text-sm text-tinta-2" htmlFor="filtro-estado">
             Estado
           </label>
           <select
             id="filtro-estado"
             value={estado}
             onChange={(e) => trocarEstado(e.target.value)}
-            className="border rounded px-3 py-2 text-sm bg-white"
+            className="min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
           >
             <option value="">Todos</option>
-            {Object.entries(ESTADO_LABEL).map(([valor, rotulo]) => (
+            {ORDEM_ESTADOS.map((valor) => (
               <option key={valor} value={valor}>
-                {rotulo}
+                {ESTADOS[valor].rotulo}
               </option>
             ))}
           </select>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-600">
+        <label className="flex items-center gap-2 py-2 text-sm text-tinta-2">
           <input
             type="checkbox"
             checked={somenteAtrasados}
             onChange={(e) => alternarAtrasados(e.target.checked)}
-            className="rounded"
+            className="h-4 w-4 rounded border-borda-forte"
           />
           Somente atrasados
         </label>
+
+        {temFiltro && (
+          <Botao variante="discreta" tamanho="sm" onClick={limparFiltros}>
+            Limpar filtros
+          </Botao>
+        )}
       </div>
 
-      {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-3 mb-4">{erro}</div>}
-      {carregando && <p className="text-gray-500 text-sm">Carregando...</p>}
-
-      {!carregando && chamados.length === 0 && (
-        <p className="text-gray-500 text-sm">
-          {buscaAplicada
-            ? `Nenhum chamado encontrado para "${buscaAplicada}".`
-            : 'Nenhum chamado encontrado.'}
-        </p>
+      {erro && (
+        <Aviso tipo="erro" className="mb-4">
+          {erro}
+        </Aviso>
       )}
 
-      {/* min-w-0 no cartão: item de grid não encolhe abaixo do próprio
-          conteúdo por padrão, então um título longo — que o truncate deveria
-          cortar — esticava a página inteira e dava rolagem horizontal no
-          celular. */}
-      <div className="grid gap-3">
-        {chamados.map((c) => (
-          <Link
-            key={c.id}
-            to={`/chamados/${c.id}`}
-            className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between gap-3 min-w-0 hover:shadow-md transition"
-          >
-            <div className="min-w-0">
-              <p className="font-medium text-navy truncate">{c.titulo}</p>
-              <p className="text-xs text-gray-500">{c.protocolo}</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {c.em_atraso && (
-                <span className="text-xs font-medium px-2 py-1 rounded bg-red-100 text-red-700">
-                  Em atraso
-                </span>
-              )}
-              <span className={`text-xs font-medium px-2 py-1 rounded ${ESTADO_COR[c.estado]}`}>
-                {ESTADO_LABEL[c.estado]}
-              </span>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <Regiao carregando={carregando}>
+        {/* O esqueleto tem a forma dos cartões que vão chegar: "Carregando..."
+            não dizia se vinha uma linha ou vinte, e a tela saltava quando o
+            conteúdo entrava. */}
+        {carregando && <Esqueleto linhas={4} altura="h-[4.5rem]" />}
+
+        {!carregando && chamados.length === 0 && (
+          <EstadoVazio
+            titulo={
+              buscaAplicada
+                ? `Nenhum chamado encontrado para "${buscaAplicada}".`
+                : 'Nenhum chamado encontrado.'
+            }
+            descricao={
+              temFiltro
+                ? 'Os filtros ativos podem estar estreitando demais o resultado.'
+                : 'Quando alguém abrir um chamado, ele aparece aqui.'
+            }
+            acao={
+              temFiltro ? (
+                <Botao variante="secundaria" tamanho="sm" onClick={limparFiltros}>
+                  Limpar filtros
+                </Botao>
+              ) : null
+            }
+          />
+        )}
+
+        {/* min-w-0 no cartão: item de grid não encolhe abaixo do próprio
+            conteúdo por padrão, então um título longo — que o truncate deveria
+            cortar — esticava a página inteira e dava rolagem horizontal no
+            celular. */}
+        {!carregando && chamados.length > 0 && (
+          <ul className="grid gap-3">
+            {chamados.map((c) => (
+              <li key={c.id} className="min-w-0">
+                <Link
+                  to={`/chamados/${c.id}`}
+                  className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-borda bg-superficie p-4 shadow-sm transition hover:border-borda-forte"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-navy">{c.titulo}</p>
+                    {/* A prioridade não aparecia na lista: quem varre o painel
+                        procurando o que atacar primeiro não tinha como saber
+                        sem abrir chamado por chamado — justamente o dado que a
+                        priorização do §2.5 existe para produzir. Fica à
+                        esquerda, com o protocolo, para não disputar largura
+                        com estado e atraso no celular. */}
+                    <div className="mt-1 flex min-w-0 items-center gap-2">
+                      <span className="truncate text-xs text-tinta-2">{c.protocolo}</span>
+                      <BadgePrioridade prioridade={c.prioridade} />
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {c.em_atraso && <BadgeAtraso />}
+                    <BadgeEstado estado={c.estado} />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Regiao>
 
       {paginacao.total > 0 && (
-        <div className="flex items-center justify-between gap-3 mt-6 text-sm">
-          <span className="text-gray-600">
+        <nav
+          aria-label="Paginação dos chamados"
+          className="mt-6 flex items-center justify-between gap-3 text-sm"
+        >
+          <span className="text-tinta-2">
             {primeiro}–{ultimo} de {paginacao.total}
           </span>
           <div className="flex items-center gap-2">
-            <button
+            <Botao
+              variante="secundaria"
+              tamanho="sm"
               onClick={() => setPagina((p) => p - 1)}
               disabled={paginacao.pagina <= 1 || carregando}
-              className="border rounded px-3 py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Anterior
-            </button>
-            <span className="text-gray-600">
+            </Botao>
+            <span className="text-tinta-2">
               {paginacao.pagina} / {paginacao.paginas}
             </span>
-            <button
+            <Botao
+              variante="secundaria"
+              tamanho="sm"
               onClick={() => setPagina((p) => p + 1)}
               disabled={paginacao.pagina >= paginacao.paginas || carregando}
-              className="border rounded px-3 py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Próxima
-            </button>
+            </Botao>
           </div>
-        </div>
+        </nav>
       )}
     </div>
   );

@@ -14,6 +14,7 @@ vi.mock('../src/context/AuthContext', () => ({
 
 import api from '../src/api/client';
 import Cadastros from '../src/pages/Cadastros';
+import { conferirCabecalhos } from './apoio/cabecalhos';
 
 const LOCAIS = [
   { id: 1, unidade: 'Bloco A', bloco: null, pavimento: null, setor: null, ambiente: 'Sala 101', ativo: true },
@@ -200,7 +201,14 @@ describe('Importação de planilha de locais', () => {
     expect(screen.getByText('Linha 7: repete a linha 4.')).toBeInTheDocument();
     // A frase importa tanto quanto a lista: sem ela, quem importou não sabe se
     // as linhas boas entraram.
-    expect(screen.getByText(/Nada foi importado/)).toBeInTheDocument();
+    const resumo = screen.getByText(/Nada foi importado/);
+    expect(resumo).toBeInTheDocument();
+
+    // E precisa ser anunciada na hora: quem usa leitor de tela mandou o
+    // arquivo e não tem como ver que a tela mudou. `role="status"` esperaria a
+    // leitura em curso terminar — aqui a pessoa já está indo corrigir o
+    // arquivo errado.
+    expect(resumo.closest('[role]')).toHaveAttribute('role', 'alert');
   });
 
   it('avisa quais locais do arquivo estão desativados', async () => {
@@ -243,5 +251,19 @@ describe('Importação de planilha de locais', () => {
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith('/locais/importar', { csv: 'unidade\nTérreo' })
     );
+  });
+});
+
+describe('Hierarquia de cabeçalhos', () => {
+  it('a tela tem um h1 e os painéis ficam um nível abaixo', async () => {
+    const { container } = preparar();
+    await screen.findByRole('heading', { level: 1, name: 'Cadastros' });
+
+    const niveis = conferirCabecalhos(container);
+
+    expect(
+      niveis.filter((h) => h.nivel > 2),
+      'nenhum painel de cadastro é subdivisão de outro: todos ficam em h2'
+    ).toEqual([]);
   });
 });

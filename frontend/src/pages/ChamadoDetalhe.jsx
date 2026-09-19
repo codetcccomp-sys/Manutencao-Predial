@@ -2,6 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../components/ui/Badge';
+import Aviso from '../components/ui/Aviso';
+import Confirmacao from '../components/ui/Confirmacao';
+import {
+  ORDEM_PRIORIDADES,
+  rotuloEstado,
+  rotuloPrioridade,
+} from '../dominio/rotulos';
 
 // Escalas e perguntas orientadoras conforme o §2.5 do Termo de Abertura. As
 // perguntas ficam visíveis de propósito: são elas que tornam a nota menos
@@ -27,24 +35,9 @@ const FATORES = [
   },
 ];
 
-const PRIORIDADE_LABEL = {
-  baixa: 'Baixa',
-  media: 'Média',
-  alta: 'Alta',
-  critica: 'Crítica',
-};
-
-const PRIORIDADES = Object.keys(PRIORIDADE_LABEL);
-
-const ESTADO_LABEL = {
-  aberto: 'Aberto',
-  em_triagem: 'Em triagem',
-  atribuido: 'Atribuído',
-  em_andamento: 'Em andamento',
-  aguardando_material: 'Aguardando material',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-};
+// Os rótulos vinham repetidos aqui, no painel e no relatório — três cópias,
+// com ordens diferentes. Agora saem de dominio/rotulos.js.
+const PRIORIDADES = ORDEM_PRIORIDADES;
 
 const PROXIMOS_ESTADOS = {
   aberto: ['em_triagem', 'cancelado'],
@@ -83,6 +76,8 @@ function ChamadoDetalhe() {
   const [edicao, setEdicao] = useState(null);
   const [categorias, setCategorias] = useState([]);
   const [locais, setLocais] = useState([]);
+  const [confirmacao, setConfirmacao] = useState(null);
+  const [confirmando, setConfirmando] = useState(false);
 
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
@@ -231,7 +226,31 @@ function ChamadoDetalhe() {
       setConcluindo(true);
       return;
     }
+    // §2.4: "cancelado" não tem estado seguinte. Diferente de "concluído", que
+    // aceita reabertura em 48h (RN09), cancelar encerra o chamado para sempre
+    // — e o botão fica encostado nos outros, numa tela de celular.
+    if (estado === 'cancelado') {
+      setConfirmacao({
+        titulo: 'Cancelar este chamado?',
+        descricao:
+          'O chamado sai do fluxo e não pode ser reaberto. Se o serviço ainda for necessário, será preciso abrir um chamado novo.',
+        rotulo: 'Cancelar o chamado',
+        executar: () => mudarEstado('cancelado'),
+      });
+      return;
+    }
     mudarEstado(estado);
+  }
+
+  // A ação destrutiva pendente de confirmação. `null` quando não há diálogo.
+  async function confirmar() {
+    setConfirmando(true);
+    try {
+      await confirmacao.executar();
+      setConfirmacao(null);
+    } finally {
+      setConfirmando(false);
+    }
   }
 
   async function salvarExecucao(e) {
@@ -393,9 +412,9 @@ function ChamadoDetalhe() {
 
   if (!chamado) {
     return erro ? (
-      <div className="bg-red-50 text-red-700 text-sm rounded p-3">{erro}</div>
+      <Aviso tipo="erro">{erro}</Aviso>
     ) : (
-      <p className="text-gray-500 text-sm">Carregando...</p>
+      <p className="text-tinta-2 text-sm">Carregando...</p>
     );
   }
 
@@ -436,45 +455,45 @@ function ChamadoDetalhe() {
 
   return (
     <div className="grid gap-6">
-      {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-3">{erro}</div>}
+      {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <p className="text-xs text-gray-500">{chamado.protocolo}</p>
+      <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6">
+        <p className="text-xs text-tinta-2">{chamado.protocolo}</p>
 
         {editando && edicao ? (
           <form onSubmit={salvarEdicao} className="grid gap-3 mt-2 mb-4">
             <label className="grid gap-1 text-sm">
-              <span className="text-gray-600">Título</span>
+              <span className="text-tinta-2">Título</span>
               <input
                 type="text"
                 required
                 minLength={5}
                 value={edicao.titulo}
                 onChange={(e) => setEdicao({ ...edicao, titulo: e.target.value })}
-                className="border rounded px-3 py-2"
+                className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
               />
             </label>
 
             <label className="grid gap-1 text-sm">
-              <span className="text-gray-600">Descrição</span>
+              <span className="text-tinta-2">Descrição</span>
               <textarea
                 required
                 minLength={10}
                 rows={4}
                 value={edicao.descricao}
                 onChange={(e) => setEdicao({ ...edicao, descricao: e.target.value })}
-                className="border rounded px-3 py-2"
+                className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
               />
             </label>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1 text-sm">
-                <span className="text-gray-600">Categoria</span>
+                <span className="text-tinta-2">Categoria</span>
                 <select
                   required
                   value={edicao.categoria_id}
                   onChange={(e) => setEdicao({ ...edicao, categoria_id: e.target.value })}
-                  className="border rounded px-3 py-2"
+                  className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
                 >
                   {categorias.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -485,12 +504,12 @@ function ChamadoDetalhe() {
               </label>
 
               <label className="grid gap-1 text-sm">
-                <span className="text-gray-600">Local</span>
+                <span className="text-tinta-2">Local</span>
                 <select
                   required
                   value={edicao.local_id}
                   onChange={(e) => setEdicao({ ...edicao, local_id: e.target.value })}
-                  className="border rounded px-3 py-2"
+                  className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
                 >
                   {locais.map((l) => (
                     <option key={l.id} value={l.id}>
@@ -504,13 +523,13 @@ function ChamadoDetalhe() {
             </div>
 
             <div className="flex gap-3 items-center">
-              <button className="bg-navy text-white rounded px-6 py-2 text-sm font-medium hover:bg-navy-2">
+              <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
                 Salvar correção
               </button>
               <button
                 type="button"
                 onClick={() => setEditando(false)}
-                className="text-sm text-gray-600 hover:underline"
+                className="text-sm text-tinta-2 hover:underline"
               >
                 Cancelar
               </button>
@@ -519,7 +538,7 @@ function ChamadoDetalhe() {
         ) : (
           <>
             <div className="flex items-start justify-between gap-3 mb-2">
-              <h2 className="text-lg font-bold text-navy">{chamado.titulo}</h2>
+              <h1 className="text-lg font-bold text-navy">{chamado.titulo}</h1>
               {podeEditar && (
                 <button
                   onClick={abrirEdicao}
@@ -529,17 +548,21 @@ function ChamadoDetalhe() {
                 </button>
               )}
             </div>
-            <p className="text-sm text-gray-700 mb-4 whitespace-pre-line">{chamado.descricao}</p>
+            <p className="text-sm text-tinta mb-4 whitespace-pre-line">{chamado.descricao}</p>
           </>
         )}
 
-        <div className="text-sm grid grid-cols-2 gap-2 text-gray-600">
-          <span>
-            Estado: <strong>{ESTADO_LABEL[chamado.estado] ?? chamado.estado}</strong>
-          </span>
-          <span>
-            Prioridade: <strong>{PRIORIDADE_LABEL[chamado.prioridade] ?? chamado.prioridade}</strong>
-          </span>
+        {/* Estado, prioridade e atraso eram texto em negrito aqui e badge no
+            painel: o mesmo campo, dois desenhos, conforme a tela. Agora saem
+            dos mesmos componentes — e a prioridade, que era invisível como
+            informação, ganha a mesma leitura rápida do estado. */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <BadgeEstado estado={chamado.estado} />
+          <BadgePrioridade prioridade={chamado.prioridade} />
+          {chamado.em_atraso && <BadgeAtraso />}
+        </div>
+
+        <div className="text-sm grid grid-cols-2 gap-2 text-tinta-2">
           {/* Onde e de que tipo: é a primeira coisa que o técnico designado
               precisa saber, e era o que faltava — o local só aparecia no
               relatório e na planilha, não na tela por onde se trabalha. */}
@@ -554,7 +577,7 @@ function ChamadoDetalhe() {
             </span>
           )}
           {chamado.total_reaberturas > 0 && (
-            <span className="col-span-2 text-red-700">
+            <span className="col-span-2 text-erro">
               Reaberto {chamado.total_reaberturas}{' '}
               {chamado.total_reaberturas === 1 ? 'vez' : 'vezes'} — está no ciclo{' '}
               {chamado.total_reaberturas + 1} de atendimento.
@@ -563,14 +586,11 @@ function ChamadoDetalhe() {
           {chamado.prazo_estimado && (
             <span className="col-span-2">
               Prazo:{' '}
-              <strong className={chamado.em_atraso ? 'text-red-700' : ''}>
+              {/* O badge de atraso já está no topo; aqui basta a data marcada,
+                  senão a mesma informação aparece duas vezes na mesma tela. */}
+              <strong className={chamado.em_atraso ? 'text-erro' : ''}>
                 {new Date(chamado.prazo_estimado).toLocaleString('pt-BR')}
               </strong>
-              {chamado.em_atraso && (
-                <span className="ml-2 text-xs font-medium px-2 py-1 rounded bg-red-100 text-red-700">
-                  Em atraso
-                </span>
-              )}
             </span>
           )}
         </div>
@@ -579,22 +599,22 @@ function ChamadoDetalhe() {
       {/* Chamado encerrado vira registro: o que foi apurado e feito precisa
           continuar visível para quem consultar o histórico depois. */}
       {(chamado.diagnostico || chamado.servico_realizado) && (
-        <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3 text-sm">
-          <h3 className="font-medium text-navy">Registro do atendimento</h3>
+        <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3 text-sm">
+          <h2 className="font-medium text-navy">Registro do atendimento</h2>
           {chamado.diagnostico && (
             <div>
-              <p className="text-gray-600 text-xs uppercase tracking-wide">Diagnóstico</p>
+              <p className="text-tinta-2 text-xs uppercase tracking-wide">Diagnóstico</p>
               <p className="text-gray-800 whitespace-pre-line">{chamado.diagnostico}</p>
             </div>
           )}
           {chamado.servico_realizado && (
             <div>
-              <p className="text-gray-600 text-xs uppercase tracking-wide">Serviço executado</p>
+              <p className="text-tinta-2 text-xs uppercase tracking-wide">Serviço executado</p>
               <p className="text-gray-800 whitespace-pre-line">{chamado.servico_realizado}</p>
             </div>
           )}
           {chamado.tempo_empregado_minutos && (
-            <p className="text-gray-600">
+            <p className="text-tinta-2">
               Tempo empregado: <strong>{chamado.tempo_empregado_minutos} min</strong>
             </p>
           )}
@@ -602,10 +622,10 @@ function ChamadoDetalhe() {
       )}
 
       {podeGerenciar && !['concluido', 'cancelado'].includes(chamado.estado) && (
-        <form onSubmit={priorizar} className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+        <form onSubmit={priorizar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4">
           <div>
-            <h3 className="font-medium text-navy">Priorização</h3>
-            <p className="text-xs text-gray-500">
+            <h2 className="font-medium text-navy">Priorização</h2>
+            <p className="text-xs text-tinta-2">
               Registre os três fatores; o sistema sugere a prioridade pela regra vigente. Você pode
               decidir diferente, mas aí a exceção precisa ser justificada.
             </p>
@@ -614,13 +634,13 @@ function ChamadoDetalhe() {
           <div className="grid gap-3 sm:grid-cols-3">
             {FATORES.map((f) => (
               <label key={f.campo} className="grid gap-1 text-sm">
-                <span className="text-gray-700 font-medium">{f.rotulo}</span>
-                <span className="text-xs text-gray-500 min-h-[2.5rem]">{f.pergunta}</span>
+                <span className="text-tinta font-medium">{f.rotulo}</span>
+                <span className="text-xs text-tinta-2 min-h-[2.5rem]">{f.pergunta}</span>
                 <select
                   required
                   value={fatores[f.campo]}
                   onChange={(e) => setFatores({ ...fatores, [f.campo]: e.target.value })}
-                  className="border rounded px-3 py-2"
+                  className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
                 >
                   <option value="">Selecione</option>
                   {f.escala.map((rotulo, i) => (
@@ -634,28 +654,28 @@ function ChamadoDetalhe() {
           </div>
 
           {sugestao && (
-            <div className="bg-[#EEF1F5] rounded p-3 text-sm grid gap-1">
+            <div className="bg-fundo rounded p-3 text-sm grid gap-1">
               <span>
                 Sugestão:{' '}
-                <strong>{PRIORIDADE_LABEL[sugestao.prioridade] ?? sugestao.prioridade}</strong>{' '}
-                <span className="text-gray-500">(pontuação {sugestao.pontuacao})</span>
+                <strong>{rotuloPrioridade(sugestao.prioridade)}</strong>{' '}
+                <span className="text-tinta-2">(pontuação {sugestao.pontuacao})</span>
               </span>
-              <span className="text-xs text-gray-600">{sugestao.motivo}</span>
+              <span className="text-xs text-tinta-2">{sugestao.motivo}</span>
             </div>
           )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              <span className="text-gray-700 font-medium">Prioridade registrada</span>
+              <span className="text-tinta font-medium">Prioridade registrada</span>
               <select
                 value={prioridadeEscolhida}
                 onChange={(e) => setPrioridadeEscolhida(e.target.value)}
                 disabled={!sugestao}
-                className="border rounded px-3 py-2 disabled:opacity-50"
+                className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm disabled:bg-fundo"
               >
                 {PRIORIDADES.map((p) => (
                   <option key={p} value={p}>
-                    {PRIORIDADE_LABEL[p]}
+                    {rotuloPrioridade(p)}
                   </option>
                 ))}
               </select>
@@ -663,7 +683,7 @@ function ChamadoDetalhe() {
 
             {sugestao && prioridadeEscolhida !== sugestao.prioridade && (
               <label className="grid gap-1 text-sm">
-                <span className="text-gray-700 font-medium">Justificativa da exceção</span>
+                <span className="text-tinta font-medium">Justificativa da exceção</span>
                 <textarea
                   required
                   minLength={10}
@@ -671,7 +691,7 @@ function ChamadoDetalhe() {
                   value={justificativa}
                   onChange={(e) => setJustificativa(e.target.value)}
                   placeholder="Por que a prioridade difere da sugerida?"
-                  className="border rounded px-3 py-2"
+                  className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
                 />
               </label>
             )}
@@ -685,11 +705,11 @@ function ChamadoDetalhe() {
           </button>
 
           {chamado.priorizado_em && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-tinta-2">
               Última priorização em {new Date(chamado.priorizado_em).toLocaleString('pt-BR')}
               {chamado.prioridade_sugerida &&
                 chamado.prioridade !== chamado.prioridade_sugerida &&
-                ` — sugerida "${PRIORIDADE_LABEL[chamado.prioridade_sugerida]}", registrada "${PRIORIDADE_LABEL[chamado.prioridade]}"`}
+                ` — sugerida "${rotuloPrioridade(chamado.prioridade_sugerida)}", registrada "${rotuloPrioridade(chamado.prioridade)}"`}
               .
             </p>
           )}
@@ -697,10 +717,10 @@ function ChamadoDetalhe() {
       )}
 
       {podeReabrir && (
-        <form onSubmit={reabrir} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
+        <form onSubmit={reabrir} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
           <div>
-            <h3 className="font-medium text-navy">Reabrir chamado</h3>
-            <p className="text-xs text-gray-500">
+            <h2 className="font-medium text-navy">Reabrir chamado</h2>
+            <p className="text-xs text-tinta-2">
               Disponível por 48 horas após a conclusão (RN09). A reabertura preserva todo o
               histórico e inicia um novo ciclo de atendimento, com prazo próprio.
             </p>
@@ -712,27 +732,27 @@ function ChamadoDetalhe() {
             value={justificativaReabertura}
             onChange={(e) => setJustificativaReabertura(e.target.value)}
             placeholder="Por que o atendimento não resolveu?"
-            className="border rounded px-3 py-2"
+            className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
           />
-          <button className="bg-amber text-white rounded py-2 font-medium hover:opacity-90 justify-self-start px-6">
+          <button className="alvo-toque inline-flex items-center justify-center justify-self-start rounded bg-amber px-6 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90">
             Reabrir
           </button>
         </form>
       )}
 
       {podeDistribuir && (
-        <form onSubmit={atribuir} className="bg-white rounded-lg shadow-sm p-6 grid gap-3 min-w-0">
-          <h3 className="font-medium text-navy">
+        <form onSubmit={atribuir} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3 min-w-0">
+          <h2 className="font-medium text-navy">
             {ehReatribuicao ? 'Reatribuir técnico' : 'Atribuir técnico'}
-          </h3>
+          </h2>
           {ehReatribuicao && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-tinta-2">
               O chamado já tem responsável. Trocar exige justificativa, e o estado do atendimento é
               preservado.
             </p>
           )}
           {tecnicosDisponiveis.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-tinta-2">
               {tecnicos.length === 0
                 ? 'Nenhum técnico cadastrado. Cadastre um usuário com perfil técnico para poder atribuir.'
                 : 'Não há outro técnico ativo para assumir este chamado. Cadastre ou reative um técnico antes de reatribuir.'}
@@ -747,7 +767,7 @@ function ChamadoDetalhe() {
                    opção mais larga, e as opções trazem nome e e-mail. Como
                    item de grid ele não encolhia abaixo disso, e um e-mail
                    comprido esticava a página inteira no celular. */
-                className="border rounded px-3 py-2 w-full min-w-0"
+                className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
               >
                 <option value="">Selecione o técnico</option>
                 {tecnicosDisponiveis.map((t) => (
@@ -765,11 +785,11 @@ function ChamadoDetalhe() {
                   value={justificativaAtribuicao}
                   onChange={(e) => setJustificativaAtribuicao(e.target.value)}
                   placeholder="Por que o responsável está mudando?"
-                  className="border rounded px-3 py-2"
+                  className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
                 />
               )}
 
-              <button className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2">
+              <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
                 {ehReatribuicao ? 'Reatribuir' : 'Atribuir'}
               </button>
             </>
@@ -778,48 +798,48 @@ function ChamadoDetalhe() {
       )}
 
       {podeMudarEstado && !['concluido', 'cancelado'].includes(chamado.estado) && (
-        <form onSubmit={salvarExecucao} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-          <h3 className="font-medium text-navy">Execução</h3>
+        <form onSubmit={salvarExecucao} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
+          <h2 className="font-medium text-navy">Execução</h2>
 
           <label className="grid gap-1 text-sm">
-            <span className="text-gray-600">Diagnóstico</span>
+            <span className="text-tinta-2">Diagnóstico</span>
             <textarea
               rows={3}
               value={diagnostico}
               onChange={(e) => setDiagnostico(e.target.value)}
               placeholder="O que foi constatado no local"
-              className="border rounded px-3 py-2"
+              className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
             />
           </label>
 
           <label className="grid gap-1 text-sm max-w-xs">
-            <span className="text-gray-600">Tempo empregado (minutos)</span>
+            <span className="text-tinta-2">Tempo empregado (minutos)</span>
             <input
               type="number"
               min={1}
               value={tempoEmpregado}
               onChange={(e) => setTempoEmpregado(e.target.value)}
-              className="border rounded px-3 py-2"
+              className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
             />
           </label>
 
-          <button className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2 justify-self-start px-6">
+          <button className="alvo-toque inline-flex items-center justify-center justify-self-start rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
             Salvar execução
           </button>
         </form>
       )}
 
       {podeMudarEstado && PROXIMOS_ESTADOS[chamado.estado]?.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-          <h3 className="font-medium text-navy">Mudar estado</h3>
+        <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
+          <h2 className="font-medium text-navy">Mudar estado</h2>
           <div className="flex flex-wrap gap-2">
             {PROXIMOS_ESTADOS[chamado.estado].map((estado) => (
               <button
                 key={estado}
                 onClick={() => acionarEstado(estado)}
-                className="bg-amber text-white text-sm rounded px-3 py-2 hover:opacity-90"
+                className="alvo-toque inline-flex items-center justify-center rounded bg-amber px-3 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
               >
-                {ESTADO_LABEL[estado] ?? estado}
+                {rotuloEstado(estado)}
               </button>
             ))}
           </div>
@@ -833,8 +853,8 @@ function ChamadoDetalhe() {
               className="grid gap-2 border-t pt-3"
             >
               <label className="grid gap-1 text-sm">
-                <span className="text-gray-700 font-medium">Descrição do serviço executado</span>
-                <span className="text-xs text-gray-500">
+                <span className="text-tinta font-medium">Descrição do serviço executado</span>
+                <span className="text-xs text-tinta-2">
                   Obrigatória para concluir (RN07). Registre o que foi feito, não apenas que foi
                   resolvido.
                 </span>
@@ -845,17 +865,17 @@ function ChamadoDetalhe() {
                   autoFocus
                   value={servicoRealizado}
                   onChange={(e) => setServicoRealizado(e.target.value)}
-                  className="border rounded px-3 py-2"
+                  className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
                 />
               </label>
               <div className="flex gap-2">
-                <button className="bg-navy text-white rounded px-4 py-2 text-sm font-medium hover:bg-navy-2">
+                <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
                   Concluir chamado
                 </button>
                 <button
                   type="button"
                   onClick={() => setConcluindo(false)}
-                  className="text-sm text-gray-600 hover:underline"
+                  className="text-sm text-tinta-2 hover:underline"
                 >
                   Cancelar
                 </button>
@@ -866,24 +886,24 @@ function ChamadoDetalhe() {
       )}
 
       {podeAvaliar && (
-        <form onSubmit={avaliar} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-          <h3 className="font-medium text-navy">Avaliar atendimento</h3>
-          <select value={nota} onChange={(e) => setNota(e.target.value)} className="border rounded px-3 py-2">
+        <form onSubmit={avaliar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
+          <h2 className="font-medium text-navy">Avaliar atendimento</h2>
+          <select value={nota} onChange={(e) => setNota(e.target.value)} className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm">
             {[5, 4, 3, 2, 1].map((n) => (
               <option key={n} value={n}>{n} estrela(s)</option>
             ))}
           </select>
-          <button className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2">
+          <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
             Enviar avaliação
           </button>
         </form>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-        <h3 className="font-medium text-navy">Anexos</h3>
+      <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
+        <h2 className="font-medium text-navy">Anexos</h2>
 
         {anexos.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum anexo neste chamado.</p>
+          <p className="text-sm text-tinta-2">Nenhum anexo neste chamado.</p>
         ) : (
           <ul className="grid gap-2">
             {anexos.map((a) => (
@@ -898,15 +918,25 @@ function ChamadoDetalhe() {
                   >
                     {a.nome_arquivo}
                   </button>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-tinta-2">
                     {formatarTamanho(a.tamanho_bytes)} · {a.usuario_nome} ·{' '}
                     {new Date(a.data_upload).toLocaleString('pt-BR')}
                   </span>
                 </div>
                 {(podeGerenciar || a.usuario_id === usuario.id) && (
                   <button
-                    onClick={() => removerAnexo(a.id)}
-                    className="text-xs text-red-600 hover:underline shrink-0"
+                    // O arquivo é apagado, não desativado: não há de onde
+                    // trazer de volta uma foto do problema que já foi
+                    // resolvido.
+                    onClick={() =>
+                      setConfirmacao({
+                        titulo: 'Remover este anexo?',
+                        descricao: `"${a.nome_arquivo}" será apagado do chamado. Não há como recuperá-lo depois.`,
+                        rotulo: 'Remover',
+                        executar: () => removerAnexo(a.id),
+                      })
+                    }
+                    className="text-xs text-erro hover:underline shrink-0"
                   >
                     Remover
                   </button>
@@ -917,7 +947,7 @@ function ChamadoDetalhe() {
         )}
 
         <label className="text-sm">
-          <span className="text-gray-600">
+          <span className="text-tinta-2">
             {enviandoAnexo ? 'Enviando...' : 'Adicionar anexo (JPEG, PNG, WebP ou PDF, até 4 MB)'}
           </span>
           <input
@@ -930,10 +960,10 @@ function ChamadoDetalhe() {
         </label>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+      <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4">
         <div>
-          <h3 className="font-medium text-navy">Comentários</h3>
-          <p className="text-xs text-gray-500">
+          <h2 className="font-medium text-navy">Comentários</h2>
+          <p className="text-xs text-tinta-2">
             {encerrado
               ? 'O chamado está encerrado: a conversa fica registrada, mas não recebe novos comentários.'
               : 'É por aqui que se acrescenta informação sem mexer no que já orientou a triagem. Quem participa do chamado é avisado.'}
@@ -941,22 +971,22 @@ function ChamadoDetalhe() {
         </div>
 
         {comentarios.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum comentário ainda.</p>
+          <p className="text-sm text-tinta-2">Nenhum comentário ainda.</p>
         ) : (
           <ul className="grid gap-3">
             {comentarios.map((c) => (
               <li
                 key={c.id}
                 className={`border rounded px-3 py-2 ${
-                  c.usuario_id === usuario.id ? 'bg-[#EEF1F5]' : ''
+                  c.usuario_id === usuario.id ? 'bg-fundo' : ''
                 }`}
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs mb-1">
                   <span className="font-medium text-navy">
                     {c.usuario_nome}
-                    <span className="text-gray-500 font-normal"> ({c.usuario_perfil})</span>
+                    <span className="text-tinta-2 font-normal"> ({c.usuario_perfil})</span>
                   </span>
-                  <span className="text-gray-500">{new Date(c.data).toLocaleString('pt-BR')}</span>
+                  <span className="text-tinta-2">{new Date(c.data).toLocaleString('pt-BR')}</span>
                 </div>
                 <p className="text-sm text-gray-800 whitespace-pre-line">{c.texto}</p>
               </li>
@@ -976,7 +1006,7 @@ function ChamadoDetalhe() {
                 value={novoComentario}
                 onChange={(e) => setNovoComentario(e.target.value)}
                 placeholder="Escreva um comentário"
-                className="border rounded px-3 py-2"
+                className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
               />
             </label>
             <button
@@ -989,17 +1019,55 @@ function ChamadoDetalhe() {
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="font-medium text-navy mb-3">Histórico</h3>
-        <ul className="grid gap-2 text-sm text-gray-600">
+      {/*
+        O histórico é o painel mais longo da tela e o menos consultado: é
+        registro de auditoria, não ferramenta de trabalho. Aberto sempre, ele
+        empurrava comentários e anexos — que são de uso diário — para longe do
+        alcance, e num celular isso vira muita rolagem.
+
+        <details> nativo em vez de estado em React: o navegador já sabe abrir,
+        fechar, receber foco e anunciar "recolhido/expandido" ao leitor de
+        tela. Reimplementar isso com um botão e um booleano seria trocar
+        comportamento pronto e correto por código para manter.
+      */}
+      <details className="group bg-superficie rounded-lg border border-borda shadow-sm">
+        <summary className="alvo-toque flex cursor-pointer items-center justify-between gap-2 rounded-lg p-6 font-medium text-navy">
+          <span>
+            Histórico{' '}
+            <span className="font-normal text-tinta-2">
+              ({chamado.historico?.length ?? 0}{' '}
+              {chamado.historico?.length === 1 ? 'registro' : 'registros'})
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-tinta-2 group-open:hidden">
+            mostrar
+          </span>
+          <span aria-hidden="true" className="hidden text-tinta-2 group-open:inline">
+            ocultar
+          </span>
+        </summary>
+
+        <ul className="grid gap-2 px-6 pb-6 text-sm text-tinta-2">
           {chamado.historico?.map((h) => (
-            <li key={h.id} className="border-l-2 border-amber pl-3">
-              <strong>{h.estado_novo}</strong> — {new Date(h.data).toLocaleString('pt-BR')}
-              {h.observacao && <p className="text-gray-500">{h.observacao}</p>}
+            <li key={h.id} className="border-l-2 border-amber-claro pl-3">
+              <strong>{rotuloEstado(h.estado_novo)}</strong> —{' '}
+              {new Date(h.data).toLocaleString('pt-BR')}
+              {h.observacao && <p className="text-tinta-2">{h.observacao}</p>}
             </li>
           ))}
         </ul>
-      </div>
+      </details>
+
+      <Confirmacao
+        aberto={confirmacao !== null}
+        titulo={confirmacao?.titulo}
+        rotuloConfirmar={confirmacao?.rotulo}
+        carregando={confirmando}
+        onConfirmar={confirmar}
+        onCancelar={() => setConfirmacao(null)}
+      >
+        {confirmacao?.descricao}
+      </Confirmacao>
     </div>
   );
 }

@@ -1,11 +1,31 @@
 const express = require('express');
 const cors = require('cors');
-const { errorHandler } = require('./middlewares/errorHandler');
+const { errorHandler, AppError } = require('./middlewares/errorHandler');
+const { NOME_SISTEMA } = require('./config/marca');
 
 const app = express();
 
-const ORIGENS_PERMITIDAS = [
-  /^https:\/\/manutencao-predial-frontend(-[a-z0-9]+)?(-git-[a-z0-9-]+)?-tec-code\.vercel\.app$/,
+/**
+ * De onde o navegador pode chamar esta API.
+ *
+ * A regra anterior era um regex só, exigindo o sufixo `-tec-code` — o nome que
+ * a Vercel dá aos deploys da equipe. Isso deixava de fora, sem ninguém notar,
+ * o endereço mais curto que a própria Vercel também atribui ao projeto:
+ * `manutencao-predial-frontend.vercel.app` batia na API e era recusado. Abrir
+ * o sistema por ele dava tela de login que não loga.
+ *
+ * Agora são duas coisas separadas, e é essa separação que evita a repetição:
+ *
+ * - `DOMINIOS_FIXOS`: os endereços estáveis. Endereço novo entra AQUI, numa
+ *   linha, e é o que faltou quando `conserva-predial.vercel.app` foi
+ *   acrescentado ao projeto.
+ * - `PREVIEW_VERCEL`: os deploys de branch, cujo nome é gerado e não dá para
+ *   listar um a um.
+ */
+const DOMINIOS_FIXOS = [
+  'https://conserva-predial.vercel.app',
+  'https://manutencao-predial-frontend.vercel.app',
+  'https://manutencao-predial-frontend-tec-code.vercel.app',
   'http://localhost:5173',
   // O `vite preview`, que serve a build. É por ele que os testes de ponta a
   // ponta rodam: testar o servidor de desenvolvimento deixaria de fora tudo
@@ -13,13 +33,35 @@ const ORIGENS_PERMITIDAS = [
   'http://localhost:4173',
 ];
 
+// Deploy de branch e de commit: `...-frontend-<hash>-tec-code.vercel.app` e
+// `...-frontend-git-<branch>-tec-code.vercel.app`.
+const PREVIEW_VERCEL =
+  /^https:\/\/manutencao-predial-frontend-[a-z0-9-]+-tec-code\.vercel\.app$/;
+
+function origemPermitida(origin) {
+  // Sem `Origin` é chamada que não veio de navegador — o agendador do RF08,
+  // um curl, um teste. O CORS não é o controle de acesso dessas: quem manda
+  // nelas é o token, e é assim que o cron funciona.
+  if (!origin) return true;
+  return DOMINIOS_FIXOS.includes(origin) || PREVIEW_VERCEL.test(origin);
+}
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || ORIGENS_PERMITIDAS.some((o) => (o instanceof RegExp ? o.test(origin) : o === origin))) {
-        return callback(null, true);
-      }
-      callback(new Error('Origem não permitida pelo CORS.'));
+      if (origemPermitida(origin)) return callback(null, true);
+
+      // Um `new Error` cru aqui vira 500 com "Erro interno no servidor." — a
+      // resposta mentia sobre o que tinha acontecido. Quem via a tela ia
+      // procurar banco caído e servidor quebrado, enquanto a API estava
+      // perfeitamente de pé e apenas recusando a origem. Agora diz o que é.
+      callback(
+        new AppError(
+          `Origem não permitida: ${origin}. Cadastre-a em DOMINIOS_FIXOS, em backend/src/app.js.`,
+          403,
+          'ORIGEM_NAO_PERMITIDA'
+        )
+      );
     },
   })
 );
@@ -27,7 +69,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', servico: 'Sistema de Manutenção Predial API' });
+  res.json({ status: 'ok', servico: `${NOME_SISTEMA} — API` });
 });
 
 // Checagem que realmente exercita o banco: /health sozinho responde "ok" mesmo

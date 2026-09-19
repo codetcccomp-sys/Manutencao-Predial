@@ -145,6 +145,208 @@ const MUTACOES = [
     para: '      setRelatorio(data.relatorio);',
     spec: 'testes/Cadastros.test.jsx',
   },
+  {
+    // O defeito que existia de verdade: os dois estados tinham o mesmo par de
+    // cor e ficavam indistinguíveis na tela.
+    descricao: 'atribuído e em andamento voltam a ser idênticos',
+    arquivo: 'src/dominio/rotulos.js',
+    de: `    icone: 'chave',
+    cor: 'bg-andamento-tenue text-andamento',`,
+    para: `    icone: 'pessoa',
+    cor: 'bg-info-tenue text-info',`,
+    spec: 'testes/Badge.test.jsx',
+  },
+  {
+    descricao: 'badge de estado perde o ícone e volta a depender de cor e texto',
+    arquivo: 'src/components/ui/Badge.jsx',
+    de: '      <Icone nome={definicao.icone} classe="h-3.5 w-3.5" />\n',
+    para: '',
+    spec: 'testes/Badge.test.jsx',
+  },
+  {
+    descricao: 'escada de prioridade acende todas as barras',
+    arquivo: 'src/components/ui/Icone.jsx',
+    de: 'opacity={i < nivel ? 1 : 0.25}',
+    para: 'opacity={1}',
+    spec: 'testes/Badge.test.jsx',
+  },
+  {
+    // Renomearia o campo: "Bloco" viraria "Bloco (opcional)" para leitor de
+    // tela e para qualquer busca por rótulo.
+    descricao: 'marca de opcional entra no nome acessível do campo',
+    arquivo: 'src/components/ui/Campo.jsx',
+    de: `        <label htmlFor={id} className="text-sm font-medium text-tinta">
+          {rotulo}
+        </label>
+        {opcional && <span className="text-xs text-tinta-2">(opcional)</span>}`,
+    para: `        <label htmlFor={id} className="text-sm font-medium text-tinta">
+          {rotulo}
+          {opcional && <span className="text-xs text-tinta-2"> (opcional)</span>}
+        </label>`,
+    spec: 'testes/Campo.test.jsx',
+  },
+  {
+    descricao: 'erro do campo deixa de ser lido junto dele',
+    arquivo: 'src/components/ui/Campo.jsx',
+    de: '  const partes = [ajuda && `${id}-ajuda`, erro && `${id}-erro`].filter(Boolean);',
+    para: '  const partes = [ajuda && `${id}-ajuda`].filter(Boolean);',
+    spec: 'testes/Campo.test.jsx',
+  },
+  {
+    descricao: 'botão volta a enviar o formulário sem pedirem',
+    arquivo: 'src/components/ui/Botao.jsx',
+    de: '      type="button"',
+    para: '      type={resto.type}',
+    spec: 'testes/Campo.test.jsx',
+  },
+  {
+    // O estado original do sistema: dezessete faixas de erro, nenhuma
+    // anunciada por leitor de tela.
+    descricao: 'faixa de erro perde o papel e deixa de ser anunciada',
+    arquivo: 'src/components/ui/Aviso.jsx',
+    de: "  erro: { cor: 'bg-erro-tenue text-erro', icone: 'alerta', papel: 'alert' },",
+    para: "  erro: { cor: 'bg-erro-tenue text-erro', icone: 'alerta', papel: undefined },",
+    spec: 'testes/Campo.test.jsx',
+  },
+  {
+    descricao: 'estado vazio deixa de distinguir filtro de lista vazia',
+    arquivo: 'src/pages/Dashboard.jsx',
+    de: `              temFiltro
+                ? 'Os filtros ativos podem estar estreitando demais o resultado.'
+                : 'Quando alguém abrir um chamado, ele aparece aqui.'`,
+    para: `              'Quando alguém abrir um chamado, ele aparece aqui.'`,
+    spec: 'testes/Dashboard.test.jsx',
+  },
+  {
+    // Esta passou batido na primeira tentativa: o teste limpava um filtro só.
+    descricao: 'limpar filtros esquece o estado selecionado',
+    arquivo: 'src/pages/Dashboard.jsx',
+    de: `    setBusca('');
+    setEstado('');
+    setSomenteAtrasados(false);`,
+    para: `    setBusca('');
+    setSomenteAtrasados(false);`,
+    spec: 'testes/Dashboard.test.jsx',
+  },
+  {
+    descricao: 'esqueleto deixa de ser escondido do leitor de tela',
+    arquivo: 'src/components/ui/Estados.jsx',
+    de: '      aria-hidden="true"',
+    para: '      aria-hidden={undefined}',
+    spec: 'testes/Dashboard.test.jsx',
+  },
+  {
+    descricao: 'título da página volta a ser h2, sem h1 na árvore',
+    arquivo: 'src/components/ui/CabecalhoDePagina.jsx',
+    de: '        <h1 className="text-lg font-bold text-navy">{titulo}</h1>',
+    para: '        <h2 className="text-lg font-bold text-navy">{titulo}</h2>',
+    spec: 'testes/Dashboard.test.jsx',
+  },
+  {
+    descricao: 'histórico volta a mostrar a chave crua do banco',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '<strong>{rotuloEstado(h.estado_novo)}</strong>',
+    para: '<strong>{h.estado_novo}</strong>',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'histórico volta a nascer aberto, empurrando o uso diário',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '<details className="group bg-superficie',
+    para: '<details open className="group bg-superficie',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'painel do chamado volta a h3, pulando o nível 2 da árvore',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '<h2 className="font-medium text-navy">Comentários</h2>',
+    para: '<h3 className="font-medium text-navy">Comentários</h3>',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'título do chamado deixa de ser o h1 da tela',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '<h1 className="text-lg font-bold text-navy">{chamado.titulo}</h1>',
+    para: '<h2 className="text-lg font-bold text-navy">{chamado.titulo}</h2>',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'painel de cadastro volta a h3, pulando o nível 2 da árvore',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: '<h2 className="font-medium text-navy">Cadastrar local</h2>',
+    para: '<h3 className="font-medium text-navy">Cadastrar local</h3>',
+    spec: 'testes/Cadastros.test.jsx',
+  },
+  {
+    descricao: 'cancelar o chamado volta a ser um clique só, sem perguntar',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: "    if (estado === 'cancelado') {",
+    para: '    if (false) {',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'remover anexo deixa de dizer qual arquivo some',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'descricao: `"${a.nome_arquivo}" será apagado do chamado. Não há como recuperá-lo depois.`,',
+    para: "descricao: 'O anexo será apagado do chamado.',",
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'o foco do diálogo começa no botão que executa',
+    arquivo: 'src/components/ui/Confirmacao.jsx',
+    de: "    caixa.current?.querySelector('[data-recusa]')?.focus();",
+    para: "    [...caixa.current.querySelectorAll('button')].at(-1)?.focus();",
+    spec: 'testes/Confirmacao.test.jsx',
+  },
+  {
+    descricao: 'o Tab volta a escapar do diálogo para a página atrás dele',
+    arquivo: 'src/components/ui/Confirmacao.jsx',
+    de: "      if (evento.key !== 'Tab') return;",
+    para: '      return;',
+    spec: 'testes/Confirmacao.test.jsx',
+  },
+  {
+    descricao: 'Esc deixa de fechar o diálogo',
+    arquivo: 'src/components/ui/Confirmacao.jsx',
+    de: "      if (evento.key === 'Escape') {",
+    para: '      if (false) {',
+    spec: 'testes/Confirmacao.test.jsx',
+  },
+  {
+    descricao: 'o foco não volta para o botão que abriu o diálogo',
+    arquivo: 'src/components/ui/Confirmacao.jsx',
+    de: '      if (origemDoFoco.current?.isConnected) origemDoFoco.current.focus();',
+    para: '      /* sem devolver o foco */',
+    spec: 'testes/Confirmacao.test.jsx',
+  },
+  {
+    descricao: 'símbolo da marca ganha alt e faz o nome ser anunciado duas vezes',
+    arquivo: 'src/components/ui/Marca.jsx',
+    de: '        alt=""',
+    para: '        alt="Conserva Predial"',
+    spec: 'testes/Marca.test.jsx',
+  },
+  {
+    descricao: 'nome do sistema volta a ser parte da imagem, sem texto',
+    arquivo: 'src/components/ui/Marca.jsx',
+    de: '          Conserva <span className={invertido ? \'text-amber-claro\' : \'text-amber\'}>Predial</span>',
+    para: '          {null}',
+    spec: 'testes/Marca.test.jsx',
+  },
+  {
+    descricao: 'a barra do navegador desgarra da cor do cabeçalho',
+    arquivo: 'index.html',
+    de: '<meta name="theme-color" content="#1f3864" />',
+    para: '<meta name="theme-color" content="#123456" />',
+    spec: 'testes/contraste.test.js',
+  },
+  {
+    descricao: 'lista de problemas da importação perde o papel de alerta',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: '<Aviso tipo="erro" titulo="Nada foi importado. Corrija e envie o arquivo de novo:">',
+    para: '<Aviso tipo="info" titulo="Nada foi importado. Corrija e envie o arquivo de novo:">',
+    spec: 'testes/Cadastros.test.jsx',
+  },
 ];
 
 /**

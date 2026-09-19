@@ -71,6 +71,15 @@ test('o solicitante corrige o chamado e o histórico registra (RN03)', async ({ 
   await page.getByRole('button', { name: 'Salvar correção' }).click();
 
   await expect(page.getByRole('heading', { name: novoTitulo })).toBeVisible();
+
+  // O histórico é registro de auditoria, não ferramenta de trabalho: fica
+  // recolhido para não empurrar comentários e anexos, que são de uso diário,
+  // para fora do alcance. Está lá quando se precisa dele — que é agora.
+  const historico = page.locator('details', { hasText: 'Histórico' });
+  await expect(page.getByText(/editado/i).first()).toBeHidden();
+
+  await historico.locator('summary').click();
+
   // Sem registro, o técnico leria uma descrição diferente da que motivou a
   // triagem, sem saber que mudou.
   await expect(page.getByText(/editado/i).first()).toBeVisible();
@@ -84,7 +93,7 @@ test('depois de atribuído o solicitante comenta, já que não pode editar (RN03
 
   await entrar(page, cenario.pessoas.solicitante);
   await page.goto(`/chamados/${chamado.id}`);
-  await page.waitForSelector('h3:has-text("Comentários")');
+  await page.waitForSelector('h2:has-text("Comentários")');
 
   await expect(page.getByRole('button', { name: 'Corrigir' })).toHaveCount(0);
 
@@ -126,7 +135,7 @@ test('chamado encerrado guarda a conversa mas não aceita comentário novo', asy
 
   await entrar(page, cenario.pessoas.solicitante);
   await page.goto(`/chamados/${chamado.id}`);
-  await page.waitForSelector('h3:has-text("Comentários")');
+  await page.waitForSelector('h2:has-text("Comentários")');
 
   await expect(page.getByText(`Dito antes de encerrar ${cenario.marca}`)).toBeVisible();
   await expect(page.getByPlaceholder('Escreva um comentário')).toHaveCount(0);

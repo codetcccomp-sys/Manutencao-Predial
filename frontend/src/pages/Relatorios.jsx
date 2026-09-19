@@ -2,23 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import api, { baixarArquivo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-
-const PRIORIDADE_LABEL = {
-  critica: 'Crítica',
-  alta: 'Alta',
-  media: 'Média',
-  baixa: 'Baixa',
-};
-
-const ESTADO_LABEL = {
-  aberto: 'Aberto',
-  em_triagem: 'Em triagem',
-  atribuido: 'Atribuído',
-  em_andamento: 'Em andamento',
-  aguardando_material: 'Aguardando material',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-};
+import { rotuloEstado, rotuloPrioridade } from '../dominio/rotulos';
+import Tabela from '../components/ui/Tabela';
+import Aviso from '../components/ui/Aviso';
+import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 
 // O backend devolve segundos; quem lê o relatório pensa em horas e dias.
 function formatarDuracao(segundos) {
@@ -31,8 +18,8 @@ function formatarDuracao(segundos) {
 
 function Cartao({ rotulo, valor, destaque }) {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{rotulo}</p>
+    <div className="bg-superficie rounded-lg border border-borda shadow-sm p-4">
+      <p className="text-xs uppercase tracking-wide text-tinta-2">{rotulo}</p>
       <p className={`text-2xl font-bold ${destaque || 'text-navy'}`}>{valor}</p>
     </div>
   );
@@ -43,12 +30,12 @@ function Barra({ rotulo, valor, total }) {
   return (
     <div className="grid gap-1">
       <div className="flex justify-between text-sm">
-        <span className="text-gray-700">{rotulo}</span>
-        <span className="text-gray-500">
+        <span className="text-tinta">{rotulo}</span>
+        <span className="text-tinta-2">
           {valor} ({porcento}%)
         </span>
       </div>
-      <div className="h-2 bg-gray-100 rounded overflow-hidden">
+      <div className="h-2 bg-neutro-tenue rounded overflow-hidden">
         <div className="h-full bg-navy rounded" style={{ width: `${porcento}%` }} />
       </div>
     </div>
@@ -129,11 +116,15 @@ function Relatorios() {
 
   return (
     <div className="grid gap-6">
-      <h2 className="text-lg font-bold text-navy">Relatórios</h2>
+      <CabecalhoDePagina
+        titulo="Relatórios"
+        descricao="Os recortes respeitam o período selecionado — inclusive as exportações."
+        className="mb-0"
+      />
 
-      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="bg-superficie rounded-lg border border-borda shadow-sm p-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="grid gap-1">
-          <label className="text-xs text-gray-600" htmlFor="de">
+          <label className="text-xs text-tinta-2" htmlFor="de">
             De
           </label>
           <input
@@ -141,11 +132,11 @@ function Relatorios() {
             type="date"
             value={de}
             onChange={(e) => setDe(e.target.value)}
-            className="border rounded px-3 py-2 text-sm"
+            className="min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
           />
         </div>
         <div className="grid gap-1">
-          <label className="text-xs text-gray-600" htmlFor="ate">
+          <label className="text-xs text-tinta-2" htmlFor="ate">
             Até
           </label>
           <input
@@ -153,7 +144,7 @@ function Relatorios() {
             type="date"
             value={ate}
             onChange={(e) => setAte(e.target.value)}
-            className="border rounded px-3 py-2 text-sm"
+            className="min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
           />
         </div>
         {(de || ate) && (
@@ -172,27 +163,27 @@ function Relatorios() {
           <button
             onClick={() => exportar('pdf', '/relatorios/exportar/resumo.pdf')}
             disabled={Boolean(baixando)}
-            className="bg-navy text-white text-sm rounded px-4 py-2 hover:bg-navy-2 disabled:opacity-50"
+            className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2 disabled:opacity-60"
           >
             {baixando === 'pdf' ? 'Gerando...' : 'Baixar PDF'}
           </button>
           <button
             onClick={() => exportar('csv', '/relatorios/exportar/chamados.csv')}
             disabled={Boolean(baixando)}
-            className="border border-navy text-navy text-sm rounded px-4 py-2 hover:bg-navy hover:text-white disabled:opacity-50"
+            className="alvo-toque inline-flex items-center justify-center rounded border border-borda-forte bg-superficie px-4 py-2.5 text-sm font-medium text-navy transition-colors hover:bg-fundo disabled:opacity-60"
           >
             {baixando === 'csv' ? 'Gerando...' : 'Baixar planilha'}
           </button>
         </div>
       </div>
 
-      <p className="text-xs text-gray-500 -mt-4">
+      <p className="text-xs text-tinta-2 -mt-4">
         O PDF traz este relatório consolidado, pronto para arquivar. A planilha traz uma linha por
         chamado, para cruzamentos que a tela não prevê. Os dois respeitam o período selecionado.
       </p>
 
-      {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-3">{erro}</div>}
-      {carregando && <p className="text-gray-500 text-sm">Carregando...</p>}
+      {erro && <Aviso tipo="erro">{erro}</Aviso>}
+      {carregando && <p className="text-tinta-2 text-sm">Carregando...</p>}
 
       {!carregando && dados && (
         <>
@@ -202,31 +193,31 @@ function Relatorios() {
             <Cartao
               rotulo="Concluídos"
               valor={dados.resumo.totais.concluidos}
-              destaque="text-green-700"
+              destaque="text-sucesso"
             />
             <Cartao rotulo="Cancelados" valor={dados.resumo.totais.cancelados} />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-              <h3 className="font-medium text-navy">Por estado</h3>
+            <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
+              <h2 className="font-medium text-navy">Por estado</h2>
               {dados.resumo.por_estado.length === 0 && (
-                <p className="text-sm text-gray-500">Nenhum chamado no período.</p>
+                <p className="text-sm text-tinta-2">Nenhum chamado no período.</p>
               )}
               {dados.resumo.por_estado.map((l) => (
                 <Barra
                   key={l.estado}
-                  rotulo={ESTADO_LABEL[l.estado] || l.estado}
+                  rotulo={rotuloEstado(l.estado)}
                   valor={l.total}
                   total={dados.resumo.totais.total}
                 />
               ))}
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-              <h3 className="font-medium text-navy">Por categoria</h3>
+            <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
+              <h2 className="font-medium text-navy">Por categoria</h2>
               {dados.resumo.por_categoria.length === 0 && (
-                <p className="text-sm text-gray-500">Nenhum chamado no período.</p>
+                <p className="text-sm text-tinta-2">Nenhum chamado no período.</p>
               )}
               {dados.resumo.por_categoria.map((l) => (
                 <Barra
@@ -239,48 +230,44 @@ function Relatorios() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 min-w-0">
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 min-w-0">
             <div className="mb-3">
-              <h3 className="font-medium text-navy">Por local</h3>
-              <p className="text-xs text-gray-500">
+              <h2 className="font-medium text-navy">Por local</h2>
+              <p className="text-xs text-tinta-2">
                 Os 20 locais com mais chamados no período. O recorte responde onde a demanda se
                 concentra e onde ela está vencendo o prazo.
               </p>
             </div>
-            {dados.resumo.por_local.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhum chamado no período.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-500 border-b">
-                      <th className="py-2 pr-4 font-medium">Local</th>
-                      <th className="py-2 pr-4 font-medium">Total</th>
-                      <th className="py-2 pr-4 font-medium">Em aberto</th>
-                      <th className="py-2 font-medium">Atrasados</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dados.resumo.por_local.map((l) => (
-                      <tr key={l.local} className="border-b last:border-0">
-                        <td className="py-2 pr-4 text-navy">{l.local}</td>
-                        <td className="py-2 pr-4">{l.total}</td>
-                        <td className="py-2 pr-4">{l.em_aberto}</td>
-                        <td className={`py-2 ${l.atrasados > 0 ? 'text-red-700 font-medium' : ''}`}>
-                          {l.atrasados}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <Tabela
+              legenda="Chamados por local no período"
+              ordenavel
+              chaveDaLinha={(l) => l.local}
+              linhas={dados.resumo.por_local}
+              vazio={<p className="text-sm text-tinta-2">Nenhum chamado no período.</p>}
+              colunas={[
+                { chave: 'local', rotulo: 'Local', principal: true },
+                { chave: 'total', rotulo: 'Total', numerica: true },
+                { chave: 'em_aberto', rotulo: 'Em aberto', numerica: true },
+                {
+                  chave: 'atrasados',
+                  rotulo: 'Atrasados',
+                  numerica: true,
+                  // Zero atrasado não precisa gritar; o que precisa saltar é o
+                  // local que está vencendo prazo.
+                  conteudo: (l) => (
+                    <span className={l.atrasados > 0 ? 'font-medium text-erro' : ''}>
+                      {l.atrasados}
+                    </span>
+                  ),
+                },
+              ]}
+            />
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4">
             <div>
-              <h3 className="font-medium text-navy">Tempo de atendimento</h3>
-              <p className="text-xs text-gray-500">
+              <h2 className="font-medium text-navy">Tempo de atendimento</h2>
+              <p className="text-xs text-tinta-2">
                 Descontado o tempo em &ldquo;aguardando material&rdquo;, que é espera por insumo e não
                 trabalho da equipe.
               </p>
@@ -309,10 +296,10 @@ function Relatorios() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4">
             <div>
-              <h3 className="font-medium text-navy">Marcos do atendimento</h3>
-              <p className="text-xs text-gray-500">
+              <h2 className="font-medium text-navy">Marcos do atendimento</h2>
+              <p className="text-xs text-tinta-2">
                 Os três intervalos que o processo distingue, para que &ldquo;tempo de
                 atendimento&rdquo; não signifique coisas diferentes em análises diferentes.
               </p>
@@ -331,17 +318,17 @@ function Relatorios() {
                 valor={formatarDuracao(dados.desempenho.marcos.tempo_execucao_segundos)}
               />
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-tinta-2">
               Abertura → início da triagem · abertura → início efetivo da execução · início efetivo →
               conclusão. Baseados em {dados.desempenho.marcos.chamados_triados} chamados triados e{' '}
               {dados.desempenho.marcos.chamados_iniciados} iniciados no período.
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4">
             <div>
-              <h3 className="font-medium text-navy">Cumprimento de prazo</h3>
-              <p className="text-xs text-gray-500">
+              <h2 className="font-medium text-navy">Cumprimento de prazo</h2>
+              <p className="text-xs text-tinta-2">
                 O prazo é contado a partir da abertura e empurrado pelo tempo em &ldquo;aguardando
                 material&rdquo;, pelo mesmo motivo que o tempo de atendimento o desconta.
               </p>
@@ -358,8 +345,8 @@ function Relatorios() {
                   dados.desempenho.prazo.percentual_no_prazo === null
                     ? undefined
                     : dados.desempenho.prazo.percentual_no_prazo >= 80
-                      ? 'text-green-700'
-                      : 'text-red-700'
+                      ? 'text-sucesso'
+                      : 'text-erro'
                 }
               />
               <Cartao
@@ -370,17 +357,17 @@ function Relatorios() {
               <Cartao
                 rotulo="Atrasados agora"
                 valor={dados.desempenho.prazo.em_aberto_atrasados}
-                destaque={dados.desempenho.prazo.em_aberto_atrasados > 0 ? 'text-red-700' : 'text-green-700'}
+                destaque={dados.desempenho.prazo.em_aberto_atrasados > 0 ? 'text-erro' : 'text-sucesso'}
               />
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-navy mb-2">Prazos por prioridade</h4>
+              <h3 className="text-sm font-medium text-navy mb-2">Prazos por prioridade</h3>
               <div className="flex flex-wrap gap-4">
                 {dados.sla.map((s) => (
                   <label key={s.prioridade} className="text-sm grid gap-1">
-                    <span className="text-gray-600">
-                      {PRIORIDADE_LABEL[s.prioridade] ?? s.prioridade}
+                    <span className="text-tinta-2">
+                      {rotuloPrioridade(s.prioridade)}
                     </span>
                     <span className="flex items-center gap-1">
                       <input
@@ -391,12 +378,12 @@ function Relatorios() {
                         onBlur={(e) => salvarPrazo(s.prioridade, e.target.value, s.prazo_horas)}
                         className="border rounded px-2 py-1 w-24"
                       />
-                      <span className="text-gray-500 text-xs">horas</span>
+                      <span className="text-tinta-2 text-xs">horas</span>
                     </span>
                   </label>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-tinta-2 mt-2">
                 Alterar o prazo vale para chamados abertos daqui em diante; os já existentes mantêm o
                 prazo com que nasceram.
               </p>
@@ -406,36 +393,29 @@ function Relatorios() {
           {/* min-w-0: o cartão é item de grid, e sem isso a tabela larga
               vazava para fora em vez de rolar dentro do overflow-x-auto,
               levando a página inteira junto no celular. */}
-          <div className="bg-white rounded-lg shadow-sm p-6 min-w-0">
-            <h3 className="font-medium text-navy mb-3">Carga por técnico</h3>
-            {dados.tecnicos.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhum chamado atribuído no período.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-500 border-b">
-                      <th className="py-2 pr-4 font-medium">Técnico</th>
-                      <th className="py-2 pr-4 font-medium">Atribuídos</th>
-                      <th className="py-2 pr-4 font-medium">Concluídos</th>
-                      <th className="py-2 pr-4 font-medium">Em aberto</th>
-                      <th className="py-2 font-medium">Tempo médio</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dados.tecnicos.map((t) => (
-                      <tr key={t.tecnico_id} className="border-b last:border-0">
-                        <td className="py-2 pr-4 text-navy">{t.nome}</td>
-                        <td className="py-2 pr-4">{t.atribuidos}</td>
-                        <td className="py-2 pr-4">{t.concluidos}</td>
-                        <td className="py-2 pr-4">{t.em_aberto}</td>
-                        <td className="py-2">{formatarDuracao(t.tempo_medio_segundos)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 min-w-0">
+            <h2 className="font-medium text-navy mb-3">Carga por técnico</h2>
+            <Tabela
+              legenda="Carga de chamados por técnico no período"
+              ordenavel
+              chaveDaLinha={(t) => t.tecnico_id}
+              linhas={dados.tecnicos}
+              vazio={
+                <p className="text-sm text-tinta-2">Nenhum chamado atribuído no período.</p>
+              }
+              colunas={[
+                { chave: 'nome', rotulo: 'Técnico', principal: true },
+                { chave: 'atribuidos', rotulo: 'Atribuídos', numerica: true },
+                { chave: 'concluidos', rotulo: 'Concluídos', numerica: true },
+                { chave: 'em_aberto', rotulo: 'Em aberto', numerica: true },
+                {
+                  chave: 'tempo_medio_segundos',
+                  rotulo: 'Tempo médio',
+                  numerica: true,
+                  conteudo: (t) => formatarDuracao(t.tempo_medio_segundos),
+                },
+              ]}
+            />
           </div>
         </>
       )}

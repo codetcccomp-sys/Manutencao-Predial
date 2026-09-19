@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { Campo } from '../components/ui/Campo';
+import Botao from '../components/ui/Botao';
+import Aviso from '../components/ui/Aviso';
 
 function RecuperarSenha() {
   const [email, setEmail] = useState('');
@@ -23,53 +26,45 @@ function RecuperarSenha() {
   }
 
   return (
-    <div className="min-h-screen bg-[#EEF1F5] flex items-center justify-center px-4">
-      <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-navy mb-1">Recuperar senha</h1>
+    <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
+      <div className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4">
+        <h1 className="text-xl font-bold text-navy">Recuperar senha</h1>
 
         {enviado ? (
           <>
             {/* A mesma mensagem sai exista ou não a conta: dizer "e-mail não
                 cadastrado" transformaria esta tela numa consulta de quem tem
                 conta no sistema. */}
-            <p className="text-sm text-gray-600 my-6">
+            <Aviso tipo="info">
               Se houver uma conta ativa com este e-mail, enviamos um link de redefinição. Ele vale
               por 60 minutos e só pode ser usado uma vez.
-            </p>
-            <Link to="/login" className="text-sm text-amber font-medium">
+            </Aviso>
+            <Link to="/login" className="text-sm font-medium text-navy hover:underline">
               Voltar para o login
             </Link>
           </>
         ) : (
-          <form onSubmit={enviar}>
-            <p className="text-sm text-gray-500 mb-6">
+          <form onSubmit={enviar} className="grid gap-4">
+            <p className="text-sm text-tinta-2">
               Informe seu e-mail e enviaremos um link para definir uma nova senha.
             </p>
 
-            {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-2 mb-4">{erro}</div>}
+            {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
-              E-mail
-            </label>
-            <input
-              id="email"
+            <Campo
+              rotulo="E-mail"
               type="email"
-              required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded px-3 py-2 mb-6 focus:outline-none focus:ring-2 focus:ring-navy"
             />
 
-            <button
-              type="submit"
-              disabled={carregando}
-              className="w-full bg-navy text-white rounded py-2 font-medium hover:bg-navy-2 disabled:opacity-60"
-            >
+            <Botao type="submit" variante="primaria" carregando={carregando} larguraTotal>
               {carregando ? 'Enviando...' : 'Enviar link'}
-            </button>
+            </Botao>
 
-            <p className="text-sm text-gray-500 mt-4 text-center">
-              <Link to="/login" className="text-amber font-medium">
+            <p className="text-sm text-center">
+              <Link to="/login" className="font-medium text-navy hover:underline">
                 Voltar para o login
               </Link>
             </p>
