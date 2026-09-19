@@ -4,6 +4,7 @@ import api from '../api/client';
 import { AreaDeTexto, Campo, Selecao } from '../components/ui/Campo';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
+import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import { ORDEM_PRIORIDADES, PRIORIDADES } from '../dominio/rotulos';
 
 function NovoChamado() {
@@ -52,11 +53,10 @@ function NovoChamado() {
     // olho perder o começo da próxima. Os 32rem continuam valendo mesmo com o
     // invólucro agora em 1280px.
     <div className="max-w-2xl">
-      <h2 className="text-lg font-bold text-navy mb-1">Abrir novo chamado</h2>
-      <p className="text-sm text-tinta-2 mb-6">
-        Todos os campos são obrigatórios. Quanto mais específico o título e o local, mais rápido a
-        triagem encaminha.
-      </p>
+      <CabecalhoDePagina
+        titulo="Abrir novo chamado"
+        descricao="Todos os campos são obrigatórios. Quanto mais específico o título e o local, mais rápido a triagem encaminha."
+      />
 
       <form
         onSubmit={handleSubmit}

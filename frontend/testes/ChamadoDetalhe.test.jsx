@@ -19,6 +19,7 @@ vi.mock('../src/context/AuthContext', () => ({
 
 import api from '../src/api/client';
 import ChamadoDetalhe from '../src/pages/ChamadoDetalhe';
+import { conferirCabecalhos } from './apoio/cabecalhos';
 
 const SOLICITANTE = { id: 10, nome: 'Maria', perfil: 'solicitante' };
 const TECNICO = { id: 20, nome: 'João', perfil: 'tecnico' };
@@ -353,5 +354,28 @@ describe('Histórico', () => {
   it('a contagem concorda em singular', async () => {
     montar({ como: GESTOR, dados: chamado({ historico: [COM_HISTORICO[0]] }) });
     expect(await screen.findByText(/1 registro\b/)).toBeInTheDocument();
+  });
+});
+
+describe('Hierarquia de cabeçalhos', () => {
+  it('o título do chamado é o h1 e os painéis ficam um nível abaixo', async () => {
+    // Como gestor e com o chamado em andamento: é o recorte em que mais
+    // painéis aparecem de uma vez, e portanto o que mais tem a errar.
+    const { container } = montar({
+      como: GESTOR,
+      dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }),
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    const niveis = conferirCabecalhos(container);
+
+    // A regra de "não pular nível" sozinha não prende o painel: descer de h2
+    // para h3 é um passo legal, e um painel afundado um nível vira subdivisão
+    // do painel anterior para quem navega por cabeçalhos. Nesta tela não há
+    // subdivisão nenhuma — todo painel é irmão dos outros.
+    expect(
+      niveis.filter((h) => h.nivel > 2),
+      'nenhum painel do chamado é subdivisão de outro: todos ficam em h2'
+    ).toEqual([]);
   });
 });

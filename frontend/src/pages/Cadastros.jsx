@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Aviso from '../components/ui/Aviso';
+import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 
 const ABAS = [
   { id: 'locais', rotulo: 'Locais' },
@@ -164,16 +166,14 @@ function Cadastros() {
 
   return (
     <div className="grid gap-6">
-      <div>
-        <h2 className="text-lg font-bold text-navy">Cadastros</h2>
-        <p className="text-sm text-gray-500">
-          Nada aqui é apagado: locais e equipes são desativados, e categorias são renomeadas. Os
-          chamados antigos continuam apontando para o registro original.
-        </p>
-      </div>
+      <CabecalhoDePagina
+        titulo="Cadastros"
+        descricao="Nada aqui é apagado: locais e equipes são desativados, e categorias são renomeadas. Os chamados antigos continuam apontando para o registro original."
+        className="mb-0"
+      />
 
-      {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-3">{erro}</div>}
-      {aviso && <div className="bg-green-50 text-green-700 text-sm rounded p-3">{aviso}</div>}
+      {erro && <Aviso tipo="erro">{erro}</Aviso>}
+      {aviso && <Aviso tipo="sucesso">{aviso}</Aviso>}
 
       <div className="flex gap-2 border-b">
         {ABAS.map((a) => (
@@ -181,7 +181,7 @@ function Cadastros() {
             key={a.id}
             onClick={() => setAba(a.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-              aba === a.id ? 'border-navy text-navy' : 'border-transparent text-gray-500'
+              aba === a.id ? 'border-navy text-navy' : 'border-transparent text-tinta-2'
             }`}
           >
             {a.rotulo}
@@ -189,7 +189,7 @@ function Cadastros() {
         ))}
       </div>
 
-      {carregando && <p className="text-gray-500 text-sm">Carregando...</p>}
+      {carregando && <p className="text-tinta-2 text-sm">Carregando...</p>}
 
       {!carregando && aba === 'locais' && (
         <>
@@ -201,13 +201,13 @@ function Cadastros() {
                 setNovoLocal(LOCAL_VAZIO);
               }, 'Local cadastrado.');
             }}
-            className="bg-white rounded-lg shadow-sm p-6 grid gap-3"
+            className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3"
           >
-            <h3 className="font-medium text-navy">Cadastrar local</h3>
+            <h2 className="font-medium text-navy">Cadastrar local</h2>
             <div className="grid gap-3 sm:grid-cols-3">
               {NIVEIS_LOCAL.map((n) => (
                 <label key={n.campo} className="grid gap-1 text-sm">
-                  <span className="text-gray-600">
+                  <span className="text-tinta-2">
                     {n.rotulo}
                     {!n.obrigatorio && <span className="text-gray-400"> (opcional)</span>}
                   </span>
@@ -216,12 +216,12 @@ function Cadastros() {
                     required={n.obrigatorio}
                     value={novoLocal[n.campo]}
                     onChange={(e) => setNovoLocal({ ...novoLocal, [n.campo]: e.target.value })}
-                    className="border rounded px-3 py-2"
+                    className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
                   />
                 </label>
               ))}
             </div>
-            <button className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2 justify-self-start px-6">
+            <button className="alvo-toque inline-flex items-center justify-center justify-self-start rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
               Cadastrar
             </button>
           </form>
@@ -230,9 +230,9 @@ function Cadastros() {
               formulário acima é meia hora de digitação antes de o sistema
               servir para alguma coisa — e é exatamente o que separa uma
               demonstração de um piloto com dados de verdade. */}
-          <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3 min-w-0">
-            <h3 className="font-medium text-navy">Importar planilha</h3>
-            <p className="text-sm text-gray-600">
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3 min-w-0">
+            <h2 className="font-medium text-navy">Importar planilha</h2>
+            <p className="text-sm text-tinta-2">
               Envie um arquivo CSV com as colunas <code>unidade</code>, <code>bloco</code>,{' '}
               <code>pavimento</code>, <code>setor</code> e <code>ambiente</code>. Só{' '}
               <code>unidade</code> é obrigatória. Locais que já existem são reconhecidos e não
@@ -265,10 +265,10 @@ function Cadastros() {
               </button>
             </div>
 
-            {importando && <p className="text-sm text-gray-500">Importando...</p>}
+            {importando && <p className="text-sm text-tinta-2">Importando...</p>}
 
             {relatorio && (
-              <div className="bg-green-50 text-green-800 text-sm rounded p-3 grid gap-1">
+              <div className="bg-sucesso-tenue text-green-800 text-sm rounded p-3 grid gap-1">
                 <p>
                   {relatorio.criados} {relatorio.criados === 1 ? 'local criado' : 'locais criados'}
                   {relatorio.ja_existiam > 0 &&
@@ -296,37 +296,38 @@ function Cadastros() {
             )}
 
             {problemas.length > 0 && (
-              <div className="bg-red-50 text-red-700 text-sm rounded p-3">
-                <p className="mb-1">Nada foi importado. Corrija e envie o arquivo de novo:</p>
-                <ul className="list-disc pl-5 max-h-60 overflow-y-auto">
+              <Aviso tipo="erro" titulo="Nada foi importado. Corrija e envie o arquivo de novo:">
+                {/* A lista rola dentro do aviso: um arquivo com cem linhas
+                    erradas empurraria o formulário para fora da tela. */}
+                <ul className="list-disc pl-5 mt-1 max-h-60 overflow-y-auto">
                   {problemas.map((p) => (
                     <li key={p}>{p}</li>
                   ))}
                 </ul>
-              </div>
+              </Aviso>
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6">
             {/* Uma instituição tem centenas de ambientes. Sem um filtro, achar
                 um local para desativar vira rolagem de página inteira. */}
             <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="font-medium text-navy">Cadastrados</h3>
+              <h2 className="font-medium text-navy">Cadastrados</h2>
               <input
                 type="search"
                 value={filtroLocal}
                 onChange={(e) => setFiltroLocal(e.target.value)}
                 placeholder="Filtrar locais"
-                className="border rounded px-3 py-2 text-sm sm:w-64"
+                className="min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm sm:w-64"
               />
             </div>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-tinta-2 mb-3">
               {locaisFiltrados.length} de {locais.length}{' '}
               {locais.length === 1 ? 'local' : 'locais'}.
             </p>
             <ul className="grid gap-2 text-sm">
               {locaisFiltrados.length === 0 && (
-                <li className="text-gray-500">Nenhum local corresponde ao filtro.</li>
+                <li className="text-tinta-2">Nenhum local corresponde ao filtro.</li>
               )}
               {locaisFiltrados.map((l) => (
                 <li
@@ -337,7 +338,7 @@ function Cadastros() {
                 >
                   <span className="text-navy">{rotuloLocal(l)}</span>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={l.ativo ? 'text-green-700 text-xs' : 'text-gray-500 text-xs'}>
+                    <span className={l.ativo ? 'text-sucesso text-xs' : 'text-tinta-2 text-xs'}>
                       {l.ativo ? 'Ativo' : 'Desativado'}
                     </span>
                     <button
@@ -366,9 +367,9 @@ function Cadastros() {
                 setNovaCategoria('');
               }, 'Categoria cadastrada.');
             }}
-            className="bg-white rounded-lg shadow-sm p-6 grid gap-3"
+            className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3"
           >
-            <h3 className="font-medium text-navy">Cadastrar categoria</h3>
+            <h2 className="font-medium text-navy">Cadastrar categoria</h2>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -376,16 +377,16 @@ function Cadastros() {
                 minLength={3}
                 value={novaCategoria}
                 onChange={(e) => setNovaCategoria(e.target.value)}
-                className="border rounded px-3 py-2 flex-1"
+                className="min-w-0 flex-1 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
               />
-              <button className="bg-navy text-white rounded px-6 font-medium hover:bg-navy-2">
+              <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
                 Cadastrar
               </button>
             </div>
           </form>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="font-medium text-navy mb-3">Cadastradas</h3>
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6">
+            <h2 className="font-medium text-navy mb-3">Cadastradas</h2>
             <ul className="grid gap-2 text-sm">
               {categorias.map((c) => (
                 <li key={c.id} className="flex items-center gap-2 border rounded px-3 py-2">
@@ -398,7 +399,7 @@ function Cadastros() {
                         executar(() => api.patch(`/categorias/${c.id}`, { nome }), 'Categoria renomeada.');
                       }
                     }}
-                    className="border rounded px-2 py-1 flex-1"
+                    className="min-w-0 flex-1 rounded border border-borda-forte bg-superficie px-2 py-1 text-sm"
                   />
                 </li>
               ))}
@@ -417,9 +418,9 @@ function Cadastros() {
                 setNovaEquipe('');
               }, 'Equipe cadastrada.');
             }}
-            className="bg-white rounded-lg shadow-sm p-6 grid gap-3"
+            className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3"
           >
-            <h3 className="font-medium text-navy">Cadastrar equipe</h3>
+            <h2 className="font-medium text-navy">Cadastrar equipe</h2>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -427,16 +428,16 @@ function Cadastros() {
                 minLength={2}
                 value={novaEquipe}
                 onChange={(e) => setNovaEquipe(e.target.value)}
-                className="border rounded px-3 py-2 flex-1"
+                className="min-w-0 flex-1 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
               />
-              <button className="bg-navy text-white rounded px-6 font-medium hover:bg-navy-2">
+              <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
                 Cadastrar
               </button>
             </div>
           </form>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-            <h3 className="font-medium text-navy">Cadastradas</h3>
+          <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
+            <h2 className="font-medium text-navy">Cadastradas</h2>
             <ul className="grid gap-2 text-sm">
               {equipes.map((e) => (
                 <li key={e.id} className={`border rounded px-3 py-2 ${e.ativo ? '' : 'opacity-60'}`}>
@@ -448,7 +449,7 @@ function Cadastros() {
                       {e.nome}
                     </button>
                     <div className="flex items-center gap-3 shrink-0 text-xs">
-                      <span className="text-gray-500">
+                      <span className="text-tinta-2">
                         {e.total_tecnicos} {e.total_tecnicos === 1 ? 'técnico' : 'técnicos'}
                       </span>
                       <button
@@ -465,12 +466,12 @@ function Cadastros() {
                   {equipeAberta?.id === e.id && (
                     <div className="mt-3 border-t pt-3 grid gap-2">
                       {equipeAberta.tecnicos.length === 0 ? (
-                        <p className="text-gray-500 text-xs">Nenhum técnico nesta equipe.</p>
+                        <p className="text-tinta-2 text-xs">Nenhum técnico nesta equipe.</p>
                       ) : (
                         equipeAberta.tecnicos.map((t) => (
                           <div key={t.id} className="flex items-center justify-between gap-2 text-xs">
                             <span>
-                              {t.nome} <span className="text-gray-500">{t.email}</span>
+                              {t.nome} <span className="text-tinta-2">{t.email}</span>
                             </span>
                             <button
                               onClick={() =>

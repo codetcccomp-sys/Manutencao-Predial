@@ -33,9 +33,9 @@ test.afterAll(async () => {
 const TELAS = [
   { rota: '/', espera: 'h1', quem: 'gestor' },
   { rota: '/chamados/novo', espera: 'form', quem: 'solicitante' },
-  { rota: '/relatorios', espera: 'h3:has-text("Por local")', quem: 'gestor' },
-  { rota: '/cadastros', espera: 'h3:has-text("Cadastrar local")', quem: 'gestor' },
-  { rota: '/usuarios', espera: 'h2', quem: 'administrador' },
+  { rota: '/relatorios', espera: 'h2:has-text("Por local")', quem: 'gestor' },
+  { rota: '/cadastros', espera: 'h2:has-text("Cadastrar local")', quem: 'gestor' },
+  { rota: '/usuarios', espera: 'h1', quem: 'administrador' },
 ];
 
 for (const { rota, espera, quem } of TELAS) {
@@ -50,7 +50,7 @@ for (const { rota, espera, quem } of TELAS) {
 test('o detalhe do chamado cabe na tela', async ({ page }) => {
   await entrar(page, cenario.pessoas.gestor);
   await page.goto(`/chamados/${chamado.id}`);
-  await page.waitForSelector('h3:has-text("Comentários")');
+  await page.waitForSelector('h2:has-text("Comentários")');
   await conferirQueCabeNaTela(page, expect);
 });
 
@@ -87,7 +87,7 @@ test('o painel de avisos abre inteiro dentro da tela', async ({ page }) => {
 test('o relatório cabe na tela em qualquer largura', async ({ page }) => {
   await entrar(page, cenario.pessoas.gestor);
   await page.goto('/relatorios');
-  await page.waitForSelector('h3:has-text("Carga por técnico")');
+  await page.waitForSelector('h2:has-text("Carga por técnico")');
 
   await conferirQueCabeNaTela(page, expect);
 });
@@ -158,7 +158,7 @@ test('o conteúdo aproveita a largura do monitor', async ({ page }) => {
 test('o mesmo dado sai como tabela no monitor e como blocos no celular', async ({ page }, info) => {
   await entrar(page, cenario.pessoas.gestor);
   await page.goto('/relatorios');
-  await page.waitForSelector('h3:has-text("Por local")');
+  await page.waitForSelector('h2:has-text("Por local")');
 
   const tabela = page.getByRole('table', { name: 'Chamados por local no período' });
 
@@ -188,7 +188,7 @@ test('ordenar a tabela reordena e anuncia a direção', async ({ page }, info) =
 
   await entrar(page, cenario.pessoas.gestor);
   await page.goto('/relatorios');
-  await page.waitForSelector('h3:has-text("Carga por técnico")');
+  await page.waitForSelector('h2:has-text("Carga por técnico")');
 
   const tabela = page.getByRole('table', { name: 'Carga de chamados por técnico no período' });
   const cabecalho = tabela.locator('th', { hasText: 'Técnico' });

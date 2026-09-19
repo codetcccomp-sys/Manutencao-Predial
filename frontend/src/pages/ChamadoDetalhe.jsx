@@ -511,7 +511,7 @@ function ChamadoDetalhe() {
         ) : (
           <>
             <div className="flex items-start justify-between gap-3 mb-2">
-              <h2 className="text-lg font-bold text-navy">{chamado.titulo}</h2>
+              <h1 className="text-lg font-bold text-navy">{chamado.titulo}</h1>
               {podeEditar && (
                 <button
                   onClick={abrirEdicao}
@@ -573,7 +573,7 @@ function ChamadoDetalhe() {
           continuar visível para quem consultar o histórico depois. */}
       {(chamado.diagnostico || chamado.servico_realizado) && (
         <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3 text-sm">
-          <h3 className="font-medium text-navy">Registro do atendimento</h3>
+          <h2 className="font-medium text-navy">Registro do atendimento</h2>
           {chamado.diagnostico && (
             <div>
               <p className="text-tinta-2 text-xs uppercase tracking-wide">Diagnóstico</p>
@@ -597,7 +597,7 @@ function ChamadoDetalhe() {
       {podeGerenciar && !['concluido', 'cancelado'].includes(chamado.estado) && (
         <form onSubmit={priorizar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4">
           <div>
-            <h3 className="font-medium text-navy">Priorização</h3>
+            <h2 className="font-medium text-navy">Priorização</h2>
             <p className="text-xs text-tinta-2">
               Registre os três fatores; o sistema sugere a prioridade pela regra vigente. Você pode
               decidir diferente, mas aí a exceção precisa ser justificada.
@@ -692,7 +692,7 @@ function ChamadoDetalhe() {
       {podeReabrir && (
         <form onSubmit={reabrir} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
           <div>
-            <h3 className="font-medium text-navy">Reabrir chamado</h3>
+            <h2 className="font-medium text-navy">Reabrir chamado</h2>
             <p className="text-xs text-tinta-2">
               Disponível por 48 horas após a conclusão (RN09). A reabertura preserva todo o
               histórico e inicia um novo ciclo de atendimento, com prazo próprio.
@@ -715,9 +715,9 @@ function ChamadoDetalhe() {
 
       {podeDistribuir && (
         <form onSubmit={atribuir} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3 min-w-0">
-          <h3 className="font-medium text-navy">
+          <h2 className="font-medium text-navy">
             {ehReatribuicao ? 'Reatribuir técnico' : 'Atribuir técnico'}
-          </h3>
+          </h2>
           {ehReatribuicao && (
             <p className="text-xs text-tinta-2">
               O chamado já tem responsável. Trocar exige justificativa, e o estado do atendimento é
@@ -772,7 +772,7 @@ function ChamadoDetalhe() {
 
       {podeMudarEstado && !['concluido', 'cancelado'].includes(chamado.estado) && (
         <form onSubmit={salvarExecucao} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
-          <h3 className="font-medium text-navy">Execução</h3>
+          <h2 className="font-medium text-navy">Execução</h2>
 
           <label className="grid gap-1 text-sm">
             <span className="text-tinta-2">Diagnóstico</span>
@@ -804,7 +804,7 @@ function ChamadoDetalhe() {
 
       {podeMudarEstado && PROXIMOS_ESTADOS[chamado.estado]?.length > 0 && (
         <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
-          <h3 className="font-medium text-navy">Mudar estado</h3>
+          <h2 className="font-medium text-navy">Mudar estado</h2>
           <div className="flex flex-wrap gap-2">
             {PROXIMOS_ESTADOS[chamado.estado].map((estado) => (
               <button
@@ -860,7 +860,7 @@ function ChamadoDetalhe() {
 
       {podeAvaliar && (
         <form onSubmit={avaliar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
-          <h3 className="font-medium text-navy">Avaliar atendimento</h3>
+          <h2 className="font-medium text-navy">Avaliar atendimento</h2>
           <select value={nota} onChange={(e) => setNota(e.target.value)} className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm">
             {[5, 4, 3, 2, 1].map((n) => (
               <option key={n} value={n}>{n} estrela(s)</option>
@@ -873,7 +873,7 @@ function ChamadoDetalhe() {
       )}
 
       <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
-        <h3 className="font-medium text-navy">Anexos</h3>
+        <h2 className="font-medium text-navy">Anexos</h2>
 
         {anexos.length === 0 ? (
           <p className="text-sm text-tinta-2">Nenhum anexo neste chamado.</p>
@@ -925,7 +925,7 @@ function ChamadoDetalhe() {
 
       <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4">
         <div>
-          <h3 className="font-medium text-navy">Comentários</h3>
+          <h2 className="font-medium text-navy">Comentários</h2>
           <p className="text-xs text-tinta-2">
             {encerrado
               ? 'O chamado está encerrado: a conversa fica registrada, mas não recebe novos comentários.'

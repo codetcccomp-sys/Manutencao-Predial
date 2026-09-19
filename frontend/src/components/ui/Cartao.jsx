@@ -18,7 +18,7 @@ function Cartao({ titulo, descricao, acao, className = '', children, ...resto })
       {(titulo || acao) && (
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
-            {titulo && <h3 className="font-medium text-navy">{titulo}</h3>}
+            {titulo && <h2 className="font-medium text-navy">{titulo}</h2>}
             {descricao && <p className="text-xs text-tinta-2 mt-0.5">{descricao}</p>}
           </div>
           {acao && <div className="shrink-0">{acao}</div>}

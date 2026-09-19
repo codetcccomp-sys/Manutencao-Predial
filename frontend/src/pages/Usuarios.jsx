@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import Tabela from '../components/ui/Tabela';
+import Aviso from '../components/ui/Aviso';
+import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import Botao from '../components/ui/Botao';
 import { Esqueleto, Regiao } from '../components/ui/Estados';
 
@@ -17,7 +19,7 @@ const PERFIL_COR = {
   solicitante: 'bg-gray-200 text-gray-800',
   tecnico: 'bg-blue-100 text-blue-700',
   gestor: 'bg-amber/20 text-amber',
-  administrador: 'bg-green-100 text-green-700',
+  administrador: 'bg-green-100 text-sucesso',
 };
 
 const FORMULARIO_VAZIO = { nome: '', email: '', senha: '', perfil: 'tecnico' };
@@ -80,61 +82,61 @@ function Usuarios() {
   return (
     <div className="grid gap-6">
       <div>
-        <h2 className="text-lg font-bold text-navy">Usuários</h2>
-        <p className="text-sm text-gray-500">
+        <CabecalhoDePagina titulo="Usuários" className="mb-0" />
+        <p className="text-sm text-tinta-2">
           Técnicos, gestores e administradores só podem ser criados aqui — o cadastro público sempre
           gera um solicitante.
         </p>
       </div>
 
-      {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-3">{erro}</div>}
-      {aviso && <div className="bg-green-50 text-green-700 text-sm rounded p-3">{aviso}</div>}
+      {erro && <Aviso tipo="erro">{erro}</Aviso>}
+      {aviso && <div className="bg-sucesso-tenue text-sucesso text-sm rounded p-3">{aviso}</div>}
 
-      <form onSubmit={criar} className="bg-white rounded-lg shadow-sm p-6 grid gap-3">
-        <h3 className="font-medium text-navy">Cadastrar usuário</h3>
+      <form onSubmit={criar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
+        <h2 className="font-medium text-navy">Cadastrar usuário</h2>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            <span className="text-gray-600">Nome</span>
+            <span className="text-tinta-2">Nome</span>
             <input
               required
               type="text"
               minLength={3}
               value={novo.nome}
               onChange={(e) => setNovo({ ...novo, nome: e.target.value })}
-              className="border rounded px-3 py-2"
+              className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
             />
           </label>
 
           <label className="grid gap-1 text-sm">
-            <span className="text-gray-600">E-mail</span>
+            <span className="text-tinta-2">E-mail</span>
             <input
               required
               type="email"
               value={novo.email}
               onChange={(e) => setNovo({ ...novo, email: e.target.value })}
-              className="border rounded px-3 py-2"
+              className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
             />
           </label>
 
           <label className="grid gap-1 text-sm">
-            <span className="text-gray-600">Senha provisória</span>
+            <span className="text-tinta-2">Senha provisória</span>
             <input
               required
               type="password"
               minLength={6}
               value={novo.senha}
               onChange={(e) => setNovo({ ...novo, senha: e.target.value })}
-              className="border rounded px-3 py-2"
+              className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
             />
           </label>
 
           <label className="grid gap-1 text-sm">
-            <span className="text-gray-600">Perfil</span>
+            <span className="text-tinta-2">Perfil</span>
             <select
               value={novo.perfil}
               onChange={(e) => setNovo({ ...novo, perfil: e.target.value })}
-              className="border rounded px-3 py-2"
+              className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
             >
               {PERFIS.map((p) => (
                 <option key={p.valor} value={p.valor}>
@@ -156,8 +158,8 @@ function Usuarios() {
       {/* min-w-0: o cartão é item de grid, e sem isso a tabela de cinco
           colunas vazava para fora em vez de rolar dentro do overflow-x-auto,
           levando a página inteira junto no celular. */}
-      <div className="bg-white rounded-lg shadow-sm p-6 min-w-0">
-        <h3 className="font-medium text-navy mb-3">Cadastrados</h3>
+      <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 min-w-0">
+        <h2 className="font-medium text-navy mb-3">Cadastrados</h2>
 
         <Regiao carregando={carregando}>
         {carregando ? (

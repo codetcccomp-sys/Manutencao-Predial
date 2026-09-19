@@ -256,6 +256,34 @@ const MUTACOES = [
     para: '<details open className="group bg-superficie',
     spec: 'testes/ChamadoDetalhe.test.jsx',
   },
+  {
+    descricao: 'painel do chamado volta a h3, pulando o nível 2 da árvore',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '<h2 className="font-medium text-navy">Comentários</h2>',
+    para: '<h3 className="font-medium text-navy">Comentários</h3>',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'título do chamado deixa de ser o h1 da tela',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '<h1 className="text-lg font-bold text-navy">{chamado.titulo}</h1>',
+    para: '<h2 className="text-lg font-bold text-navy">{chamado.titulo}</h2>',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'painel de cadastro volta a h3, pulando o nível 2 da árvore',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: '<h2 className="font-medium text-navy">Cadastrar local</h2>',
+    para: '<h3 className="font-medium text-navy">Cadastrar local</h3>',
+    spec: 'testes/Cadastros.test.jsx',
+  },
+  {
+    descricao: 'lista de problemas da importação perde o papel de alerta',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: '<Aviso tipo="erro" titulo="Nada foi importado. Corrija e envie o arquivo de novo:">',
+    para: '<Aviso tipo="info" titulo="Nada foi importado. Corrija e envie o arquivo de novo:">',
+    spec: 'testes/Cadastros.test.jsx',
+  },
 ];
 
 /**

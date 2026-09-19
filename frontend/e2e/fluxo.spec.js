@@ -93,7 +93,7 @@ test('depois de atribuído o solicitante comenta, já que não pode editar (RN03
 
   await entrar(page, cenario.pessoas.solicitante);
   await page.goto(`/chamados/${chamado.id}`);
-  await page.waitForSelector('h3:has-text("Comentários")');
+  await page.waitForSelector('h2:has-text("Comentários")');
 
   await expect(page.getByRole('button', { name: 'Corrigir' })).toHaveCount(0);
 
@@ -135,7 +135,7 @@ test('chamado encerrado guarda a conversa mas não aceita comentário novo', asy
 
   await entrar(page, cenario.pessoas.solicitante);
   await page.goto(`/chamados/${chamado.id}`);
-  await page.waitForSelector('h3:has-text("Comentários")');
+  await page.waitForSelector('h2:has-text("Comentários")');
 
   await expect(page.getByText(`Dito antes de encerrar ${cenario.marca}`)).toBeVisible();
   await expect(page.getByPlaceholder('Escreva um comentário')).toHaveCount(0);

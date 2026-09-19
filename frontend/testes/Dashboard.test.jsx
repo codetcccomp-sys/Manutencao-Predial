@@ -7,6 +7,7 @@ vi.mock('../src/api/client', () => ({ default: { get: vi.fn() } }));
 
 import api from '../src/api/client';
 import Dashboard from '../src/pages/Dashboard';
+import { conferirCabecalhos } from './apoio/cabecalhos';
 
 function chamado(extra = {}) {
   return {
@@ -263,12 +264,14 @@ describe('Estado vazio e carregamento', () => {
 describe('Hierarquia de cabeçalhos', () => {
   it('a tela tem um h1, e não começa no segundo nível', async () => {
     responder([]);
-    montar();
+    const { container } = montar();
 
     // As telas internas começavam em h2 sem h1 nenhum na página: quem navega
     // por cabeçalhos encontrava uma árvore sem raiz.
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1, name: 'Chamados' })).toBeInTheDocument()
     );
+
+    conferirCabecalhos(container);
   });
 });
