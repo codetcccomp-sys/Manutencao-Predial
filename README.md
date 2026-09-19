@@ -7,6 +7,10 @@ perfis de acesso, fluxo de atendimento auditado e relatórios de desempenho.
 - **Frontend**: React + Vite + Tailwind
 - **Hospedagem**: Vercel (duas aplicações) com PostgreSQL no Supabase
 
+Para colocar o sistema em uso real com um prédio de verdade, veja
+[docs/piloto.md](docs/piloto.md): o que precisa estar configurado antes do
+primeiro chamado, o que medir e o que declarar como limitação.
+
 ## Perfis e permissões
 
 | Perfil | O que enxerga | O que faz |
