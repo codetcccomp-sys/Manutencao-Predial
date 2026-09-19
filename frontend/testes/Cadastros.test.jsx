@@ -134,3 +134,114 @@ describe('Quem entra na tela', () => {
     usuarioAtual.valor = { id: 1, nome: 'Gestor', perfil: 'gestor' };
   });
 });
+
+describe('Importação de planilha de locais', () => {
+  const entrada = () => screen.getByLabelText('Planilha de locais');
+
+  function arquivo(conteudo, nome = 'locais.csv') {
+    return new File([conteudo], nome, { type: 'text/csv' });
+  }
+
+  it('manda o conteúdo do arquivo e conta o que entrou', async () => {
+    const usuario = userEvent.setup();
+    preparar();
+    await waitFor(() => expect(screen.getByText('3 de 3 locais.')).toBeInTheDocument());
+
+    api.post.mockResolvedValue({
+      data: { relatorio: { linhas: 3, criados: 2, ja_existiam: 1, desativados: [] } },
+    });
+
+    await usuario.upload(entrada(), arquivo('unidade;ambiente\nPrédio;Sala 1'));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith('/locais/importar', {
+        csv: 'unidade;ambiente\nPrédio;Sala 1',
+      })
+    );
+    expect(await screen.findByText('2 locais criados; 1 já existia de 3 linhas.')).toBeInTheDocument();
+  });
+
+  it('recarrega a lista depois de importar', async () => {
+    const usuario = userEvent.setup();
+    preparar();
+    await waitFor(() => expect(screen.getByText('3 de 3 locais.')).toBeInTheDocument());
+    const antes = api.get.mock.calls.length;
+
+    api.post.mockResolvedValue({
+      data: { relatorio: { linhas: 1, criados: 1, ja_existiam: 0, desativados: [] } },
+    });
+    await usuario.upload(entrada(), arquivo('unidade\nPrédio'));
+
+    // Sem recarregar, os locais importados só apareceriam no próximo F5 — e
+    // quem importou ficaria sem saber se funcionou.
+    await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(antes));
+  });
+
+  it('lista os problemas linha a linha quando o arquivo é recusado', async () => {
+    const usuario = userEvent.setup();
+    preparar();
+    await waitFor(() => expect(screen.getByText('3 de 3 locais.')).toBeInTheDocument());
+
+    api.post.mockRejectedValue({
+      response: {
+        data: {
+          erro: {
+            mensagem: 'O arquivo não foi importado: 2 problemas encontrados.',
+            codigo: 'ARQUIVO_INVALIDO',
+            detalhes: ['Linha 3: "unidade" é obrigatória.', 'Linha 7: repete a linha 4.'],
+          },
+        },
+      },
+    });
+
+    await usuario.upload(entrada(), arquivo('unidade\n\n'));
+
+    expect(await screen.findByText('Linha 3: "unidade" é obrigatória.')).toBeInTheDocument();
+    expect(screen.getByText('Linha 7: repete a linha 4.')).toBeInTheDocument();
+    // A frase importa tanto quanto a lista: sem ela, quem importou não sabe se
+    // as linhas boas entraram.
+    expect(screen.getByText(/Nada foi importado/)).toBeInTheDocument();
+  });
+
+  it('avisa quais locais do arquivo estão desativados', async () => {
+    const usuario = userEvent.setup();
+    preparar();
+    await waitFor(() => expect(screen.getByText('3 de 3 locais.')).toBeInTheDocument());
+
+    api.post.mockResolvedValue({
+      data: {
+        relatorio: {
+          linhas: 2,
+          criados: 1,
+          ja_existiam: 1,
+          desativados: [{ id: 9, rotulo: 'Prédio Central / Almoxarifado' }],
+        },
+      },
+    });
+
+    await usuario.upload(entrada(), arquivo('unidade;ambiente\nPrédio Central;Almoxarifado'));
+
+    expect(await screen.findByText('Prédio Central / Almoxarifado')).toBeInTheDocument();
+  });
+
+  it('lê planilha salva pelo Excel em Windows-1252 sem corromper o acento', async () => {
+    const usuario = userEvent.setup();
+    preparar();
+    await waitFor(() => expect(screen.getByText('3 de 3 locais.')).toBeInTheDocument());
+
+    api.post.mockResolvedValue({
+      data: { relatorio: { linhas: 1, criados: 1, ja_existiam: 0, desativados: [] } },
+    });
+
+    // "unidade\nTérreo" nos bytes que o Excel do Windows grava: o É é um único
+    // byte 0xE9, que não é UTF-8 válido.
+    const bytes = new Uint8Array([
+      117, 110, 105, 100, 97, 100, 101, 10, 84, 0xe9, 114, 114, 101, 111,
+    ]);
+    await usuario.upload(entrada(), arquivo(bytes));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith('/locais/importar', { csv: 'unidade\nTérreo' })
+    );
+  });
+});

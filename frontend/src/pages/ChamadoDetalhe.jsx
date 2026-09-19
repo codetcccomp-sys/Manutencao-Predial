@@ -540,6 +540,19 @@ function ChamadoDetalhe() {
           <span>
             Prioridade: <strong>{PRIORIDADE_LABEL[chamado.prioridade] ?? chamado.prioridade}</strong>
           </span>
+          {/* Onde e de que tipo: é a primeira coisa que o técnico designado
+              precisa saber, e era o que faltava — o local só aparecia no
+              relatório e na planilha, não na tela por onde se trabalha. */}
+          {chamado.local_rotulo && (
+            <span className="col-span-2 min-w-0">
+              Local: <strong className="text-navy">{chamado.local_rotulo}</strong>
+            </span>
+          )}
+          {chamado.categoria_nome && (
+            <span className="col-span-2">
+              Categoria: <strong>{chamado.categoria_nome}</strong>
+            </span>
+          )}
           {chamado.total_reaberturas > 0 && (
             <span className="col-span-2 text-red-700">
               Reaberto {chamado.total_reaberturas}{' '}

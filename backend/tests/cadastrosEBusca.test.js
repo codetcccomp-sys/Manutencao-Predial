@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -41,11 +42,8 @@ beforeAll(async () => {
   outroSolicitante = await criarUsuarioELogar('solicitante');
   tecnico = await criarUsuarioELogar('tecnico');
 
-  const local = await pool.query(
-    "INSERT INTO local (unidade, bloco) VALUES ('Unidade Cad', 'B') RETURNING id"
-  );
   const categoria = await pool.query('SELECT id FROM categoria LIMIT 1');
-  localId = local.rows[0].id;
+  localId = await garantirLocal({ unidade: 'Unidade Cad', bloco: 'B' });
   categoriaId = categoria.rows[0].id;
 });
 
@@ -248,7 +246,9 @@ describe('Cadastro de locais (RF11)', () => {
     const criado = await request(app)
       .post('/locais')
       .set(auth(gestor))
-      .send({ unidade: 'Unidade Nova', bloco: 'C', ambiente: 'Sala 101' });
+      // Nome único por execução: o local tem chave natural, e um nome fixo
+      // faria a segunda rodada da suíte receber 409 em vez de 201.
+      .send({ unidade: `Unidade Nova ${Date.now()}`, bloco: 'C', ambiente: 'Sala 101' });
     expect(criado.status).toBe(201);
     const id = criado.body.local.id;
 
@@ -284,6 +284,19 @@ describe('Cadastro de locais (RF11)', () => {
 
     const completo = await request(app).get('/locais?incluir_inativos=true').set(auth(gestor));
     expect(completo.body.locais.map((l) => l.id)).toContain(id);
+  });
+});
+
+describe('Contexto do chamado', () => {
+  it('o detalhe traz o local e a categoria por extenso, não só os ids', async () => {
+    const chamado = await abrir('Chamado com contexto');
+
+    const resp = await request(app).get(`/chamados/${chamado.id}`).set(auth(gestor));
+
+    // Quem atende precisa saber onde é. Os ids sozinhos obrigariam a tela a
+    // baixar a lista inteira de locais só para traduzir um número.
+    expect(resp.body.chamado.local_rotulo).toBe('Unidade Cad / B');
+    expect(typeof resp.body.chamado.categoria_nome).toBe('string');
   });
 });
 

@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -25,11 +26,9 @@ async function criarUsuarioELogar(perfilDesejado) {
 }
 
 async function obterLocalECategoria() {
-  const localResp = await pool.query(
-    "INSERT INTO local (unidade) VALUES ('Unidade Teste') RETURNING id"
-  );
+  const localDeTeste = await garantirLocal({ unidade: 'Unidade Teste' });
   const categoriaResp = await pool.query("SELECT id FROM categoria LIMIT 1");
-  return { localId: localResp.rows[0].id, categoriaId: categoriaResp.rows[0].id };
+  return { localId: localDeTeste, categoriaId: categoriaResp.rows[0].id };
 }
 
 describe('Fluxo de chamados', () => {

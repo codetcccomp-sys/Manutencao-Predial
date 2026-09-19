@@ -24,6 +24,16 @@ router.post(
   locaisController.criar
 );
 
+// A planilha chega como texto no corpo, e não como upload: são alguns quilos
+// de CSV, o multipart traria uma dependência e um diretório temporário para
+// nada, e o arquivo nunca é guardado — é lido, validado e descartado.
+router.post(
+  '/importar',
+  authorize('administrador', 'gestor'),
+  validate({ csv: { obrigatorio: true, tipo: 'string' } }),
+  locaisController.importar
+);
+
 router.patch(
   '/:id',
   authorize('administrador', 'gestor'),

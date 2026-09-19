@@ -202,6 +202,8 @@ Todas exigem `Authorization: Bearer <token>`, exceto `/health`, `/health/db`,
 | `GET POST DELETE` | `/chamados/:id/materiais` | gestão ou técnico designado (leitura: quem vê o chamado) |
 | `GET POST DELETE` | `/chamados/:id/anexos` | quem tem acesso ao chamado |
 | `GET` | `/notificacoes` | o próprio usuário |
+| `GET POST PATCH` | `/locais`, `/categorias` | leitura autenticada, escrita para gestão |
+| `POST` | `/locais/importar` | gestor, administrador |
 | `GET POST PATCH` | `/equipes`, `/materiais` | leitura autenticada, escrita para gestão |
 | `GET PATCH` | `/sla`, `/sla/:prioridade` | leitura autenticada, escrita para gestão |
 | `GET POST` | `/regras-priorizacao` | leitura da vigente autenticada, versão nova para administrador |
@@ -210,6 +212,44 @@ Todas exigem `Authorization: Bearer <token>`, exceto `/health`, `/health/db`,
 `GET /health/db` executa uma consulta e devolve 503 quando o banco está
 inacessível — `/health` sozinho responde `ok` mesmo com o banco fora, o que
 já escondeu falha de conexão em produção.
+
+## Locais
+
+Os cinco níveis — unidade, bloco, pavimento, setor e ambiente — são colunas de
+uma tabela plana, e só `unidade` é obrigatória. O rótulo legível é montado na
+consulta pulando os níveis vazios (`Prédio A / B / Térreo / Sala 101`), e vem
+pronto do servidor no detalhe do chamado, no relatório por local e na planilha,
+para que as três telas não escrevam o mesmo endereço de três jeitos.
+
+Desde a migração 014 o conjunto dos cinco níveis é chave natural: um índice
+único sobre os valores normalizados (`lower(btrim(...))`, com `NULL` valendo
+vazio) impede que o mesmo ambiente entre duas vezes, por maiúscula, por espaço
+sobrando ou por reenvio de planilha. Tentar cadastrar um repetido devolve 409,
+não erro interno. A própria migração consolida o que já tivesse entrado
+duplicado: os chamados passam a apontar para o sobrevivente de menor id, que
+herda `ativo` do grupo.
+
+### Carga em massa
+
+`POST /locais/importar` recebe `{ "csv": "..." }` — o arquivo como texto, não
+como upload. A tela de cadastros tem o seletor de arquivo e um modelo para
+baixar.
+
+- separador `;`, `,` ou tabulação, detectado pelo cabeçalho; aspas, aspas
+  escapadas e BOM tratados;
+- cabeçalho obrigatório, com os nomes das colunas — a ordem não importa, e
+  coluna desconhecida é recusada em vez de adivinhada;
+- no máximo 500 linhas por arquivo;
+- **tudo ou nada**: qualquer linha inválida recusa o arquivo inteiro e devolve
+  a lista completa de problemas, linha a linha, em `erro.detalhes`;
+- reenviar o mesmo arquivo não duplica nada, então corrigir uma linha e mandar
+  a planilha inteira de volta é o caminho normal;
+- locais do arquivo que existem mas estão desativados são apontados no
+  relatório — não são reativados em silêncio.
+
+No navegador, um arquivo que não for UTF-8 válido é lido como Windows-1252,
+que é o que o Excel no Windows grava: sem isso "Térreo" entraria no banco
+corrompido e ninguém notaria até o primeiro relatório.
 
 ## Anexos
 

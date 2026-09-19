@@ -5,6 +5,7 @@ const { gerarProtocolo } = require('../utils/protocolo');
 const notificacoesService = require('./notificacoes.service');
 const slaService = require('./sla.service');
 const priorizacaoService = require('./priorizacao.service');
+const { rotuloSql } = require('./locais.service');
 
 // "Em atraso" não é um estado da máquina, é uma leitura do relógio sobre o
 // estado atual: vira e desvira sozinho quando o prazo passa ou quando o
@@ -190,7 +191,20 @@ async function buscarPorId(id, usuario) {
     [id]
   );
 
-  return { ...chamado, historico: historico.rows };
+  // O chamado guarda só os ids. Sem resolvê-los, a tela do técnico designado
+  // mostrava o que houve e para quando, mas não onde nem de que tipo — e é
+  // justamente onde ele precisa ir. A planilha e o relatório já traziam o
+  // local; a tela, que é por onde se trabalha, não trazia.
+  const contexto = await pool.query(
+    `SELECT ${rotuloSql('l')} AS local_rotulo, cat.nome AS categoria_nome
+       FROM chamado c
+       JOIN local l ON l.id = c.local_id
+       JOIN categoria cat ON cat.id = c.categoria_id
+      WHERE c.id = $1`,
+    [id]
+  );
+
+  return { ...chamado, ...contexto.rows[0], historico: historico.rows };
 }
 
 // Estados em que o chamado já tem responsável: atribuir de novo aqui é
