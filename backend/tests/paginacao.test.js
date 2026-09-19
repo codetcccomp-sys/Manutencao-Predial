@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -20,9 +21,8 @@ beforeAll(async () => {
   const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
   solicitante = { token: login.body.token, usuario: login.body.usuario };
 
-  const local = await pool.query("INSERT INTO local (unidade) VALUES ('Unidade Paginação') RETURNING id");
   const categoria = await pool.query('SELECT id FROM categoria LIMIT 1');
-  localId = local.rows[0].id;
+  localId = await garantirLocal({ unidade: 'Unidade Paginação' });
   categoriaId = categoria.rows[0].id;
 
   for (let i = 0; i < TOTAL_CHAMADOS; i += 1) {

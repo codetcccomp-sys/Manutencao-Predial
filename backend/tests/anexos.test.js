@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 const { TAMANHO_MAXIMO_BYTES } = require('../src/services/anexos.service');
 
 const { ipDaSuite } = require('./apoio/ip');
@@ -37,13 +38,13 @@ beforeAll(async () => {
   estranho = await criarUsuarioELogar('solicitante');
   gestor = await criarUsuarioELogar('gestor');
 
-  const local = await pool.query("INSERT INTO local (unidade) VALUES ('Unidade Anexo') RETURNING id");
+  const localDeTeste = await garantirLocal({ unidade: 'Unidade Anexo' });
   const categoria = await pool.query('SELECT id FROM categoria LIMIT 1');
 
   const dados = {
     descricao: 'Descrição do chamado com anexo',
     categoria_id: categoria.rows[0].id,
-    local_id: local.rows[0].id,
+    local_id: localDeTeste,
   };
 
   const meu = await request(app)

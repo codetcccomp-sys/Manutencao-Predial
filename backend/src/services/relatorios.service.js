@@ -62,15 +62,10 @@ async function emSnapshot(executar) {
   }
 }
 
-// O local é hierárquico no papel e plano na tabela; enquanto for assim, o
-// rótulo legível é montado na consulta, ignorando os níveis não preenchidos.
-const ROTULO_LOCAL = `
-  l.unidade
-  || coalesce(' / ' || l.bloco, '')
-  || coalesce(' / ' || l.pavimento, '')
-  || coalesce(' / ' || l.setor, '')
-  || coalesce(' / ' || l.ambiente, '')
-`;
+// O rótulo do local vem de locais.service: o relatório, a planilha e a tela de
+// chamado precisam dele escrito do mesmo jeito, e três cópias divergiriam na
+// primeira vez que o local ganhasse um nível.
+const ROTULO_LOCAL = require('./locais.service').rotuloSql('l');
 
 async function resumo(filtros = {}) {
   const { where, params } = recorte(filtros);

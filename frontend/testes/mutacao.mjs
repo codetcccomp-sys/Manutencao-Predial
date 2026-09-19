@@ -123,6 +123,28 @@ const MUTACOES = [
     para: 'carregar().then(() => {',
     spec: 'testes/ChamadoDetalhe.test.jsx',
   },
+  {
+    descricao: 'importação lê a planilha sempre como UTF-8',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: `    return new TextDecoder('windows-1252').decode(bytes);`,
+    para: `    return new TextDecoder('utf-8').decode(bytes);`,
+    spec: 'testes/Cadastros.test.jsx',
+  },
+  {
+    descricao: 'importação engole a lista de problemas do arquivo',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: 'setProblemas(corpo?.detalhes || []);',
+    para: 'setProblemas([]);',
+    spec: 'testes/Cadastros.test.jsx',
+  },
+  {
+    descricao: 'importação não recarrega a lista de locais',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: `      setRelatorio(data.relatorio);
+      carregar();`,
+    para: '      setRelatorio(data.relatorio);',
+    spec: 'testes/Cadastros.test.jsx',
+  },
 ];
 
 /**

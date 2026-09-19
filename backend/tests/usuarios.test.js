@@ -147,22 +147,37 @@ describe('PATCH /usuarios/:id', () => {
     expect(restantes.rows[0].n).toBeGreaterThanOrEqual(2);
 
     // Desativa todos menos um, depois tenta o último.
-    await pool.query(
-      "UPDATE usuario SET ativo = FALSE WHERE perfil='administrador' AND id NOT IN ($1,$2)",
+    //
+    // Este é o único teste da suíte que mexe em linhas que não criou — a trava
+    // do último administrador só se verifica sobre o banco inteiro. Por isso
+    // devolve o que desativou: sem o RETURNING e o finally, ele derrubava o
+    // administrador semeado para os testes de ponta a ponta, que passavam a
+    // falhar no login sem nenhuma relação aparente com esta suíte.
+    const { rows: desativados } = await pool.query(
+      `UPDATE usuario SET ativo = FALSE
+        WHERE perfil = 'administrador' AND ativo = TRUE AND id NOT IN ($1, $2)
+        RETURNING id`,
       [admin.usuario.id, promovido.usuario.id]
     );
-    await request(app)
-      .patch(`/usuarios/${promovido.usuario.id}`)
-      .set(comoAdmin())
-      .send({ ativo: false });
 
-    const resp = await request(app)
-      .patch(`/usuarios/${admin.usuario.id}`)
-      .set('Authorization', `Bearer ${promovido.token}`)
-      .send({ ativo: false });
+    try {
+      await request(app)
+        .patch(`/usuarios/${promovido.usuario.id}`)
+        .set(comoAdmin())
+        .send({ ativo: false });
 
-    expect(resp.status).toBe(422);
-    expect(resp.body.erro.codigo).toBe('ULTIMO_ADMINISTRADOR');
+      const resp = await request(app)
+        .patch(`/usuarios/${admin.usuario.id}`)
+        .set('Authorization', `Bearer ${promovido.token}`)
+        .send({ ativo: false });
+
+      expect(resp.status).toBe(422);
+      expect(resp.body.erro.codigo).toBe('ULTIMO_ADMINISTRADOR');
+    } finally {
+      await pool.query('UPDATE usuario SET ativo = TRUE WHERE id = ANY($1::int[])', [
+        desativados.map((u) => u.id),
+      ]);
+    }
   });
 
   it('gestor não altera usuários', async () => {

@@ -1,5 +1,6 @@
 const request = require('supertest');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 const { conferirSegredo } = require('../src/middlewares/cron');
 const { ORCAMENTO_AVISOS, MAXIMO_EMAILS } = require('../src/services/atrasos.service');
 
@@ -86,9 +87,8 @@ beforeAll(async () => {
   solicitante = await criarUsuarioELogar('solicitante');
   tecnico = await criarUsuarioELogar('tecnico');
 
-  const local = await pool.query("INSERT INTO local (unidade) VALUES ('Unidade Atr') RETURNING id");
   const categoria = await pool.query('SELECT id FROM categoria LIMIT 1');
-  localId = local.rows[0].id;
+  localId = await garantirLocal({ unidade: 'Unidade Atr' });
   categoriaId = categoria.rows[0].id;
 });
 

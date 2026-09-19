@@ -36,6 +36,8 @@ function chamado(extra = {}) {
     tecnico_id: null,
     categoria_id: 1,
     local_id: 1,
+    local_rotulo: 'Bloco A / Térreo / Auditório',
+    categoria_nome: 'Hidráulica',
     prazo_estimado: null,
     em_atraso: false,
     total_reaberturas: 0,
@@ -291,5 +293,23 @@ describe('Rótulos com acento', () => {
 
     await waitFor(() => expect(screen.getByText('Aguardando material')).toBeInTheDocument());
     expect(screen.queryByText('aguardando_material')).toBeNull();
+  });
+});
+
+describe('Onde é o problema', () => {
+  it('mostra local e categoria para quem vai atender', async () => {
+    montar({ como: TECNICO, dados: chamado({ tecnico_id: TECNICO.id, estado: 'atribuido' }) });
+
+    // O técnico designado precisa saber para onde ir. Antes isso só existia no
+    // relatório e na planilha; a tela mostrava estado, prioridade e prazo.
+    expect(await screen.findByText('Bloco A / Térreo / Auditório')).toBeInTheDocument();
+    expect(screen.getByText('Hidráulica')).toBeInTheDocument();
+  });
+
+  it('não deixa buraco quando o servidor não manda o rótulo', async () => {
+    montar({ como: SOLICITANTE, dados: chamado({ local_rotulo: undefined, categoria_nome: undefined }) });
+
+    await screen.findByRole('heading', { name: 'Infiltração no auditório' });
+    expect(screen.queryByText(/^Local:/)).toBeNull();
   });
 });

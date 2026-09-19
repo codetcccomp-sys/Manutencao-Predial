@@ -177,3 +177,65 @@ test('sessão expirada devolve ao login em vez de deixar a tela quebrada', async
   await page.waitForURL('**/login', { timeout: 15_000 });
   await expect(page.getByText(/sess(ã|a)o expirou|entre com sua conta/i).first()).toBeVisible();
 });
+
+test('importar planilha de locais e abrir chamado num deles (RF02/RF11)', async ({ page }) => {
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto('/cadastros');
+
+  const unidade = `Unidade Carga ${cenario.marca}`;
+  const planilha = Buffer.from(
+    `﻿unidade;bloco;pavimento;ambiente\r\n` +
+      `${unidade};A;Térreo;Recepção\r\n` +
+      `${unidade};A;1º andar;Sala 101\r\n`,
+    'utf8'
+  );
+
+  await page
+    .getByLabel('Planilha de locais')
+    .setInputFiles({ name: 'locais.csv', mimeType: 'text/csv', buffer: planilha });
+
+  await expect(page.getByText('2 locais criados de 2 linhas.')).toBeVisible();
+
+  // Reenviar o mesmo arquivo reconhece o que já existe em vez de duplicar. É a
+  // garantia que torna a correção de uma linha barata: reenvia-se tudo.
+  await page
+    .getByLabel('Planilha de locais')
+    .setInputFiles({ name: 'locais.csv', mimeType: 'text/csv', buffer: planilha });
+
+  await expect(page.getByText('0 locais criados; 2 já existiam de 2 linhas.')).toBeVisible();
+
+  // O acento tem de ter sobrevivido a build, requisição, banco e volta — é
+  // onde a codificação costuma quebrar sem ninguém notar.
+  await expect(page.getByText(`${unidade} / A / Térreo / Recepção`)).toBeVisible();
+
+  // E o local importado serve para o que existe: abrir chamado nele.
+  await entrar(page, cenario.pessoas.solicitante);
+  await page.goto('/chamados/novo');
+  await page.getByLabel('Local').selectOption({ label: `${unidade} / A / 1º andar / Sala 101` });
+  await page.getByLabel('Título').fill(`Chamado no local importado ${cenario.marca}`);
+  await page.getByLabel('Descrição').fill('Lâmpada queimada na sala recém-cadastrada.');
+  await page.getByLabel('Categoria').selectOption({ index: 1 });
+  await page.getByRole('button', { name: /abrir chamado|criar/i }).click();
+
+  await page.waitForURL(/\/chamados\/\d+$/);
+  await expect(page.getByText(`${unidade} / A / 1º andar / Sala 101`)).toBeVisible();
+});
+
+test('planilha com linha errada é recusada inteira, com os problemas na tela', async ({ page }) => {
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto('/cadastros');
+
+  const unidade = `Unidade Recusa ${cenario.marca}`;
+  await page.getByLabel('Planilha de locais').setInputFiles({
+    name: 'ruim.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(`unidade;ambiente\r\n${unidade};Sala 1\r\n;Sala 2\r\n`, 'utf8'),
+  });
+
+  await expect(page.getByText('Nada foi importado. Corrija e envie o arquivo de novo:')).toBeVisible();
+  await expect(page.getByText('Linha 3: "unidade" é obrigatória.')).toBeVisible();
+
+  // Tudo ou nada: a linha boa também ficou de fora.
+  await page.getByPlaceholder('Filtrar locais').fill(unidade);
+  await expect(page.getByText('Nenhum local corresponde ao filtro.')).toBeVisible();
+});

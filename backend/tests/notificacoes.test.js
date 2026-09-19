@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 const emailService = require('../src/services/email.service');
 
 const { ipDaSuite } = require('./apoio/ip');
@@ -29,7 +30,7 @@ beforeAll(async () => {
   tecnico = await criarUsuarioELogar('tecnico');
   gestor = await criarUsuarioELogar('gestor');
 
-  const local = await pool.query("INSERT INTO local (unidade) VALUES ('Unidade Notif') RETURNING id");
+  const localDeTeste = await garantirLocal({ unidade: 'Unidade Notif' });
   const categoria = await pool.query('SELECT id FROM categoria LIMIT 1');
 
   const abertura = await request(app)
@@ -39,7 +40,7 @@ beforeAll(async () => {
       titulo: 'Chamado com notificação',
       descricao: 'Descrição do chamado',
       categoria_id: categoria.rows[0].id,
-      local_id: local.rows[0].id,
+      local_id: localDeTeste,
     });
   chamadoId = abertura.body.chamado.id;
 });

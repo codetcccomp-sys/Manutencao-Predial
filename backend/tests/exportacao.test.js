@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 const { campo, COLUNAS } = require('../src/services/exportacao.service');
 
 const { ipDaSuite } = require('./apoio/ip');
@@ -76,12 +77,8 @@ beforeAll(async () => {
   solicitante = await criarUsuarioELogar('solicitante');
   tecnico = await criarUsuarioELogar('tecnico');
 
-  const local = await pool.query(
-    "INSERT INTO local (unidade, bloco) VALUES ($1, 'E') RETURNING id",
-    [`Unidade Exp ${marca}`]
-  );
   const categoria = await pool.query('SELECT id FROM categoria LIMIT 1');
-  localId = local.rows[0].id;
+  localId = await garantirLocal({ unidade: `Unidade Exp ${marca}`, bloco: 'E' });
   categoriaId = categoria.rows[0].id;
 });
 

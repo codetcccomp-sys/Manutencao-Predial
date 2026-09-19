@@ -11,6 +11,32 @@ const ABAS = [
 
 const LOCAL_VAZIO = { unidade: '', bloco: '', pavimento: '', setor: '', ambiente: '' };
 
+// Modelo de planilha, com o ponto e vírgula que o Excel em português usa e o
+// BOM que faz ele abrir o arquivo como UTF-8 — sem os dois, quem baixa o
+// modelo, preenche e devolve manda de volta um arquivo que precisa de conserto.
+const MODELO_CSV =
+  '﻿unidade;bloco;pavimento;setor;ambiente\r\n' +
+  'Prédio Central;A;Térreo;Administrativo;Recepção\r\n' +
+  'Prédio Central;A;1º andar;Ensino;Sala 101\r\n' +
+  'Prédio Central;B;Térreo;;Almoxarifado\r\n';
+
+/**
+ * Lê o arquivo como texto, aceitando o que o Excel de fato salva.
+ *
+ * O "CSV (separado por vírgulas)" do Excel no Windows sai em Windows-1252, não
+ * em UTF-8. Lido como UTF-8, "Térreo" chega como caractere de substituição e o
+ * local entra no banco com o nome corrompido — erro que ninguém percebe na
+ * hora e que só aparece meses depois, num relatório.
+ */
+async function lerTexto(arquivo) {
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes);
+  }
+}
+
 // Os cinco níveis do local, na ordem em que o Termo de Abertura os descreve.
 const NIVEIS_LOCAL = [
   { campo: 'unidade', rotulo: 'Unidade', obrigatorio: true },
@@ -38,6 +64,9 @@ function Cadastros() {
 
   const [novoLocal, setNovoLocal] = useState(LOCAL_VAZIO);
   const [filtroLocal, setFiltroLocal] = useState('');
+  const [importando, setImportando] = useState(false);
+  const [relatorio, setRelatorio] = useState(null);
+  const [problemas, setProblemas] = useState([]);
   const [novaCategoria, setNovaCategoria] = useState('');
   const [novaEquipe, setNovaEquipe] = useState('');
   const [equipeAberta, setEquipeAberta] = useState(null);
@@ -78,6 +107,11 @@ function Cadastros() {
   async function executar(acao, mensagem) {
     setErro('');
     setAviso('');
+    // O relatório da importação some a cada nova ação: mantido na tela, a
+    // lista de problemas apareceria junto com o erro de outra operação, como
+    // se fosse dela.
+    setRelatorio(null);
+    setProblemas([]);
     try {
       await acao();
       if (mensagem) setAviso(mensagem);
@@ -85,6 +119,37 @@ function Cadastros() {
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível concluir a operação.');
     }
+  }
+
+  async function importarLocais(arquivo) {
+    if (!arquivo) return;
+    setErro('');
+    setAviso('');
+    setRelatorio(null);
+    setProblemas([]);
+    setImportando(true);
+    try {
+      const { data } = await api.post('/locais/importar', { csv: await lerTexto(arquivo) });
+      setRelatorio(data.relatorio);
+      carregar();
+    } catch (err) {
+      const corpo = err.response?.data?.erro;
+      setErro(corpo?.mensagem || 'Não foi possível importar a planilha.');
+      // A lista item a item é o que permite corrigir o arquivo de uma vez; a
+      // frase de resumo sozinha manda quem importou procurar no escuro.
+      setProblemas(corpo?.detalhes || []);
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  function baixarModelo() {
+    const url = URL.createObjectURL(new Blob([MODELO_CSV], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'modelo_locais.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   async function abrirEquipe(id) {
@@ -160,6 +225,87 @@ function Cadastros() {
               Cadastrar
             </button>
           </form>
+
+          {/* Um prédio tem dezenas de ambientes. Cadastrá-los um a um no
+              formulário acima é meia hora de digitação antes de o sistema
+              servir para alguma coisa — e é exatamente o que separa uma
+              demonstração de um piloto com dados de verdade. */}
+          <div className="bg-white rounded-lg shadow-sm p-6 grid gap-3 min-w-0">
+            <h3 className="font-medium text-navy">Importar planilha</h3>
+            <p className="text-sm text-gray-600">
+              Envie um arquivo CSV com as colunas <code>unidade</code>, <code>bloco</code>,{' '}
+              <code>pavimento</code>, <code>setor</code> e <code>ambiente</code>. Só{' '}
+              <code>unidade</code> é obrigatória. Locais que já existem são reconhecidos e não
+              entram de novo, então dá para corrigir o arquivo e reenviá-lo inteiro.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="text-sm">
+                <span className="sr-only">Planilha de locais</span>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  disabled={importando}
+                  onChange={(e) => {
+                    const arquivo = e.target.files?.[0];
+                    // Zerar o campo deixa reenviar o mesmo arquivo depois de
+                    // corrigi-lo; sem isso o onChange não dispara de novo.
+                    e.target.value = '';
+                    importarLocais(arquivo);
+                  }}
+                  className="text-sm"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={baixarModelo}
+                className="text-sm text-navy hover:underline"
+              >
+                Baixar modelo
+              </button>
+            </div>
+
+            {importando && <p className="text-sm text-gray-500">Importando...</p>}
+
+            {relatorio && (
+              <div className="bg-green-50 text-green-800 text-sm rounded p-3 grid gap-1">
+                <p>
+                  {relatorio.criados} {relatorio.criados === 1 ? 'local criado' : 'locais criados'}
+                  {relatorio.ja_existiam > 0 &&
+                    `; ${relatorio.ja_existiam} já ${
+                      relatorio.ja_existiam === 1 ? 'existia' : 'existiam'
+                    }`}
+                  {' de '}
+                  {relatorio.linhas} {relatorio.linhas === 1 ? 'linha' : 'linhas'}.
+                </p>
+                {relatorio.desativados?.length > 0 && (
+                  <div className="text-amber-800">
+                    <p>
+                      {relatorio.desativados.length === 1
+                        ? 'Um local do arquivo está desativado e não aparece na abertura de chamado:'
+                        : `${relatorio.desativados.length} locais do arquivo estão desativados e não aparecem na abertura de chamado:`}
+                    </p>
+                    <ul className="list-disc pl-5">
+                      {relatorio.desativados.map((l) => (
+                        <li key={l.id}>{l.rotulo}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {problemas.length > 0 && (
+              <div className="bg-red-50 text-red-700 text-sm rounded p-3">
+                <p className="mb-1">Nada foi importado. Corrija e envie o arquivo de novo:</p>
+                <ul className="list-disc pl-5 max-h-60 overflow-y-auto">
+                  {problemas.map((p) => (
+                    <li key={p}>{p}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
             {/* Uma instituição tem centenas de ambientes. Sem um filtro, achar
