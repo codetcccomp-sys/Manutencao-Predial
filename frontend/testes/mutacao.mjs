@@ -145,6 +145,31 @@ const MUTACOES = [
     para: '      setRelatorio(data.relatorio);',
     spec: 'testes/Cadastros.test.jsx',
   },
+  {
+    // O defeito que existia de verdade: os dois estados tinham o mesmo par de
+    // cor e ficavam indistinguíveis na tela.
+    descricao: 'atribuído e em andamento voltam a ser idênticos',
+    arquivo: 'src/dominio/rotulos.js',
+    de: `    icone: 'chave',
+    cor: 'bg-andamento-tenue text-andamento',`,
+    para: `    icone: 'pessoa',
+    cor: 'bg-info-tenue text-info',`,
+    spec: 'testes/Badge.test.jsx',
+  },
+  {
+    descricao: 'badge de estado perde o ícone e volta a depender de cor e texto',
+    arquivo: 'src/components/ui/Badge.jsx',
+    de: '      <Icone nome={definicao.icone} classe="h-3.5 w-3.5" />\n',
+    para: '',
+    spec: 'testes/Badge.test.jsx',
+  },
+  {
+    descricao: 'escada de prioridade acende todas as barras',
+    arquivo: 'src/components/ui/Icone.jsx',
+    de: 'opacity={i < nivel ? 1 : 0.25}',
+    para: 'opacity={1}',
+    spec: 'testes/Badge.test.jsx',
+  },
 ];
 
 /**

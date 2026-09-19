@@ -2,23 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import api, { baixarArquivo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-
-const PRIORIDADE_LABEL = {
-  critica: 'Crítica',
-  alta: 'Alta',
-  media: 'Média',
-  baixa: 'Baixa',
-};
-
-const ESTADO_LABEL = {
-  aberto: 'Aberto',
-  em_triagem: 'Em triagem',
-  atribuido: 'Atribuído',
-  em_andamento: 'Em andamento',
-  aguardando_material: 'Aguardando material',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-};
+import { rotuloEstado, rotuloPrioridade } from '../dominio/rotulos';
 
 // O backend devolve segundos; quem lê o relatório pensa em horas e dias.
 function formatarDuracao(segundos) {
@@ -216,7 +200,7 @@ function Relatorios() {
               {dados.resumo.por_estado.map((l) => (
                 <Barra
                   key={l.estado}
-                  rotulo={ESTADO_LABEL[l.estado] || l.estado}
+                  rotulo={rotuloEstado(l.estado)}
                   valor={l.total}
                   total={dados.resumo.totais.total}
                 />
@@ -380,7 +364,7 @@ function Relatorios() {
                 {dados.sla.map((s) => (
                   <label key={s.prioridade} className="text-sm grid gap-1">
                     <span className="text-gray-600">
-                      {PRIORIDADE_LABEL[s.prioridade] ?? s.prioridade}
+                      {rotuloPrioridade(s.prioridade)}
                     </span>
                     <span className="flex items-center gap-1">
                       <input

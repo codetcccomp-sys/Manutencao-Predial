@@ -1,26 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
-
-const ESTADO_LABEL = {
-  aberto: 'Aberto',
-  em_triagem: 'Em triagem',
-  atribuido: 'Atribuído',
-  em_andamento: 'Em andamento',
-  aguardando_material: 'Aguardando material',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-};
-
-const ESTADO_COR = {
-  aberto: 'bg-gray-200 text-gray-800',
-  em_triagem: 'bg-amber/20 text-amber',
-  atribuido: 'bg-blue-100 text-blue-700',
-  em_andamento: 'bg-blue-100 text-blue-700',
-  aguardando_material: 'bg-yellow-100 text-yellow-700',
-  concluido: 'bg-green-100 text-green-700',
-  cancelado: 'bg-red-100 text-red-700',
-};
+import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../components/ui/Badge';
+import { ESTADOS, ORDEM_ESTADOS } from '../dominio/rotulos';
 
 function Dashboard() {
   const [chamados, setChamados] = useState([]);
@@ -120,9 +102,9 @@ function Dashboard() {
             className="border rounded px-3 py-2 text-sm bg-white"
           >
             <option value="">Todos</option>
-            {Object.entries(ESTADO_LABEL).map(([valor, rotulo]) => (
+            {ORDEM_ESTADOS.map((valor) => (
               <option key={valor} value={valor}>
-                {rotulo}
+                {ESTADOS[valor].rotulo}
               </option>
             ))}
           </select>
@@ -163,17 +145,20 @@ function Dashboard() {
           >
             <div className="min-w-0">
               <p className="font-medium text-navy truncate">{c.titulo}</p>
-              <p className="text-xs text-gray-500">{c.protocolo}</p>
+              {/* A prioridade não aparecia na lista: quem varre o painel
+                  procurando o que atacar primeiro não tinha como saber sem
+                  abrir chamado por chamado — justamente o dado que a
+                  priorização do §2.5 existe para produzir. Fica à esquerda,
+                  com o protocolo, para não disputar largura com estado e
+                  atraso no celular. */}
+              <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                <span className="text-xs text-tinta-2 truncate">{c.protocolo}</span>
+                <BadgePrioridade prioridade={c.prioridade} />
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {c.em_atraso && (
-                <span className="text-xs font-medium px-2 py-1 rounded bg-red-100 text-red-700">
-                  Em atraso
-                </span>
-              )}
-              <span className={`text-xs font-medium px-2 py-1 rounded ${ESTADO_COR[c.estado]}`}>
-                {ESTADO_LABEL[c.estado]}
-              </span>
+              {c.em_atraso && <BadgeAtraso />}
+              <BadgeEstado estado={c.estado} />
             </div>
           </Link>
         ))}

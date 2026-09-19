@@ -2,6 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../components/ui/Badge';
+import {
+  ORDEM_PRIORIDADES,
+  rotuloEstado,
+  rotuloPrioridade,
+} from '../dominio/rotulos';
 
 // Escalas e perguntas orientadoras conforme o §2.5 do Termo de Abertura. As
 // perguntas ficam visíveis de propósito: são elas que tornam a nota menos
@@ -27,24 +33,9 @@ const FATORES = [
   },
 ];
 
-const PRIORIDADE_LABEL = {
-  baixa: 'Baixa',
-  media: 'Média',
-  alta: 'Alta',
-  critica: 'Crítica',
-};
-
-const PRIORIDADES = Object.keys(PRIORIDADE_LABEL);
-
-const ESTADO_LABEL = {
-  aberto: 'Aberto',
-  em_triagem: 'Em triagem',
-  atribuido: 'Atribuído',
-  em_andamento: 'Em andamento',
-  aguardando_material: 'Aguardando material',
-  concluido: 'Concluído',
-  cancelado: 'Cancelado',
-};
+// Os rótulos vinham repetidos aqui, no painel e no relatório — três cópias,
+// com ordens diferentes. Agora saem de dominio/rotulos.js.
+const PRIORIDADES = ORDEM_PRIORIDADES;
 
 const PROXIMOS_ESTADOS = {
   aberto: ['em_triagem', 'cancelado'],
@@ -533,13 +524,17 @@ function ChamadoDetalhe() {
           </>
         )}
 
+        {/* Estado, prioridade e atraso eram texto em negrito aqui e badge no
+            painel: o mesmo campo, dois desenhos, conforme a tela. Agora saem
+            dos mesmos componentes — e a prioridade, que era invisível como
+            informação, ganha a mesma leitura rápida do estado. */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <BadgeEstado estado={chamado.estado} />
+          <BadgePrioridade prioridade={chamado.prioridade} />
+          {chamado.em_atraso && <BadgeAtraso />}
+        </div>
+
         <div className="text-sm grid grid-cols-2 gap-2 text-gray-600">
-          <span>
-            Estado: <strong>{ESTADO_LABEL[chamado.estado] ?? chamado.estado}</strong>
-          </span>
-          <span>
-            Prioridade: <strong>{PRIORIDADE_LABEL[chamado.prioridade] ?? chamado.prioridade}</strong>
-          </span>
           {/* Onde e de que tipo: é a primeira coisa que o técnico designado
               precisa saber, e era o que faltava — o local só aparecia no
               relatório e na planilha, não na tela por onde se trabalha. */}
@@ -563,14 +558,11 @@ function ChamadoDetalhe() {
           {chamado.prazo_estimado && (
             <span className="col-span-2">
               Prazo:{' '}
-              <strong className={chamado.em_atraso ? 'text-red-700' : ''}>
+              {/* O badge de atraso já está no topo; aqui basta a data marcada,
+                  senão a mesma informação aparece duas vezes na mesma tela. */}
+              <strong className={chamado.em_atraso ? 'text-erro' : ''}>
                 {new Date(chamado.prazo_estimado).toLocaleString('pt-BR')}
               </strong>
-              {chamado.em_atraso && (
-                <span className="ml-2 text-xs font-medium px-2 py-1 rounded bg-red-100 text-red-700">
-                  Em atraso
-                </span>
-              )}
             </span>
           )}
         </div>
@@ -637,7 +629,7 @@ function ChamadoDetalhe() {
             <div className="bg-fundo rounded p-3 text-sm grid gap-1">
               <span>
                 Sugestão:{' '}
-                <strong>{PRIORIDADE_LABEL[sugestao.prioridade] ?? sugestao.prioridade}</strong>{' '}
+                <strong>{rotuloPrioridade(sugestao.prioridade)}</strong>{' '}
                 <span className="text-gray-500">(pontuação {sugestao.pontuacao})</span>
               </span>
               <span className="text-xs text-gray-600">{sugestao.motivo}</span>
@@ -655,7 +647,7 @@ function ChamadoDetalhe() {
               >
                 {PRIORIDADES.map((p) => (
                   <option key={p} value={p}>
-                    {PRIORIDADE_LABEL[p]}
+                    {rotuloPrioridade(p)}
                   </option>
                 ))}
               </select>
@@ -689,7 +681,7 @@ function ChamadoDetalhe() {
               Última priorização em {new Date(chamado.priorizado_em).toLocaleString('pt-BR')}
               {chamado.prioridade_sugerida &&
                 chamado.prioridade !== chamado.prioridade_sugerida &&
-                ` — sugerida "${PRIORIDADE_LABEL[chamado.prioridade_sugerida]}", registrada "${PRIORIDADE_LABEL[chamado.prioridade]}"`}
+                ` — sugerida "${rotuloPrioridade(chamado.prioridade_sugerida)}", registrada "${rotuloPrioridade(chamado.prioridade)}"`}
               .
             </p>
           )}
@@ -819,7 +811,7 @@ function ChamadoDetalhe() {
                 onClick={() => acionarEstado(estado)}
                 className="bg-amber text-white text-sm rounded px-3 py-2 hover:opacity-90"
               >
-                {ESTADO_LABEL[estado] ?? estado}
+                {rotuloEstado(estado)}
               </button>
             ))}
           </div>
