@@ -634,7 +634,7 @@ function ChamadoDetalhe() {
           </div>
 
           {sugestao && (
-            <div className="bg-[#EEF1F5] rounded p-3 text-sm grid gap-1">
+            <div className="bg-fundo rounded p-3 text-sm grid gap-1">
               <span>
                 Sugestão:{' '}
                 <strong>{PRIORIDADE_LABEL[sugestao.prioridade] ?? sugestao.prioridade}</strong>{' '}
@@ -948,7 +948,7 @@ function ChamadoDetalhe() {
               <li
                 key={c.id}
                 className={`border rounded px-3 py-2 ${
-                  c.usuario_id === usuario.id ? 'bg-[#EEF1F5]' : ''
+                  c.usuario_id === usuario.id ? 'bg-fundo' : ''
                 }`}
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs mb-1">

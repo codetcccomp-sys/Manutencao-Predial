@@ -138,8 +138,11 @@ function Avisos() {
         aria-expanded={aberto}
       >
         <span aria-hidden="true">🔔</span>
+        {/* O contador fica sobre o navy do cabeçalho, então usa o âmbar claro:
+            o âmbar de superfície clara é escuro, e texto navy sobre ele seria
+            escuro sobre escuro. Assim são 8,14:1. */}
         {naoLidas > 0 && (
-          <span className="absolute -top-1 -right-1 bg-amber text-navy text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-amber-claro text-navy-2 text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
             {naoLidas > 9 ? '9+' : naoLidas}
           </span>
         )}

@@ -279,7 +279,7 @@ function Cadastros() {
                   {relatorio.linhas} {relatorio.linhas === 1 ? 'linha' : 'linhas'}.
                 </p>
                 {relatorio.desativados?.length > 0 && (
-                  <div className="text-amber-800">
+                  <div className="text-atencao">
                     <p>
                       {relatorio.desativados.length === 1
                         ? 'Um local do arquivo está desativado e não aparece na abertura de chamado:'

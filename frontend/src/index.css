@@ -1,3 +1,103 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Valores dos tokens, em canais RGB separados por espaço.
+ *
+ * Não é capricho de formato: é o que faz `bg-amber/20` continuar funcionando.
+ * Com a variável guardando um hexadecimal, o modificador de opacidade do
+ * Tailwind produz CSS inválido e a cor some sem erro nenhum — o pior tipo de
+ * quebra, porque o build passa. Em canais, o config monta
+ * `rgb(var(--cor-ambar) / <alpha-value>)` e a opacidade volta a valer.
+ *
+ * O porquê de cada valor, com a razão de contraste medida, está no
+ * tailwind.config.js.
+ */
+:root {
+  --cor-navy: 31 56 100;
+  --cor-navy-2: 22 41 75;
+
+  --cor-ambar: 138 83 0;
+  --cor-ambar-claro: 240 185 99;
+
+  --cor-fundo: 244 246 250;
+  --cor-superficie: 255 255 255;
+  --cor-superficie-2: 248 250 252;
+  --cor-borda: 223 227 236;
+  /* 3,42:1 sobre o cartão: borda de controle é elemento gráfico e
+     precisa ser percebida. O cinza anterior (1,64:1) desenhava o campo para
+     quem já enxergava bem e sumia para quem não. */
+  --cor-borda-forte: 126 139 168;
+  --cor-tinta: 22 41 75;
+  --cor-tinta-2: 85 98 124;
+  --cor-tinta-clara: 232 237 246;
+
+  --cor-erro: 180 35 24;
+  --cor-erro-tenue: 253 236 234;
+  --cor-sucesso: 20 108 52;
+  --cor-sucesso-tenue: 230 244 234;
+  --cor-atencao: 138 83 0;
+  --cor-atencao-tenue: 253 243 227;
+  --cor-info: 29 78 216;
+  --cor-info-tenue: 230 237 253;
+  --cor-neutro: 68 80 107;
+  --cor-neutro-tenue: 237 239 244;
+  --cor-andamento: 14 116 144;
+  --cor-andamento-tenue: 224 242 246;
+}
+
+@layer base {
+  body {
+    @apply bg-fundo text-tinta antialiased;
+  }
+
+  /**
+   * Foco visível em tudo, de uma vez.
+   *
+   * Antes só quatro campos — todos nas telas de autenticação — tinham anel de
+   * foco. As outras quarenta entradas do sistema dependiam do outline padrão
+   * do navegador, que varia de um para outro e some contra fundo claro. Quem
+   * navega por teclado ficava sem saber onde está.
+   *
+   * `:focus-visible` e não `:focus`: o anel aparece para quem usa teclado e
+   * não a cada clique de mouse, que é o comportamento que faz as pessoas
+   * quererem removê-lo.
+   */
+  :focus-visible {
+    @apply outline-none ring-2 ring-navy ring-offset-2 ring-offset-fundo;
+  }
+
+  /* Quem pediu menos movimento recebe menos movimento. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /**
+   * Alvo de toque confortável sem inchar o controle no desktop.
+   *
+   * Ideia tirada do padrão de badge do 21st.dev (coss.com): em ponteiro
+   * grosso, um pseudo-elemento invisível estende a área clicável até 44px,
+   * enquanto o botão continua pequeno para quem usa mouse. Vale para os
+   * controles em `text-xs` espalhados pelas listas, que hoje têm menos de
+   * 30px de altura tocável.
+   */
+  @media (pointer: coarse) {
+    .alvo-toque {
+      @apply relative;
+    }
+
+    .alvo-toque::after {
+      content: '';
+      @apply absolute left-1/2 top-1/2 min-h-toque min-w-toque -translate-x-1/2 -translate-y-1/2;
+    }
+  }
+}

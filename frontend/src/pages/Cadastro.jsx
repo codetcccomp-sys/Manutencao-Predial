@@ -28,7 +28,7 @@ function Cadastro() {
   }
 
   return (
-    <div className="min-h-screen bg-[#EEF1F5] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-fundo flex items-center justify-center px-4">
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
         <h1 className="text-xl font-bold text-navy mb-1">Criar conta</h1>
         <p className="text-sm text-gray-500 mb-6">Cadastro como solicitante</p>

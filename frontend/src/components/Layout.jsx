@@ -8,7 +8,7 @@ function Layout() {
   const ehAdministrador = usuario?.perfil === 'administrador';
 
   return (
-    <div className="min-h-screen bg-[#EEF1F5]">
+    <div className="min-h-screen bg-fundo">
       {/* Em telas estreitas o título e a identificação do usuário disputavam a
           mesma linha: o título quebrava em três linhas e espremia o botão Sair.
           Abaixo de sm eles viram duas linhas; a partir de sm voltam lado a lado. */}
@@ -18,25 +18,38 @@ function Layout() {
             <Link to="/" className="font-bold leading-tight">
               Sistema de Manutenção Predial
             </Link>
+            {/* Os links eram âmbar sobre o navy: 4,28:1, abaixo do mínimo. E
+                o âmbar já significava perfil, KPI e reabertura ao mesmo tempo
+                — navegação não é aviso. Tinta clara resolve as duas coisas de
+                uma vez: 9,89:1, e a cor de atenção fica livre para atenção. */}
             {podeVerRelatorios && (
-              <Link to="/relatorios" className="text-sm text-amber shrink-0 hover:underline">
+              <Link
+                to="/relatorios"
+                className="text-sm font-medium text-tinta-clara shrink-0 hover:underline"
+              >
                 Relatórios
               </Link>
             )}
             {podeVerRelatorios && (
-              <Link to="/cadastros" className="text-sm text-amber shrink-0 hover:underline">
+              <Link
+                to="/cadastros"
+                className="text-sm font-medium text-tinta-clara shrink-0 hover:underline"
+              >
                 Cadastros
               </Link>
             )}
             {ehAdministrador && (
-              <Link to="/usuarios" className="text-sm text-amber shrink-0 hover:underline">
+              <Link
+                to="/usuarios"
+                className="text-sm font-medium text-tinta-clara shrink-0 hover:underline"
+              >
                 Usuários
               </Link>
             )}
           </div>
           <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
             <span className="truncate">
-              {usuario?.nome} <span className="text-amber">({usuario?.perfil})</span>
+              {usuario?.nome} <span className="text-tinta-clara">({usuario?.perfil})</span>
             </span>
             <Avisos />
             <button
