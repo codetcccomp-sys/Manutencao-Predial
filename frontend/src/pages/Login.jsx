@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Campo } from '../components/ui/Campo';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
+import Marca from '../components/ui/Marca';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -34,8 +35,13 @@ function Login() {
         className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4"
       >
         <div>
-          <h1 className="text-xl font-bold text-navy">Sistema de Manutenção Predial</h1>
-          <p className="text-sm text-tinta-2 mt-1">Entre com sua conta</p>
+          {/* A marca é o <h1> da tela, não um enfeite acima dele: esta página
+              não tem outro título, e um h1 escondido atrás de uma logomarca
+              seria um título duplicado para quem navega por cabeçalhos. */}
+          <h1>
+            <Marca tamanho="destaque" comDescritor />
+          </h1>
+          <p className="text-sm text-tinta-2 mt-3">Entre com sua conta</p>
         </div>
 
         {/* Quem caiu aqui por token vencido merece saber o motivo, em vez de

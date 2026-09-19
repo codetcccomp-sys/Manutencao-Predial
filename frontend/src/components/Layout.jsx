@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
+import Marca from './ui/Marca';
 
 /**
  * Invólucro das telas autenticadas.
@@ -64,8 +65,8 @@ function Layout() {
               caber, de propósito: link espremido a ponto de cortar a palavra
               é pior que link na linha de baixo. */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-            <Link to="/" className="font-bold leading-tight mr-2 rounded px-1 shrink-0">
-              Sistema de Manutenção Predial
+            <Link to="/" className="mr-2 rounded px-1 shrink-0">
+              <Marca invertido />
             </Link>
 
             <nav

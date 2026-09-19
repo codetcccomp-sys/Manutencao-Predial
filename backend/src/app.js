@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { errorHandler } = require('./middlewares/errorHandler');
+const { NOME_SISTEMA } = require('./config/marca');
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', servico: 'Sistema de Manutenção Predial API' });
+  res.json({ status: 'ok', servico: `${NOME_SISTEMA} — API` });
 });
 
 // Checagem que realmente exercita o banco: /health sozinho responde "ok" mesmo

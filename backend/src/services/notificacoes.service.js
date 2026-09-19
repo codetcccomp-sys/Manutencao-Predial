@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const email = require('./email.service');
+const { ASSINATURA } = require('../config/marca');
 
 const ASSUNTO_POR_TIPO = {
   atribuicao: 'Chamado designado a você',
@@ -38,7 +39,7 @@ async function despacharEmail(notificacaoId) {
     const enviado = await email.enviar({
       para: notificacao.email,
       assunto: `[${notificacao.protocolo}] ${ASSUNTO_POR_TIPO[notificacao.tipo] || 'Atualização'}`,
-      texto: `Olá, ${notificacao.nome}.\n\n${notificacao.mensagem}\n\nSistema de Manutenção Predial`,
+      texto: `Olá, ${notificacao.nome}.\n\n${notificacao.mensagem}\n\n${ASSINATURA}`,
     });
 
     if (enviado) {

@@ -320,6 +320,27 @@ const MUTACOES = [
     spec: 'testes/Confirmacao.test.jsx',
   },
   {
+    descricao: 'símbolo da marca ganha alt e faz o nome ser anunciado duas vezes',
+    arquivo: 'src/components/ui/Marca.jsx',
+    de: '        alt=""',
+    para: '        alt="Conserva Predial"',
+    spec: 'testes/Marca.test.jsx',
+  },
+  {
+    descricao: 'nome do sistema volta a ser parte da imagem, sem texto',
+    arquivo: 'src/components/ui/Marca.jsx',
+    de: '          Conserva <span className={invertido ? \'text-amber-claro\' : \'text-amber\'}>Predial</span>',
+    para: '          {null}',
+    spec: 'testes/Marca.test.jsx',
+  },
+  {
+    descricao: 'a barra do navegador desgarra da cor do cabeçalho',
+    arquivo: 'index.html',
+    de: '<meta name="theme-color" content="#1f3864" />',
+    para: '<meta name="theme-color" content="#123456" />',
+    spec: 'testes/contraste.test.js',
+  },
+  {
     descricao: 'lista de problemas da importação perde o papel de alerta',
     arquivo: 'src/pages/Cadastros.jsx',
     de: '<Aviso tipo="erro" titulo="Nada foi importado. Corrija e envie o arquivo de novo:">',

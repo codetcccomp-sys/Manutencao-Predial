@@ -93,3 +93,19 @@ describe('Contraste dos tokens (WCAG 2.1 AA)', () => {
     expect(razao('ambar-claro', 'navy')).toBeGreaterThanOrEqual(TEXTO);
   });
 });
+
+describe('A cor da barra do navegador acompanha o cabeçalho', () => {
+  it('theme-color do index.html é exatamente o --cor-navy', () => {
+    const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
+    const declarado = html.match(/name="theme-color"\s+content="(#[0-9a-fA-F]{6})"/)?.[1];
+
+    // Duas fontes para a mesma cor: o token no CSS e um hexadecimal escrito à
+    // mão no HTML, que o Tailwind não enxerga. Sem este teste, trocar o navy
+    // deixaria a barra do celular numa cor que o sistema não usa mais — e
+    // ninguém repara, porque só aparece no celular, acima da tela.
+    const [r, g, b] = token('navy');
+    const esperado = `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+
+    expect(declarado?.toLowerCase()).toBe(esperado);
+  });
+});

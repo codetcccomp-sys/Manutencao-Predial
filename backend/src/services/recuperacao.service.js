@@ -5,6 +5,7 @@ const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { normalizarEmail } = require('./auth.service');
 const email = require('./email.service');
+const { ASSINATURA } = require('../config/marca');
 
 const VALIDADE_MINUTOS = 60;
 const SALT_ROUNDS = 10;
@@ -66,13 +67,13 @@ async function enviarEmail({ token, usuario }, urlBase) {
 
   await email.enviar({
     para: usuario.email,
-    assunto: 'Redefinição de senha — Sistema de Manutenção Predial',
+    assunto: `Redefinição de senha — ${ASSINATURA}`,
     texto:
       `Olá, ${usuario.nome}.\n\n` +
       `Recebemos um pedido para redefinir sua senha. O link abaixo vale por ${VALIDADE_MINUTOS} minutos e só pode ser usado uma vez:\n\n` +
       `${link}\n\n` +
       'Se não foi você quem pediu, ignore esta mensagem: sua senha atual continua valendo.\n\n' +
-      'Sistema de Manutenção Predial',
+      ASSINATURA,
   });
 
   return link;
