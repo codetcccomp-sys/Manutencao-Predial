@@ -54,6 +54,29 @@ test('o detalhe do chamado cabe na tela', async ({ page }) => {
   await conferirQueCabeNaTela(page, expect);
 });
 
+test('o diálogo de confirmação cabe na tela e devolve o foco', async ({ page }) => {
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto(`/chamados/${chamado.id}`);
+
+  const botao = page.getByRole('button', { name: 'Cancelado' });
+  await botao.click();
+
+  const dialogo = page.getByRole('dialog');
+  await expect(dialogo).toBeVisible();
+  // Um diálogo que não cabe é pior que nenhum: o botão de recusa fica fora da
+  // tela e sobra confirmar.
+  await conferirQueCabeNaTela(page, expect);
+  const caixa = await dialogo.boundingBox();
+  const tela = page.viewportSize();
+  expect(caixa.y).toBeGreaterThanOrEqual(0);
+  expect(caixa.y + caixa.height).toBeLessThanOrEqual(tela.height + 1);
+
+  await page.keyboard.press('Escape');
+  await expect(dialogo).toBeHidden();
+  // O chamado continua no fluxo: fechar é "não".
+  await expect(page.getByRole('button', { name: 'Cancelado' })).toBeFocused();
+});
+
 test('um título longo é cortado em vez de esticar a página', async ({ page }) => {
   await entrar(page, cenario.pessoas.solicitante);
   await page.goto('/');

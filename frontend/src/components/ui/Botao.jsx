@@ -51,11 +51,13 @@ function Botao({
       // assim que botões de "Cancelar" já submeteram formulário por aí. Quem
       // quer enviar pede explicitamente.
       type="button"
+      {...resto}
+      // Depois do espalhamento, de propósito: com `disabled` antes dele, um
+      // `disabled={false}` vindo de fora reabilitava o botão no meio do envio.
       disabled={carregando || resto.disabled}
       // Avisa o leitor de tela que a ação está em curso, o que um rótulo
       // trocado para "Enviando..." não comunica de forma padronizada.
       aria-busy={carregando || undefined}
-      {...resto}
       className={`${BASE} ${VARIANTES[variante]} ${TAMANHOS[tamanho]} ${
         larguraTotal ? 'w-full' : ''
       } ${className}`}

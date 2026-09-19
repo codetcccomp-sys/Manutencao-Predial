@@ -4,6 +4,7 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../components/ui/Badge';
 import Aviso from '../components/ui/Aviso';
+import Confirmacao from '../components/ui/Confirmacao';
 import {
   ORDEM_PRIORIDADES,
   rotuloEstado,
@@ -75,6 +76,8 @@ function ChamadoDetalhe() {
   const [edicao, setEdicao] = useState(null);
   const [categorias, setCategorias] = useState([]);
   const [locais, setLocais] = useState([]);
+  const [confirmacao, setConfirmacao] = useState(null);
+  const [confirmando, setConfirmando] = useState(false);
 
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
@@ -223,7 +226,31 @@ function ChamadoDetalhe() {
       setConcluindo(true);
       return;
     }
+    // §2.4: "cancelado" não tem estado seguinte. Diferente de "concluído", que
+    // aceita reabertura em 48h (RN09), cancelar encerra o chamado para sempre
+    // — e o botão fica encostado nos outros, numa tela de celular.
+    if (estado === 'cancelado') {
+      setConfirmacao({
+        titulo: 'Cancelar este chamado?',
+        descricao:
+          'O chamado sai do fluxo e não pode ser reaberto. Se o serviço ainda for necessário, será preciso abrir um chamado novo.',
+        rotulo: 'Cancelar o chamado',
+        executar: () => mudarEstado('cancelado'),
+      });
+      return;
+    }
     mudarEstado(estado);
+  }
+
+  // A ação destrutiva pendente de confirmação. `null` quando não há diálogo.
+  async function confirmar() {
+    setConfirmando(true);
+    try {
+      await confirmacao.executar();
+      setConfirmacao(null);
+    } finally {
+      setConfirmando(false);
+    }
   }
 
   async function salvarExecucao(e) {
@@ -898,8 +925,18 @@ function ChamadoDetalhe() {
                 </div>
                 {(podeGerenciar || a.usuario_id === usuario.id) && (
                   <button
-                    onClick={() => removerAnexo(a.id)}
-                    className="text-xs text-red-600 hover:underline shrink-0"
+                    // O arquivo é apagado, não desativado: não há de onde
+                    // trazer de volta uma foto do problema que já foi
+                    // resolvido.
+                    onClick={() =>
+                      setConfirmacao({
+                        titulo: 'Remover este anexo?',
+                        descricao: `"${a.nome_arquivo}" será apagado do chamado. Não há como recuperá-lo depois.`,
+                        rotulo: 'Remover',
+                        executar: () => removerAnexo(a.id),
+                      })
+                    }
+                    className="text-xs text-erro hover:underline shrink-0"
                   >
                     Remover
                   </button>
@@ -1020,6 +1057,17 @@ function ChamadoDetalhe() {
           ))}
         </ul>
       </details>
+
+      <Confirmacao
+        aberto={confirmacao !== null}
+        titulo={confirmacao?.titulo}
+        rotuloConfirmar={confirmacao?.rotulo}
+        carregando={confirmando}
+        onConfirmar={confirmar}
+        onCancelar={() => setConfirmacao(null)}
+      >
+        {confirmacao?.descricao}
+      </Confirmacao>
     </div>
   );
 }

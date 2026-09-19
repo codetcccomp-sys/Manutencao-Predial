@@ -379,3 +379,90 @@ describe('Hierarquia de cabeçalhos', () => {
     ).toEqual([]);
   });
 });
+
+describe('Confirmação antes do que não tem volta', () => {
+  it('cancelar o chamado pergunta antes, e o botão sozinho não cancela nada', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: GESTOR, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    await usuario.click(screen.getByRole('button', { name: 'Cancelado' }));
+
+    // §2.4: cancelado não tem estado seguinte. O clique abre a pergunta; quem
+    // muda o chamado é a resposta.
+    expect(api.patch).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Cancelar este chamado?');
+
+    await usuario.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(api.patch).not.toHaveBeenCalled();
+
+    await usuario.click(screen.getByRole('button', { name: 'Cancelado' }));
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar o chamado' }));
+
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith('/chamados/7/estado', { estado: 'cancelado' })
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('os outros estados seguem num clique só', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: GESTOR, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    // Perguntar em tudo treina a pessoa a responder "sim" sem ler — e aí a
+    // pergunta que importa também passa batida. "Aguardando material" se
+    // desfaz voltando para "em andamento".
+    await usuario.click(screen.getByRole('button', { name: 'Aguardando material' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith('/chamados/7/estado', {
+        estado: 'aguardando_material',
+      })
+    );
+  });
+
+  it('remover um anexo pergunta antes, e diz qual arquivo some', async () => {
+    const usuario = userEvent.setup();
+    api.get.mockImplementation(async (caminho) => {
+      if (caminho === '/chamados/7') return { data: { chamado: chamado() } };
+      if (caminho === '/chamados/7/anexos')
+        return {
+          data: {
+            anexos: [
+              {
+                id: 3,
+                nome_arquivo: 'foto-da-infiltracao.jpg',
+                tamanho_bytes: 2048,
+                usuario_id: GESTOR.id,
+                usuario_nome: 'Gestor',
+                data_upload: '2025-01-01T12:00:00Z',
+              },
+            ],
+          },
+        };
+      if (caminho === '/chamados/7/comentarios') return { data: { comentarios: [] } };
+      return { data: { usuarios: [], categorias: [], locais: [] } };
+    });
+
+    render(
+      <MemoryRouter>
+        <ChamadoDetalhe />
+      </MemoryRouter>
+    );
+    await screen.findByText('foto-da-infiltracao.jpg');
+
+    await usuario.click(screen.getByRole('button', { name: 'Remover' }));
+
+    // O nome do arquivo na pergunta é o que evita apagar o anexo errado numa
+    // lista de vários.
+    expect(api.delete).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveAccessibleDescription(
+      /"foto-da-infiltracao\.jpg" será apagado/
+    );
+
+    await usuario.click(screen.getAllByRole('button', { name: 'Remover' })[1]);
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/chamados/7/anexos/3'));
+  });
+});
