@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -311,5 +311,47 @@ describe('Onde é o problema', () => {
 
     await screen.findByRole('heading', { name: 'Infiltração no auditório' });
     expect(screen.queryByText(/^Local:/)).toBeNull();
+  });
+});
+
+describe('Histórico', () => {
+  const COM_HISTORICO = [
+    { id: 1, estado_novo: 'em_triagem', data: '2026-01-02T10:00:00Z', observacao: null },
+    {
+      id: 2,
+      estado_novo: 'aguardando_material',
+      data: '2026-01-03T10:00:00Z',
+      observacao: 'Chamado editado: titulo',
+    },
+  ];
+
+  it('escreve os estados por extenso, como o resto do sistema', async () => {
+    const { container } = montar({ como: GESTOR, dados: chamado({ historico: COM_HISTORICO }) });
+
+    // Escopado ao painel: a tela tem botões de mudança de estado com os mesmos
+    // nomes, e uma busca solta acharia os dois.
+    await screen.findByText(/2 registros/);
+    const painel = within(container.querySelector('details'));
+
+    // O histórico mostrava a chave crua do banco — "em_triagem",
+    // "aguardando_material" — enquanto todo o resto da tela já escrevia por
+    // extenso. Mesmo dado, duas grafias, na mesma página.
+    expect(painel.getByText('Em triagem')).toBeInTheDocument();
+    expect(painel.getByText('Aguardando material')).toBeInTheDocument();
+    expect(painel.queryByText('em_triagem')).toBeNull();
+  });
+
+  it('vem recolhido, dizendo quantos registros guarda', async () => {
+    montar({ como: GESTOR, dados: chamado({ historico: COM_HISTORICO }) });
+
+    // Recolhido, mas anunciando o tamanho: "Histórico" sozinho não diz se vale
+    // o clique. E é registro de auditoria — fica à mão, não no caminho.
+    const detalhes = await screen.findByText(/2 registros/);
+    expect(detalhes.closest('details')).not.toHaveAttribute('open');
+  });
+
+  it('a contagem concorda em singular', async () => {
+    montar({ como: GESTOR, dados: chamado({ historico: [COM_HISTORICO[0]] }) });
+    expect(await screen.findByText(/1 registro\b/)).toBeInTheDocument();
   });
 });

@@ -242,6 +242,20 @@ const MUTACOES = [
     para: '        <h2 className="text-lg font-bold text-navy">{titulo}</h2>',
     spec: 'testes/Dashboard.test.jsx',
   },
+  {
+    descricao: 'histórico volta a mostrar a chave crua do banco',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '<strong>{rotuloEstado(h.estado_novo)}</strong>',
+    para: '<strong>{h.estado_novo}</strong>',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'histórico volta a nascer aberto, empurrando o uso diário',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '<details className="group bg-superficie',
+    para: '<details open className="group bg-superficie',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
 ];
 
 /**
