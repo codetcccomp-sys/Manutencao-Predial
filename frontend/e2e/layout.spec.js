@@ -91,3 +91,66 @@ test('as tabelas de relatório rolam dentro do cartão, não levam a página', a
 
   await conferirQueCabeNaTela(page, expect);
 });
+
+test('o primeiro Tab leva ao conteúdo, não aos links do cabeçalho', async ({ page }) => {
+  await entrar(page, cenario.pessoas.administrador);
+  await page.goto('/');
+
+  await page.keyboard.press('Tab');
+
+  const atalho = page.getByRole('link', { name: 'Pular para o conteúdo' });
+  await expect(atalho).toBeFocused();
+
+  // Invisível até receber foco: ocupa espaço nenhum para quem usa mouse.
+  await expect(atalho).toBeVisible();
+
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#conteudo')).toBeVisible();
+
+  // Sem o atalho, quem navega por teclado percorre título, três links do
+  // menu, sino e Sair a cada troca de tela antes de alcançar o conteúdo.
+  const antesDoConteudo = await page.evaluate(() => {
+    const focaveis = [...document.querySelectorAll('a[href], button, input, select')];
+    const conteudo = document.querySelector('#conteudo');
+    return focaveis.findIndex((el) => conteudo.contains(el));
+  });
+  expect(antesDoConteudo).toBeGreaterThan(4);
+});
+
+test('a seção aberta se anuncia como página atual', async ({ page }) => {
+  await entrar(page, cenario.pessoas.administrador);
+  await page.goto('/relatorios');
+
+  // aria-current é o que um leitor de tela anuncia; o sublinhado é o mesmo
+  // sinal para quem enxerga. Antes não havia nenhum dos dois: os três links
+  // ficavam idênticos, estivesse aberta qual estivesse.
+  await expect(page.getByRole('link', { name: 'Relatórios' })).toHaveAttribute(
+    'aria-current',
+    'page'
+  );
+  await expect(page.getByRole('link', { name: 'Cadastros' })).not.toHaveAttribute(
+    'aria-current',
+    'page'
+  );
+});
+
+test('o conteúdo aproveita a largura do monitor', async ({ page }) => {
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto('/');
+  await page.waitForSelector('h2');
+
+  const { larguraConteudo, larguraTela } = await page.evaluate(() => ({
+    larguraConteudo: document.querySelector('#conteudo').getBoundingClientRect().width,
+    larguraTela: document.documentElement.clientWidth,
+  }));
+
+  // Em telas largas o sistema ocupava 896px e deixava mais da metade do
+  // monitor vazia, enquanto as tabelas de relatório rolavam na horizontal
+  // dentro do container apertado. No celular o teto não vincula e o conteúdo
+  // continua ocupando a tela toda menos a margem.
+  if (larguraTela >= 1280) {
+    expect(larguraConteudo).toBeGreaterThan(1100);
+  } else {
+    expect(larguraConteudo).toBeGreaterThan(larguraTela - 48);
+  }
+});
