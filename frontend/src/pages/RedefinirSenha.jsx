@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
+import { Campo } from '../components/ui/Campo';
+import Botao from '../components/ui/Botao';
+import Aviso from '../components/ui/Aviso';
 
 function RedefinirSenha() {
   const [params] = useSearchParams();
@@ -11,6 +14,10 @@ function RedefinirSenha() {
   const [confirmacao, setConfirmacao] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
+
+  // Erro de conferência fica no campo, não na faixa do topo: é ali que a
+  // pessoa está olhando quando digita a segunda senha.
+  const naoConferem = confirmacao.length > 0 && senha !== confirmacao;
 
   async function enviar(e) {
     e.preventDefault();
@@ -35,64 +42,57 @@ function RedefinirSenha() {
   }
 
   return (
-    <div className="min-h-screen bg-fundo flex items-center justify-center px-4">
-      <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-navy mb-1">Definir nova senha</h1>
+    <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
+      <div className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4">
+        <h1 className="text-xl font-bold text-navy">Definir nova senha</h1>
 
         {!token ? (
           <>
-            <p className="text-sm text-gray-600 my-6">
+            <Aviso tipo="atencao">
               Este endereço não traz um token de redefinição. Use o link que enviamos por e-mail, ou
               peça um novo.
-            </p>
-            <Link to="/recuperar-senha" className="text-sm text-amber font-medium">
+            </Aviso>
+            <Link to="/recuperar-senha" className="text-sm font-medium text-navy hover:underline">
               Pedir novo link
             </Link>
           </>
         ) : (
-          <form onSubmit={enviar}>
-            <p className="text-sm text-gray-500 mb-6">
-              Escolha uma senha de ao menos 6 caracteres.
-            </p>
+          <form onSubmit={enviar} className="grid gap-4">
+            <p className="text-sm text-tinta-2">Escolha uma senha de ao menos 6 caracteres.</p>
 
-            {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-2 mb-4">{erro}</div>}
+            {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="senha">
-              Nova senha
-            </label>
-            <input
-              id="senha"
+            <Campo
+              rotulo="Nova senha"
               type="password"
-              required
+              autoComplete="new-password"
               minLength={6}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-navy"
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="confirmacao">
-              Repita a nova senha
-            </label>
-            <input
-              id="confirmacao"
+            <Campo
+              rotulo="Repita a nova senha"
               type="password"
-              required
+              autoComplete="new-password"
               minLength={6}
               value={confirmacao}
+              erro={naoConferem ? 'As senhas não conferem.' : undefined}
               onChange={(e) => setConfirmacao(e.target.value)}
-              className="w-full border rounded px-3 py-2 mb-6 focus:outline-none focus:ring-2 focus:ring-navy"
             />
 
-            <button
+            <Botao
               type="submit"
-              disabled={carregando}
-              className="w-full bg-navy text-white rounded py-2 font-medium hover:bg-navy-2 disabled:opacity-60"
+              variante="primaria"
+              carregando={carregando}
+              disabled={naoConferem}
+              larguraTotal
             >
               {carregando ? 'Salvando...' : 'Salvar nova senha'}
-            </button>
+            </Botao>
 
-            <p className="text-sm text-gray-500 mt-4 text-center">
-              <Link to="/recuperar-senha" className="text-amber font-medium">
+            <p className="text-sm text-center">
+              <Link to="/recuperar-senha" className="font-medium text-navy hover:underline">
                 Pedir outro link
               </Link>
             </p>

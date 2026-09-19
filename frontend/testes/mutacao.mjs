@@ -170,6 +170,44 @@ const MUTACOES = [
     para: 'opacity={1}',
     spec: 'testes/Badge.test.jsx',
   },
+  {
+    // Renomearia o campo: "Bloco" viraria "Bloco (opcional)" para leitor de
+    // tela e para qualquer busca por rótulo.
+    descricao: 'marca de opcional entra no nome acessível do campo',
+    arquivo: 'src/components/ui/Campo.jsx',
+    de: `        <label htmlFor={id} className="text-sm font-medium text-tinta">
+          {rotulo}
+        </label>
+        {opcional && <span className="text-xs text-tinta-2">(opcional)</span>}`,
+    para: `        <label htmlFor={id} className="text-sm font-medium text-tinta">
+          {rotulo}
+          {opcional && <span className="text-xs text-tinta-2"> (opcional)</span>}
+        </label>`,
+    spec: 'testes/Campo.test.jsx',
+  },
+  {
+    descricao: 'erro do campo deixa de ser lido junto dele',
+    arquivo: 'src/components/ui/Campo.jsx',
+    de: '  const partes = [ajuda && `${id}-ajuda`, erro && `${id}-erro`].filter(Boolean);',
+    para: '  const partes = [ajuda && `${id}-ajuda`].filter(Boolean);',
+    spec: 'testes/Campo.test.jsx',
+  },
+  {
+    descricao: 'botão volta a enviar o formulário sem pedirem',
+    arquivo: 'src/components/ui/Botao.jsx',
+    de: '      type="button"',
+    para: '      type={resto.type}',
+    spec: 'testes/Campo.test.jsx',
+  },
+  {
+    // O estado original do sistema: dezessete faixas de erro, nenhuma
+    // anunciada por leitor de tela.
+    descricao: 'faixa de erro perde o papel e deixa de ser anunciada',
+    arquivo: 'src/components/ui/Aviso.jsx',
+    de: "  erro: { cor: 'bg-erro-tenue text-erro', icone: 'alerta', papel: 'alert' },",
+    para: "  erro: { cor: 'bg-erro-tenue text-erro', icone: 'alerta', papel: undefined },",
+    spec: 'testes/Campo.test.jsx',
+  },
 ];
 
 /**

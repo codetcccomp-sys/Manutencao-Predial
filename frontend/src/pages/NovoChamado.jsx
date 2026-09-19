@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import { AreaDeTexto, Campo, Selecao } from '../components/ui/Campo';
+import Botao from '../components/ui/Botao';
+import Aviso from '../components/ui/Aviso';
+import { ORDEM_PRIORIDADES, PRIORIDADES } from '../dominio/rotulos';
 
 function NovoChamado() {
   const [categorias, setCategorias] = useState([]);
@@ -44,105 +48,85 @@ function NovoChamado() {
   }
 
   return (
-    <div className="max-w-lg">
-      <h2 className="text-lg font-bold text-navy mb-6">Abrir novo chamado</h2>
+    // Formulário não acompanha a largura da tela: linha longa demais faz o
+    // olho perder o começo da próxima. Os 32rem continuam valendo mesmo com o
+    // invólucro agora em 1280px.
+    <div className="max-w-2xl">
+      <h2 className="text-lg font-bold text-navy mb-1">Abrir novo chamado</h2>
+      <p className="text-sm text-tinta-2 mb-6">
+        Todos os campos são obrigatórios. Quanto mais específico o título e o local, mais rápido a
+        triagem encaminha.
+      </p>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6 grid gap-4">
-        {erro && <div className="bg-red-50 text-red-700 text-sm rounded p-2">{erro}</div>}
+      <form
+        onSubmit={handleSubmit}
+        className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4"
+      >
+        {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-        <div>
-          <label htmlFor="titulo" className="block text-sm font-medium text-gray-700 mb-1">
-            Título
-          </label>
-          <input
-            id="titulo"
-            required
-            value={form.titulo}
-            onChange={(e) => atualizarCampo('titulo', e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
+        <Campo
+          rotulo="Título"
+          value={form.titulo}
+          onChange={(e) => atualizarCampo('titulo', e.target.value)}
+          ajuda="Uma frase que identifique o problema, como “Torneira vazando no banheiro masculino”."
+        />
 
-        <div>
-          <label htmlFor="descricao" className="block text-sm font-medium text-gray-700 mb-1">
-            Descrição
-          </label>
-          <textarea
-            id="descricao"
-            required
-            rows={4}
-            value={form.descricao}
-            onChange={(e) => atualizarCampo('descricao', e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
+        <AreaDeTexto
+          rotulo="Descrição"
+          rows={4}
+          value={form.descricao}
+          onChange={(e) => atualizarCampo('descricao', e.target.value)}
+        />
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="categoria" className="block text-sm font-medium text-gray-700 mb-1">
-              Categoria
-            </label>
-            <select
-              id="categoria"
-              required
-              value={form.categoria_id}
-              onChange={(e) => atualizarCampo('categoria_id', e.target.value)}
-              className="w-full border rounded px-3 py-2"
-            >
-              <option value="">Selecione</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="prioridade" className="block text-sm font-medium text-gray-700 mb-1">
-              Prioridade
-            </label>
-            <select
-              id="prioridade"
-              value={form.prioridade}
-              onChange={(e) => atualizarCampo('prioridade', e.target.value)}
-              className="w-full border rounded px-3 py-2"
-            >
-              <option value="baixa">Baixa</option>
-              <option value="media">Média</option>
-              <option value="alta">Alta</option>
-              <option value="critica">Crítica</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="local" className="block text-sm font-medium text-gray-700 mb-1">
-            Local
-          </label>
-          <select
-            id="local"
-            required
-            value={form.local_id}
-            onChange={(e) => atualizarCampo('local_id', e.target.value)}
-            className="w-full border rounded px-3 py-2"
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Selecao
+            rotulo="Categoria"
+            value={form.categoria_id}
+            onChange={(e) => atualizarCampo('categoria_id', e.target.value)}
           >
             <option value="">Selecione</option>
-            {locais.map((l) => (
-              <option key={l.id} value={l.id}>
-                {[l.unidade, l.bloco, l.pavimento, l.setor, l.ambiente].filter(Boolean).join(' / ')}
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
               </option>
             ))}
-          </select>
+          </Selecao>
+
+          <Selecao
+            rotulo="Prioridade"
+            value={form.prioridade}
+            onChange={(e) => atualizarCampo('prioridade', e.target.value)}
+            ajuda="A gestão revisa na triagem, com urgência, impacto e risco."
+          >
+            {ORDEM_PRIORIDADES.map((valor) => (
+              <option key={valor} value={valor}>
+                {PRIORIDADES[valor].rotulo}
+              </option>
+            ))}
+          </Selecao>
         </div>
 
-        <button
+        <Selecao
+          rotulo="Local"
+          value={form.local_id}
+          onChange={(e) => atualizarCampo('local_id', e.target.value)}
+        >
+          <option value="">Selecione</option>
+          {locais.map((l) => (
+            <option key={l.id} value={l.id}>
+              {[l.unidade, l.bloco, l.pavimento, l.setor, l.ambiente].filter(Boolean).join(' / ')}
+            </option>
+          ))}
+        </Selecao>
+
+        <Botao
           type="submit"
-          disabled={enviando}
-          className="bg-navy text-white rounded py-2 font-medium hover:bg-navy-2 disabled:opacity-60"
+          variante="primaria"
+          carregando={enviando}
+          className="justify-self-start"
         >
           {enviando ? 'Enviando...' : 'Abrir chamado'}
-        </button>
+        </Botao>
       </form>
     </div>
   );
