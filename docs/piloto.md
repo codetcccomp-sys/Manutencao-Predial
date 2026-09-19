@@ -60,8 +60,19 @@ aviso mede o processo errado.
    Authorization: Bearer <o segredo>
    a cada 15 minutos
    ```
+   Ligue, no agendador, **a notificação de falha de execução** e a gravação da
+   resposta no histórico. A notificação não é conforto: o backend não tem como
+   saber que ninguém está chamando, então, se o agendador parar, nada no
+   sistema acusa (ver as limitações no item 5). Quem pode perceber é o próprio
+   agendador, e avisar você é o sinal que fecha esse furo.
 4. Confira: a primeira chamada deve devolver `200` com um resumo. Sem o
    cabeçalho, deve devolver `401`.
+
+   Atenção ao "executar teste" do agendador: ele costuma usar o que está no
+   formulário, não o que está gravado. Um cabeçalho adicionado e não salvo dá
+   `200` no teste e `401` em toda execução agendada. Salve, espere a próxima
+   execução automática e confira o `200` **dela** no histórico — é o que prova
+   que o que está gravado funciona.
 
    Um `503` com `CRON_SEM_SEGREDO` significa que o processo não enxerga a
    variável, e isso tem três causas, em ordem de frequência: o nome está
@@ -210,7 +221,9 @@ Uma rotina semanal curta, sempre no mesmo dia:
    problema está, não onde há mais chamados.
 2. Conferir que o agendador de atraso rodou (o painel do serviço mostra o
    histórico de chamadas; erros seguidos significam que ninguém está sendo
-   avisado).
+   avisado). Com a notificação de falha ligada, isso vira conferência de
+   rotina em vez de vigilância — mas ela avisa sobre chamada que falha, não
+   sobre chamada que deixou de acontecer, então a olhada continua valendo.
 3. Exportar a planilha do período e guardar. É o dado bruto do piloto; se algo
    for reconfigurado no meio do caminho, a série exportada preserva o que
    havia.
@@ -235,8 +248,10 @@ Conhecidas, decididas, e melhor ditas no começo:
 - **Não há log estruturado.** Erros vão para o log da Vercel em texto. Para
   investigar um incidente, dá; para acompanhar tendência, não.
 - **O aviso de atraso depende de serviço externo.** Se o agendador parar, o
-  sistema não reclama — ninguém é avisado e nada indica isso na tela. Por isso
-  a conferência semanal do item 4.
+  sistema não reclama — ninguém é avisado e nada indica isso na tela. A
+  notificação de falha do agendador (item 2.1) cobre o caso em que a chamada
+  acontece e dá erro; não cobre o caso em que ela simplesmente deixa de
+  acontecer, que é por isso que a conferência do item 4 continua na rotina.
 - **Não há exclusão de nada**, por decisão: locais e equipes são desativados,
   comentários e histórico não somem. Ver o item 2.5 sobre o que isso implica
   para dado pessoal.
