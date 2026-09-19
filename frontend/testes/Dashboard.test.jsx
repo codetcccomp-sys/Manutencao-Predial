@@ -185,3 +185,90 @@ describe('Lista', () => {
     );
   });
 });
+
+describe('Estado vazio e carregamento', () => {
+  it('distingue "ainda não há nada" de "o filtro não achou nada"', async () => {
+    const usuario = userEvent.setup();
+    responder([]);
+    montar();
+
+    // Sem filtro: a saída é abrir um chamado, não mexer em filtro nenhum.
+    await waitFor(() =>
+      expect(screen.getByText('Nenhum chamado encontrado.')).toBeInTheDocument()
+    );
+    expect(screen.getByText(/Quando alguém abrir um chamado/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull();
+
+    // Com filtro: a saída provável é afrouxar o filtro, e o botão fica ali.
+    await usuario.click(screen.getByLabelText('Somente atrasados'));
+    await waitFor(() =>
+      expect(screen.getByText(/filtros ativos podem estar estreitando/)).toBeInTheDocument()
+    );
+    expect(screen.getAllByRole('button', { name: 'Limpar filtros' }).length).toBeGreaterThan(0);
+  });
+
+  it('limpar filtros devolve a lista inteira', async () => {
+    const usuario = userEvent.setup();
+    responder([chamado()]);
+    montar();
+
+    await waitFor(() => expect(screen.getByText('Lâmpada queimada no corredor')).toBeInTheDocument());
+
+    // Os três filtros juntos: limpar um só e conferir um só deixaria passar
+    // um "limpar" que esquece os outros dois.
+    await usuario.type(screen.getByLabelText('Buscar'), 'torneira');
+    await usuario.selectOptions(screen.getByLabelText('Estado'), 'em_triagem');
+    await usuario.click(screen.getByLabelText('Somente atrasados'));
+
+    await waitFor(() => {
+      const params = api.get.mock.calls.at(-1)[1].params;
+      expect(params.atrasados).toBe('true');
+      expect(params.estado).toBe('em_triagem');
+      expect(params.busca).toBe('torneira');
+    });
+
+    await usuario.click(screen.getAllByRole('button', { name: 'Limpar filtros' })[0]);
+
+    await waitFor(() => {
+      const ultima = api.get.mock.calls.at(-1)[1].params;
+      expect(ultima.atrasados).toBeUndefined();
+      expect(ultima.estado).toBeUndefined();
+      expect(ultima.busca).toBeUndefined();
+    });
+  });
+
+  it('a região anuncia que está carregando, e o esqueleto fica fora disso', async () => {
+    let liberar;
+    api.get.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          liberar = () => resolve({ data: { chamados: [], paginacao: { pagina: 1, limite: 20, total: 0, paginas: 0 } } });
+        })
+    );
+
+    const { container } = montar();
+
+    // O esqueleto é decoração: quem usa leitor de tela não ganha nada ouvindo
+    // a descrição de um retângulo cinza. Quem anuncia é a região.
+    await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
+    expect(screen.getByText('Carregando...')).toHaveClass('sr-only');
+    // aria-hidden fica no invólucro do esqueleto; as barras herdam dele.
+    expect(container.querySelector('.animate-pulse').closest('[aria-hidden="true"]')).not.toBeNull();
+
+    liberar();
+    await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).toBeNull());
+  });
+});
+
+describe('Hierarquia de cabeçalhos', () => {
+  it('a tela tem um h1, e não começa no segundo nível', async () => {
+    responder([]);
+    montar();
+
+    // As telas internas começavam em h2 sem h1 nenhum na página: quem navega
+    // por cabeçalhos encontrava uma árvore sem raiz.
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 1, name: 'Chamados' })).toBeInTheDocument()
+    );
+  });
+});

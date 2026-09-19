@@ -31,7 +31,7 @@ test.afterAll(async () => {
 });
 
 const TELAS = [
-  { rota: '/', espera: 'h2', quem: 'gestor' },
+  { rota: '/', espera: 'h1', quem: 'gestor' },
   { rota: '/chamados/novo', espera: 'form', quem: 'solicitante' },
   { rota: '/relatorios', espera: 'h3:has-text("Por local")', quem: 'gestor' },
   { rota: '/cadastros', espera: 'h3:has-text("Cadastrar local")', quem: 'gestor' },
@@ -137,7 +137,7 @@ test('a seção aberta se anuncia como página atual', async ({ page }) => {
 test('o conteúdo aproveita a largura do monitor', async ({ page }) => {
   await entrar(page, cenario.pessoas.gestor);
   await page.goto('/');
-  await page.waitForSelector('h2');
+  await page.waitForSelector('h1');
 
   const { larguraConteudo, larguraTela } = await page.evaluate(() => ({
     larguraConteudo: document.querySelector('#conteudo').getBoundingClientRect().width,

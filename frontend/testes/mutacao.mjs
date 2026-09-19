@@ -208,6 +208,40 @@ const MUTACOES = [
     para: "  erro: { cor: 'bg-erro-tenue text-erro', icone: 'alerta', papel: undefined },",
     spec: 'testes/Campo.test.jsx',
   },
+  {
+    descricao: 'estado vazio deixa de distinguir filtro de lista vazia',
+    arquivo: 'src/pages/Dashboard.jsx',
+    de: `              temFiltro
+                ? 'Os filtros ativos podem estar estreitando demais o resultado.'
+                : 'Quando alguém abrir um chamado, ele aparece aqui.'`,
+    para: `              'Quando alguém abrir um chamado, ele aparece aqui.'`,
+    spec: 'testes/Dashboard.test.jsx',
+  },
+  {
+    // Esta passou batido na primeira tentativa: o teste limpava um filtro só.
+    descricao: 'limpar filtros esquece o estado selecionado',
+    arquivo: 'src/pages/Dashboard.jsx',
+    de: `    setBusca('');
+    setEstado('');
+    setSomenteAtrasados(false);`,
+    para: `    setBusca('');
+    setSomenteAtrasados(false);`,
+    spec: 'testes/Dashboard.test.jsx',
+  },
+  {
+    descricao: 'esqueleto deixa de ser escondido do leitor de tela',
+    arquivo: 'src/components/ui/Estados.jsx',
+    de: '      aria-hidden="true"',
+    para: '      aria-hidden={undefined}',
+    spec: 'testes/Dashboard.test.jsx',
+  },
+  {
+    descricao: 'título da página volta a ser h2, sem h1 na árvore',
+    arquivo: 'src/components/ui/CabecalhoDePagina.jsx',
+    de: '        <h1 className="text-lg font-bold text-navy">{titulo}</h1>',
+    para: '        <h2 className="text-lg font-bold text-navy">{titulo}</h2>',
+    spec: 'testes/Dashboard.test.jsx',
+  },
 ];
 
 /**
