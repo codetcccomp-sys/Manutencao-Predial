@@ -14,7 +14,7 @@ router.get('/', categoriasController.listar);
 router.post(
   '/',
   authorize('administrador', 'gestor'),
-  validate({ nome: { obrigatorio: true, tipo: 'string', minLength: 3, maxLength: 50 } }),
+  validate({ nome: { aparar: true, obrigatorio: true, tipo: 'string', minLength: 3, maxLength: 50 } }),
   categoriasController.criar
 );
 
@@ -23,7 +23,7 @@ router.post(
 router.patch(
   '/:id',
   authorize('administrador', 'gestor'),
-  validate({ nome: { obrigatorio: true, tipo: 'string', minLength: 3, maxLength: 50 } }),
+  validate({ nome: { aparar: true, obrigatorio: true, tipo: 'string', minLength: 3, maxLength: 50 } }),
   categoriasController.atualizar
 );
 

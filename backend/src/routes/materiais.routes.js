@@ -14,7 +14,7 @@ router.post(
   '/',
   authorize('administrador', 'gestor'),
   validate({
-    nome: { obrigatorio: true, tipo: 'string', minLength: 2, maxLength: 150 },
+    nome: { aparar: true, obrigatorio: true, tipo: 'string', minLength: 2, maxLength: 150 },
     unidade_medida: { obrigatorio: true, tipo: 'string', minLength: 1, maxLength: 30 },
   }),
   materiaisController.criar
@@ -24,7 +24,7 @@ router.patch(
   '/:id',
   authorize('administrador', 'gestor'),
   validate({
-    nome: { tipo: 'string', minLength: 2, maxLength: 150 },
+    nome: { aparar: true, tipo: 'string', minLength: 2, maxLength: 150 },
     unidade_medida: { tipo: 'string', minLength: 1, maxLength: 30 },
   }),
   materiaisController.atualizar

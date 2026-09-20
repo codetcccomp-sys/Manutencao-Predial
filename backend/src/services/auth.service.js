@@ -20,6 +20,22 @@ function normalizarEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+/**
+ * Tira o espaço sobrando do nome.
+ *
+ * O e-mail já era normalizado; o nome entrava cru. Um espaço no fim passa
+ * despercebido no cadastro e reaparece em todo lugar depois: no cabeçalho, na
+ * autoria do comentário, no histórico do chamado e no "Olá, Fulano ." dos
+ * e-mails. Pior, dois cadastros de "João" e "João " ficam visualmente
+ * idênticos na lista de usuários e são pessoas diferentes para o sistema.
+ *
+ * Também colapsa espaços internos: "Maria   Silva" vira "Maria Silva". Quem
+ * digita dois espaços sem querer não quis dizer nada com isso.
+ */
+function normalizarNome(nome) {
+  return String(nome ?? '').trim().replace(/\s+/g, ' ');
+}
+
 async function criarUsuario({ nome, email, senha, perfil }) {
   const emailNormalizado = normalizarEmail(email);
 
@@ -34,7 +50,7 @@ async function criarUsuario({ nome, email, senha, perfil }) {
     `INSERT INTO usuario (nome, email, senha_hash, perfil)
      VALUES ($1, $2, $3, $4)
      RETURNING id, nome, email, perfil, ativo, criado_em`,
-    [nome, emailNormalizado, senhaHash, perfil]
+    [normalizarNome(nome), emailNormalizado, senhaHash, perfil]
   );
 
   return rows[0];
@@ -77,4 +93,4 @@ async function login({ email, senha }) {
   };
 }
 
-module.exports = { registrar, login, criarUsuario, normalizarEmail };
+module.exports = { registrar, login, criarUsuario, normalizarEmail, normalizarNome };
