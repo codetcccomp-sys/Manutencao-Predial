@@ -154,6 +154,17 @@ Nesta ordem, porque cada passo depende do anterior:
    dois administradores ativos: o sistema impede remover o último, mas dois
    evitam depender de uma pessoa só.
 
+   > **Antes de qualquer outra coisa, crie um administrador com um e-mail que
+   > você receba de verdade.** Em 20/09/2026 o único administrador do banco era
+   > `admin@manutencaopredial.com` — conta de teste, num domínio que não
+   > existe. A consequência não é cosmética: "esqueci minha senha" manda o link
+   > para esse endereço, ele nunca chega, e o sistema se recusa a remover o
+   > último administrador. Perder essa senha é ficar trancado para fora da
+   > gestão de usuários, **sem caminho de volta pela aplicação** — só mexendo
+   > direto no banco.
+   >
+   > A conta de teste pode continuar existindo; o que não pode é ser a única.
+
 Confira antes de liberar: abrir um chamado de teste, triá-lo, atribuir,
 concluir e avaliar. Depois cancele-o ou deixe-o marcado — e **não apague**:
 não há exclusão no sistema, por decisão, e o primeiro chamado sempre fica no

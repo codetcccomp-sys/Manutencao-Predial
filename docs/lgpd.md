@@ -85,8 +85,19 @@ de um administrador autenticado.
 🔲 **Base legal.** Em geral, execução de atividade da instituição — mas
 confirme com quem responde por isso. Não é uma decisão de engenharia.
 
-🔲 **Pessoa de contato**, com nome, para pedido de acesso ou exclusão. Uma
-política sem destinatário não funciona no dia em que alguém pedir.
+**Pessoa de contato para pedido de acesso ou exclusão:**
+
+| | |
+| --- | --- |
+| Papel | Administrador principal do sistema |
+| Contato | `code.tcc.comp@gmail.com` |
+
+> Este documento vive num repositório privado. Se ele for publicado junto com
+> o TCC, o endereço vai junto — vale trocá-lo por um institucional antes, ou
+> tirar esta linha da versão pública.
+
+🔲 **Nome completo do responsável.** Um documento formal de proteção de dados
+precisa de uma pessoa nomeada, não só de um endereço.
 
 ---
 
