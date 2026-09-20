@@ -298,3 +298,51 @@ describe('Pedido cujo e-mail não saiu não ocupa vaga', () => {
     expect(await pendentesDe(usuarioId)).toBe(1);
   });
 });
+
+describe('Para onde o link de redefinição aponta', () => {
+  const original = process.env.URL_APP;
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.URL_APP;
+    else process.env.URL_APP = original;
+  });
+
+  async function linkEnviado() {
+    // O link não volta na resposta — de propósito, senão o endpoint
+    // entregaria a redefinição a quem só sabe o e-mail. Ele é lido do banco
+    // pelo token, que é o mesmo caminho do e-mail.
+    const espiao = jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(true);
+    await request(app).post('/auth/recuperar-senha').set('X-Real-IP', IP).send({ email });
+    const texto = espiao.mock.calls.at(-1)[0].texto;
+    espiao.mockRestore();
+    return texto.match(/https?:\/\/\S+/)[0];
+  }
+
+  it('usa o endereço do app, não o da API que respondeu', async () => {
+    // A API e o app são duas aplicações em domínios diferentes. Montar o link
+    // a partir do host da requisição mandava a pessoa para
+    // `.../redefinir-senha` no BACKEND, caminho que não existe lá: 404.
+    process.env.URL_APP = 'https://conserva-predial.vercel.app';
+
+    const link = await linkEnviado();
+
+    expect(link).toContain('https://conserva-predial.vercel.app/redefinir-senha?token=');
+    expect(link).not.toContain('backend');
+  });
+
+  it('não duplica a barra quando a variável termina com uma', async () => {
+    process.env.URL_APP = 'https://conserva-predial.vercel.app/';
+
+    const link = await linkEnviado();
+
+    expect(link).not.toContain('app//redefinir');
+  });
+
+  it('sem a variável, cai no endereço da requisição — que serve em desenvolvimento', async () => {
+    delete process.env.URL_APP;
+
+    const link = await linkEnviado();
+
+    expect(link).toMatch(/^https?:\/\/[^/]+\/redefinir-senha\?token=/);
+  });
+});
