@@ -3,6 +3,8 @@ const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
 const recuperacao = require('../src/services/recuperacao.service');
+const servicoEmail = require('../src/services/email.service');
+const { MAX_PENDENTES } = recuperacao;
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -229,5 +231,70 @@ describe('Retenção do pedido de redefinição (LGPD)', () => {
       [usuarioId]
     );
     expect(rows[0].total).toBe(1);
+  });
+});
+
+describe('Pedido cujo e-mail não saiu não ocupa vaga', () => {
+  const smtpOriginal = { host: process.env.SMTP_HOST, porta: process.env.SMTP_PORT };
+
+  afterEach(() => {
+    if (smtpOriginal.host === undefined) delete process.env.SMTP_HOST;
+    else process.env.SMTP_HOST = smtpOriginal.host;
+    if (smtpOriginal.porta === undefined) delete process.env.SMTP_PORT;
+    else process.env.SMTP_PORT = smtpOriginal.porta;
+    jest.restoreAllMocks();
+  });
+
+  async function pendentesDe(id) {
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND usado_em IS NULL AND expira_em > now()`,
+      [id]
+    );
+    return rows[0].total;
+  }
+
+  it('descarta o pedido quando o SMTP recusa, em vez de trancar por uma hora', async () => {
+    // Foi o que aconteceu de verdade: o Gmail recusou a senha, três cliques
+    // criaram três pendentes cujos e-mails nunca saíram, e o quarto bateu no
+    // MAX_PENDENTES. Sem token, sem tentativa, sem log — e a tela dizendo
+    // "enviamos um link".
+    process.env.SMTP_HOST = 'smtp.exemplo.invalido';
+    process.env.SMTP_PORT = '587';
+    jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(false);
+
+    for (let i = 0; i < MAX_PENDENTES + 2; i += 1) {
+      const pedido = await recuperacao.solicitar(email, IP);
+      expect(pedido).not.toBeNull();
+      await recuperacao.enviarEmail(pedido, 'https://exemplo.test');
+    }
+
+    // O limite existe para conter quem pede dez vezes seguidas, não para
+    // punir quem nunca recebeu nada.
+    expect(await pendentesDe(usuarioId)).toBe(0);
+  });
+
+  it('mantém o pedido quando não há SMTP, porque aí o link vai para o log', async () => {
+    // Sem servidor de e-mail o envio "falha" por definição, mas o controlador
+    // registra o link e ele é usável. Matar o pedido aqui quebraria o
+    // desenvolvimento e a instalação que ainda não tem e-mail.
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_PORT;
+
+    const pedido = await recuperacao.solicitar(email, IP);
+    await recuperacao.enviarEmail(pedido, 'https://exemplo.test');
+
+    expect(await pendentesDe(usuarioId)).toBe(1);
+  });
+
+  it('mantém o pedido quando o e-mail sai de verdade', async () => {
+    process.env.SMTP_HOST = 'smtp.exemplo.invalido';
+    process.env.SMTP_PORT = '587';
+    jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(true);
+
+    const pedido = await recuperacao.solicitar(email, IP);
+    await recuperacao.enviarEmail(pedido, 'https://exemplo.test');
+
+    expect(await pendentesDe(usuarioId)).toBe(1);
   });
 });

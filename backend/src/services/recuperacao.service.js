@@ -90,19 +90,39 @@ async function solicitar(emailInformado, ip) {
   if (pendentes.rows[0].total >= MAX_PENDENTES) return null;
 
   const token = gerarToken();
-  await pool.query(
+  const { rows: criados } = await pool.query(
     `INSERT INTO recuperacao_senha (usuario_id, token_hash, expira_em, ip)
-     VALUES ($1, $2, now() + ($3 * interval '1 minute'), $4)`,
+     VALUES ($1, $2, now() + ($3 * interval '1 minute'), $4)
+     RETURNING id`,
     [usuario.id, hashDoToken(token), VALIDADE_MINUTOS, ip || null]
   );
 
-  return { token, usuario };
+  return { token, usuario, pedidoId: criados[0].id };
 }
 
-async function enviarEmail({ token, usuario }, urlBase) {
+/**
+ * Manda o link e, se o envio falhar, descarta o pedido.
+ *
+ * O descarte é o ponto, e ele vem de um tropeço real: com o SMTP recusando a
+ * senha, três cliques em "esqueci minha senha" criaram três pedidos pendentes
+ * cujos e-mails nunca saíram. O quarto clique bateu no MAX_PENDENTES e o
+ * serviço devolveu `null` — sem token, sem tentativa de envio, sem log. A
+ * tela seguia dizendo "enviamos um link", e a pessoa ficava trancada por uma
+ * hora esperando um e-mail que nem chegou a ser tentado.
+ *
+ * O limite existe para conter quem pede dez vezes seguidas, não para punir
+ * quem nunca recebeu nada. Um token que ninguém tem em mãos não protege coisa
+ * alguma ocupando a vaga: se o envio falhou, o pedido morre junto.
+ *
+ * Só quando o SMTP ESTÁ configurado, note. Sem servidor de e-mail o envio
+ * "falha" por definição, mas aí o controlador registra o link no log e ele é
+ * usável — matar o pedido nesse caso quebraria o desenvolvimento e a
+ * instalação que ainda não tem e-mail.
+ */
+async function enviarEmail({ token, usuario, pedidoId }, urlBase) {
   const link = `${urlBase}/redefinir-senha?token=${token}`;
 
-  await email.enviar({
+  const enviado = await email.enviar({
     para: usuario.email,
     assunto: `Redefinição de senha — ${ASSINATURA}`,
     texto:
@@ -112,6 +132,13 @@ async function enviarEmail({ token, usuario }, urlBase) {
       'Se não foi você quem pediu, ignore esta mensagem: sua senha atual continua valendo.\n\n' +
       ASSINATURA,
   });
+
+  if (!enviado && pedidoId && email.estaConfigurado()) {
+    await pool.query('UPDATE recuperacao_senha SET usado_em = now() WHERE id = $1', [pedidoId]);
+    console.error(
+      `[recuperacao] pedido ${pedidoId} descartado: o e-mail não saiu, e ele só ocuparia vaga.`
+    );
+  }
 
   return link;
 }
