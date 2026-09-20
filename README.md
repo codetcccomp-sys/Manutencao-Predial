@@ -129,13 +129,23 @@ São três camadas, com propósitos distintos.
 
 ```bash
 cd backend
-npm test -- --runInBand
+npm test
 ```
 
 Rodam contra um PostgreSQL de verdade, não contra mocks: o que está sendo
 verificado inclui transação, bloqueio de linha, restrição de chave e
-permissão — coisas que um mock de driver só simularia. `--runInBand` evita
-que as suítes disputem o mesmo banco.
+permissão — coisas que um mock de driver só simularia.
+
+As 23 suítes compartilham um banco só, então `npm test` já roda com
+`--runInBand`. Em paralelo elas disputam as mesmas tabelas e uma delas falha
+de vez em quando — mais ou menos uma execução em três, sempre uma suíte
+diferente. O flag era documentado aqui e o script não o usava: quem rodasse
+`npm test` sem ler esta seção via falha intermitente e ia procurar bug onde
+não havia.
+
+Custa 15 segundos (13s contra 28s). Uma suíte que falha em uma execução a cada
+três ensina a ignorar falha vermelha, e aí ela deixa de servir para qualquer
+coisa. Se precisar da velocidade e souber do risco, `npm run test:paralelo`.
 
 ### Frontend: componentes
 

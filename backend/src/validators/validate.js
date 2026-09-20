@@ -10,7 +10,17 @@ function validate(schema) {
       // um e-mail válido", mensagem que não ajuda quem não vê o espaço. O
       // valor é aparado aqui, na fronteira, para que o resto da requisição já
       // trabalhe com a forma limpa.
-      if (regras.email && typeof req.body[campo] === 'string') {
+      //
+      // `aparar` estende a mesma ideia a nome de pessoa, de categoria, de
+      // equipe. Espaço no fim de um nome não significa nada e atravessa o
+      // sistema inteiro: reaparece no cabeçalho, na autoria do comentário e
+      // no "Olá, Fulano ." do e-mail. E "Elétrica " ao lado de "Elétrica"
+      // são duas categorias que ninguém consegue distinguir na tela.
+      //
+      // Aparar ANTES de medir `minLength` é o ponto: medindo o valor cru,
+      // três espaços passariam por um mínimo de três caracteres e chegariam
+      // ao banco como nome vazio.
+      if ((regras.email || regras.aparar) && typeof req.body[campo] === 'string') {
         req.body[campo] = req.body[campo].trim();
       }
 

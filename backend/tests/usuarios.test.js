@@ -189,3 +189,51 @@ describe('PATCH /usuarios/:id', () => {
     expect(resp.status).toBe(403);
   });
 });
+
+describe('Nome sem espaço sobrando', () => {
+  it('apara o nome no cadastro em vez de gravá-lo cru', async () => {
+    const email = `apara_${Date.now()}@exemplo.com`;
+
+    const resp = await request(app)
+      .post('/usuarios')
+      .set(comoAdmin())
+      .send({ nome: '  Maria   Silva  ', email, senha: 'senha123', perfil: 'tecnico' });
+
+    // O e-mail já era normalizado; o nome entrava cru. O espaço passa
+    // despercebido no cadastro e reaparece no cabeçalho, na autoria do
+    // comentário e no "Olá, Fulano ." do e-mail.
+    expect(resp.status).toBe(201);
+    expect(resp.body.usuario.nome).toBe('Maria Silva');
+
+    const { rows } = await pool.query('SELECT nome FROM usuario WHERE email = $1', [email]);
+    expect(rows[0].nome).toBe('Maria Silva');
+  });
+
+  it('recusa nome feito só de espaços, em vez de gravar vazio', async () => {
+    // Três espaços passavam pelo mínimo de três caracteres, porque a medida
+    // era feita no valor cru. Aparar antes de medir é o que fecha o buraco.
+    const resp = await request(app)
+      .post('/usuarios')
+      .set(comoAdmin())
+      .send({
+        nome: '   ',
+        email: `vazio_${Date.now()}@exemplo.com`,
+        senha: 'senha123',
+        perfil: 'tecnico',
+      });
+
+    expect(resp.status).toBe(422);
+  });
+
+  it('também apara ao renomear', async () => {
+    const alvo = await criarUsuarioELogar('tecnico');
+
+    const resp = await request(app)
+      .patch(`/usuarios/${alvo.usuario.id}`)
+      .set(comoAdmin())
+      .send({ nome: '  João Técnico  ' });
+
+    expect(resp.status).toBe(200);
+    expect(resp.body.usuario.nome).toBe('João Técnico');
+  });
+});

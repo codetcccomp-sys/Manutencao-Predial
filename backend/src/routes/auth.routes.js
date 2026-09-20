@@ -10,7 +10,7 @@ const router = Router();
 router.post(
   '/registrar',
   validate({
-    nome: { obrigatorio: true, tipo: 'string', minLength: 3 },
+    nome: { aparar: true, obrigatorio: true, tipo: 'string', minLength: 3 },
     email: { obrigatorio: true, tipo: 'string', email: true },
     senha: { obrigatorio: true, tipo: 'string', minLength: 6 },
   }),

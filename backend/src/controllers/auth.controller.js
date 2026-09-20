@@ -3,6 +3,34 @@ const { asyncHandler } = require('../utils/asyncHandler');
 const { registrarTentativa, ipDoCliente } = require('../middlewares/rateLimit');
 const recuperacaoService = require('../services/recuperacao.service');
 
+/**
+ * O endereço do APP, que é para onde o link de redefinição leva.
+ *
+ * Antes isto era `${req.protocol}://${req.get('host')}` — o endereço de quem
+ * respondeu à requisição, ou seja, a própria API. O e-mail saía com
+ * `http://...-backend-....vercel.app/redefinir-senha`, e esse caminho não
+ * existe na API: `/redefinir-senha` é uma rota do React, e o que a API expõe
+ * é `POST /auth/redefinir-senha`, que é outra coisa. Quem clicava caía num
+ * 404, e o único jeito de recuperar a senha ficava quebrado de ponta a ponta
+ * — com o e-mail chegando certinho, o que torna o defeito mais difícil de
+ * desconfiar, não menos.
+ *
+ * O `http` sem "s" vinha do mesmo lugar: atrás do proxy da Vercel o Express
+ * só enxerga o `x-forwarded-proto` se `trust proxy` estiver ligado, e não
+ * estava.
+ *
+ * `URL_APP` resolve os dois de uma vez, e é a única forma correta: front e
+ * back são duas aplicações em domínios diferentes, então a API não tem como
+ * deduzir o endereço do app a partir da requisição que recebeu. Sem a
+ * variável, cai no endereço da requisição — que é o certo em
+ * desenvolvimento, onde as duas coisas sobem na mesma máquina.
+ */
+function urlDoApp(req) {
+  const configurada = String(process.env.URL_APP || '').trim();
+  if (configurada) return configurada.replace(/\/+$/, '');
+  return `${req.protocol}://${req.get('host')}`.replace(/\/api$/, '');
+}
+
 const registrar = asyncHandler(async (req, res) => {
   const usuario = await authService.registrar(req.body);
   res.status(201).json({ usuario });
@@ -35,7 +63,7 @@ const solicitarRecuperacao = asyncHandler(async (req, res) => {
   const pedido = await recuperacaoService.solicitar(req.body.email, ipDoCliente(req));
 
   if (pedido) {
-    const urlBase = `${req.protocol}://${req.get('host')}`.replace(/\/api$/, '');
+    const urlBase = urlDoApp(req);
     const link = await recuperacaoService.enviarEmail(pedido, urlBase);
 
     // Sem SMTP configurado o e-mail vira log; registrar o link aqui é o que

@@ -5,6 +5,12 @@ const { NOME_SISTEMA } = require('./config/marca');
 
 const app = express();
 
+// Atrás do proxy da Vercel, sem isto, `req.protocol` responde "http" mesmo
+// numa conexão HTTPS: o Express ignora o `x-forwarded-proto` até que se diga
+// em quem confiar. O sintoma foi um link de redefinição de senha saindo por
+// e-mail com `http://`.
+app.set('trust proxy', 1);
+
 /**
  * De onde o navegador pode chamar esta API.
  *

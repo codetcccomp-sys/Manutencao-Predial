@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { AppError } = require('../middlewares/errorHandler');
+const { normalizarNome } = require('./auth.service');
 
 const CAMPOS = 'id, nome, email, perfil, ativo, criado_em';
 
@@ -81,7 +82,7 @@ async function atualizar(id, { nome, perfil, ativo }, autor) {
   const params = [];
 
   for (const [coluna, valor] of [
-    ['nome', nome],
+    ['nome', nome === undefined ? undefined : normalizarNome(nome)],
     ['perfil', perfil],
     ['ativo', ativo],
   ]) {

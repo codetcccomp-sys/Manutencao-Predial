@@ -13,7 +13,7 @@ router.post(
   '/',
   authorize('administrador'),
   validate({
-    nome: { obrigatorio: true, tipo: 'string', minLength: 3 },
+    nome: { aparar: true, obrigatorio: true, tipo: 'string', minLength: 3 },
     email: { obrigatorio: true, tipo: 'string', email: true },
     senha: { obrigatorio: true, tipo: 'string', minLength: 6 },
     perfil: { obrigatorio: true, enum: ['solicitante', 'tecnico', 'gestor', 'administrador'] },
@@ -25,7 +25,7 @@ router.patch(
   '/:id',
   authorize('administrador'),
   validate({
-    nome: { tipo: 'string', minLength: 3 },
+    nome: { aparar: true, tipo: 'string', minLength: 3 },
     perfil: { enum: ['solicitante', 'tecnico', 'gestor', 'administrador'] },
   }),
   usuariosController.atualizar

@@ -15,14 +15,14 @@ router.get('/:id', equipesController.buscarPorId);
 router.post(
   '/',
   authorize('administrador', 'gestor'),
-  validate({ nome: { obrigatorio: true, tipo: 'string', minLength: 2, maxLength: 100 } }),
+  validate({ nome: { aparar: true, obrigatorio: true, tipo: 'string', minLength: 2, maxLength: 100 } }),
   equipesController.criar
 );
 
 router.patch(
   '/:id',
   authorize('administrador', 'gestor'),
-  validate({ nome: { tipo: 'string', minLength: 2, maxLength: 100 } }),
+  validate({ nome: { aparar: true, tipo: 'string', minLength: 2, maxLength: 100 } }),
   equipesController.atualizar
 );
 

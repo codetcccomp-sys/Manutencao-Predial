@@ -3,6 +3,8 @@ const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
 const recuperacao = require('../src/services/recuperacao.service');
+const servicoEmail = require('../src/services/email.service');
+const { MAX_PENDENTES } = recuperacao;
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -185,5 +187,162 @@ describe('POST /auth/redefinir-senha', () => {
     const token = await tokenMaisRecente();
     const resp = await request(app).post('/auth/redefinir-senha').send({ token, senha: '123' });
     expect(resp.status).toBe(422);
+  });
+});
+
+describe('Retenção do pedido de redefinição (LGPD)', () => {
+  it('apaga pedidos velhos, junto com o IP que eles guardam', async () => {
+    // A linha guarda o IP de quem pediu, e IP é dado pessoal. O token morre em
+    // uma hora, mas a linha ficava para sempre: cada "esqueci minha senha"
+    // deixava um endereço de rede no banco, sem prazo e sem ninguém para
+    // apagá-lo.
+    await pool.query(
+      `INSERT INTO recuperacao_senha (usuario_id, token_hash, expira_em, ip, criado_em)
+       VALUES ($1, $2, now() - interval '29 days', '203.0.113.7', now() - interval '30 days')`,
+      [usuarioId, crypto.randomBytes(32).toString('hex')]
+    );
+
+    const antes = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND ip = '203.0.113.7'`,
+      [usuarioId]
+    );
+    expect(antes.rows[0].total).toBe(1);
+
+    // A limpeza não tem rota nem agendador: ela pega carona no próximo pedido.
+    await recuperacao.solicitar(email, IP);
+
+    const depois = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND ip = '203.0.113.7'`,
+      [usuarioId]
+    );
+    expect(depois.rows[0].total).toBe(0);
+  });
+
+  it('não apaga o pedido que a pessoa acabou de fazer', async () => {
+    // Uma limpeza gulosa demais arrancaria o token antes de a pessoa abrir o
+    // e-mail — a falha seria "o link não funciona", sem pista nenhuma.
+    await recuperacao.solicitar(email, IP);
+
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND usado_em IS NULL AND expira_em > now()`,
+      [usuarioId]
+    );
+    expect(rows[0].total).toBe(1);
+  });
+});
+
+describe('Pedido cujo e-mail não saiu não ocupa vaga', () => {
+  const smtpOriginal = { host: process.env.SMTP_HOST, porta: process.env.SMTP_PORT };
+
+  afterEach(() => {
+    if (smtpOriginal.host === undefined) delete process.env.SMTP_HOST;
+    else process.env.SMTP_HOST = smtpOriginal.host;
+    if (smtpOriginal.porta === undefined) delete process.env.SMTP_PORT;
+    else process.env.SMTP_PORT = smtpOriginal.porta;
+    jest.restoreAllMocks();
+  });
+
+  async function pendentesDe(id) {
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND usado_em IS NULL AND expira_em > now()`,
+      [id]
+    );
+    return rows[0].total;
+  }
+
+  it('descarta o pedido quando o SMTP recusa, em vez de trancar por uma hora', async () => {
+    // Foi o que aconteceu de verdade: o Gmail recusou a senha, três cliques
+    // criaram três pendentes cujos e-mails nunca saíram, e o quarto bateu no
+    // MAX_PENDENTES. Sem token, sem tentativa, sem log — e a tela dizendo
+    // "enviamos um link".
+    process.env.SMTP_HOST = 'smtp.exemplo.invalido';
+    process.env.SMTP_PORT = '587';
+    jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(false);
+
+    for (let i = 0; i < MAX_PENDENTES + 2; i += 1) {
+      const pedido = await recuperacao.solicitar(email, IP);
+      expect(pedido).not.toBeNull();
+      await recuperacao.enviarEmail(pedido, 'https://exemplo.test');
+    }
+
+    // O limite existe para conter quem pede dez vezes seguidas, não para
+    // punir quem nunca recebeu nada.
+    expect(await pendentesDe(usuarioId)).toBe(0);
+  });
+
+  it('mantém o pedido quando não há SMTP, porque aí o link vai para o log', async () => {
+    // Sem servidor de e-mail o envio "falha" por definição, mas o controlador
+    // registra o link e ele é usável. Matar o pedido aqui quebraria o
+    // desenvolvimento e a instalação que ainda não tem e-mail.
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_PORT;
+
+    const pedido = await recuperacao.solicitar(email, IP);
+    await recuperacao.enviarEmail(pedido, 'https://exemplo.test');
+
+    expect(await pendentesDe(usuarioId)).toBe(1);
+  });
+
+  it('mantém o pedido quando o e-mail sai de verdade', async () => {
+    process.env.SMTP_HOST = 'smtp.exemplo.invalido';
+    process.env.SMTP_PORT = '587';
+    jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(true);
+
+    const pedido = await recuperacao.solicitar(email, IP);
+    await recuperacao.enviarEmail(pedido, 'https://exemplo.test');
+
+    expect(await pendentesDe(usuarioId)).toBe(1);
+  });
+});
+
+describe('Para onde o link de redefinição aponta', () => {
+  const original = process.env.URL_APP;
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.URL_APP;
+    else process.env.URL_APP = original;
+  });
+
+  async function linkEnviado() {
+    // O link não volta na resposta — de propósito, senão o endpoint
+    // entregaria a redefinição a quem só sabe o e-mail. Ele é lido do banco
+    // pelo token, que é o mesmo caminho do e-mail.
+    const espiao = jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(true);
+    await request(app).post('/auth/recuperar-senha').set('X-Real-IP', IP).send({ email });
+    const texto = espiao.mock.calls.at(-1)[0].texto;
+    espiao.mockRestore();
+    return texto.match(/https?:\/\/\S+/)[0];
+  }
+
+  it('usa o endereço do app, não o da API que respondeu', async () => {
+    // A API e o app são duas aplicações em domínios diferentes. Montar o link
+    // a partir do host da requisição mandava a pessoa para
+    // `.../redefinir-senha` no BACKEND, caminho que não existe lá: 404.
+    process.env.URL_APP = 'https://conserva-predial.vercel.app';
+
+    const link = await linkEnviado();
+
+    expect(link).toContain('https://conserva-predial.vercel.app/redefinir-senha?token=');
+    expect(link).not.toContain('backend');
+  });
+
+  it('não duplica a barra quando a variável termina com uma', async () => {
+    process.env.URL_APP = 'https://conserva-predial.vercel.app/';
+
+    const link = await linkEnviado();
+
+    expect(link).not.toContain('app//redefinir');
+  });
+
+  it('sem a variável, cai no endereço da requisição — que serve em desenvolvimento', async () => {
+    delete process.env.URL_APP;
+
+    const link = await linkEnviado();
+
+    expect(link).toMatch(/^https?:\/\/[^/]+\/redefinir-senha\?token=/);
   });
 });
