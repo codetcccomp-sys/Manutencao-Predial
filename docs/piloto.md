@@ -36,6 +36,22 @@ justamente o problema que o sistema ataca —, **declare isso**. "Não havia
 registro" é um resultado do diagnóstico, não uma falha do piloto; o que não se
 pode é inventar um número de antes no fim.
 
+### A planilha
+
+[`medida-de-antes.xlsx`](medida-de-antes.xlsx) já tem as colunas da tabela
+acima, com três abas: instruções, registro linha a linha e um resumo que se
+calcula sozinho.
+
+O resumo devolve exatamente os indicadores que o sistema vai medir depois —
+tempo médio e mediano até o atendimento, percentual atendido, quanto se perdeu,
+quanto foi cobrado de novo, distribuição por canal e por categoria. As sete
+categorias da lista suspensa são as mesmas sete do banco, de propósito: se o
+"antes" usar um vocabulário e o "depois" outro, a comparação precisa de
+tradução no meio, e tradução no meio é onde o número se perde.
+
+São 200 linhas. Se o período couber em menos, sobra; o resumo só conta o que
+estiver preenchido.
+
 ---
 
 ## 2. Antes de abrir para as pessoas
