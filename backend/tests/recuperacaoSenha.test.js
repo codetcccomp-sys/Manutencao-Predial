@@ -187,3 +187,47 @@ describe('POST /auth/redefinir-senha', () => {
     expect(resp.status).toBe(422);
   });
 });
+
+describe('Retenção do pedido de redefinição (LGPD)', () => {
+  it('apaga pedidos velhos, junto com o IP que eles guardam', async () => {
+    // A linha guarda o IP de quem pediu, e IP é dado pessoal. O token morre em
+    // uma hora, mas a linha ficava para sempre: cada "esqueci minha senha"
+    // deixava um endereço de rede no banco, sem prazo e sem ninguém para
+    // apagá-lo.
+    await pool.query(
+      `INSERT INTO recuperacao_senha (usuario_id, token_hash, expira_em, ip, criado_em)
+       VALUES ($1, $2, now() - interval '29 days', '203.0.113.7', now() - interval '30 days')`,
+      [usuarioId, crypto.randomBytes(32).toString('hex')]
+    );
+
+    const antes = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND ip = '203.0.113.7'`,
+      [usuarioId]
+    );
+    expect(antes.rows[0].total).toBe(1);
+
+    // A limpeza não tem rota nem agendador: ela pega carona no próximo pedido.
+    await recuperacao.solicitar(email, IP);
+
+    const depois = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND ip = '203.0.113.7'`,
+      [usuarioId]
+    );
+    expect(depois.rows[0].total).toBe(0);
+  });
+
+  it('não apaga o pedido que a pessoa acabou de fazer', async () => {
+    // Uma limpeza gulosa demais arrancaria o token antes de a pessoa abrir o
+    // e-mail — a falha seria "o link não funciona", sem pista nenhuma.
+    await recuperacao.solicitar(email, IP);
+
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND usado_em IS NULL AND expira_em > now()`,
+      [usuarioId]
+    );
+    expect(rows[0].total).toBe(1);
+  });
+});

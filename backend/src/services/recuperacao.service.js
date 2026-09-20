@@ -10,6 +10,41 @@ const { ASSINATURA } = require('../config/marca');
 const VALIDADE_MINUTOS = 60;
 const SALT_ROUNDS = 10;
 
+/**
+ * Por quantos dias o pedido de redefinição sobrevive ao próprio token.
+ *
+ * A linha guarda o IP de quem pediu, e IP é dado pessoal. O token morre em
+ * uma hora, mas a linha ficava para sempre: cada "esqueci minha senha"
+ * deixava um endereço de rede gravado no banco, sem prazo e sem ninguém para
+ * apagá-lo. A tabela de tentativas de login já se limpa sozinha em 24 horas;
+ * esta não se limpava nunca.
+ *
+ * Sete dias, e não zero, porque a linha ainda responde a uma pergunta depois
+ * de o token expirar: "alguém tentou redefinir minha senha semana passada?".
+ * Passada essa janela ela não serve para mais nada.
+ */
+const RETENCAO_DIAS = 7;
+
+/**
+ * Apaga pedidos que já não servem para nada.
+ *
+ * Roda junto do próximo pedido, como a limpeza do rate limit: sem agendador
+ * próprio, sem uma rota para alguém chamar, e sem custar nada quando não há
+ * o que apagar. Falhar aqui não pode derrubar a redefinição de senha de
+ * quem está esperando o e-mail — limpeza é manutenção, não parte do pedido.
+ */
+async function limparPedidosAntigos() {
+  try {
+    await pool.query(
+      `DELETE FROM recuperacao_senha
+        WHERE criado_em < now() - ($1 * interval '1 day')`,
+      [RETENCAO_DIAS]
+    );
+  } catch (err) {
+    console.error('[recuperacao] falha ao limpar pedidos antigos:', err.message);
+  }
+}
+
 // Tokens pendentes por usuário. Pedir de novo é comum (o e-mail demora, a
 // pessoa clica duas vezes); pedir dez vezes em sequência não é.
 const MAX_PENDENTES = 3;
@@ -44,6 +79,8 @@ async function solicitar(emailInformado, ip) {
   // Conta inativa também não gera token: reativar é decisão de um
   // administrador, não consequência de um clique em "esqueci minha senha".
   if (!usuario || !usuario.ativo) return null;
+
+  await limparPedidosAntigos();
 
   const pendentes = await pool.query(
     `SELECT count(*)::int AS total FROM recuperacao_senha
