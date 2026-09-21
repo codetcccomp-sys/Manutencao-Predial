@@ -109,6 +109,19 @@ aviso mede o processo errado.
 
 ### 2.2 E-mail (decisão, não obrigação)
 
+> **Se configurar SMTP, configure `URL_APP` junto.** Ela guarda o endereço do
+> APP — `https://conserva-predial.vercel.app` —, que é para onde o link de
+> redefinição de senha aponta. Sem ela a API não tem como saber esse endereço:
+> front e back são aplicações em domínios diferentes.
+>
+> A única pista que sobraria é o cabeçalho `Host` da requisição, e esse
+> cabeçalho é escolhido por quem faz o pedido. Um pedido com
+> `Host: sitedoatacante.exemplo` e o e-mail de alguém faria o link chegar na
+> caixa da vítima apontando para o atacante — e o endpoint é público, não pede
+> autenticação. Por isso, fora de desenvolvimento e sem `URL_APP`, o e-mail
+> não é enviado e a falha vai para o log.
+
+
 Sem `SMTP_HOST` configurado, as notificações existem só no sino do cabeçalho —
 o envio vira registro em log e nada mais muda. Isso funciona, mas muda o que o
 piloto mede: quem não abrir o sistema não fica sabendo de nada, e o tempo de
@@ -149,6 +162,55 @@ Nesta ordem, porque cada passo depende do anterior:
    confrontados com a realidade da equipe antes de começarem a valer: um SLA
    que ninguém consegue cumprir transforma "atrasado" em ruído, e o indicador
    de prazo deixa de significar qualquer coisa.
+
+   **O relógio é de horas corridas.** `prazo_estimado = now() + prazo_horas`.
+   Ele não para à noite, no fim de semana nem em feriado. A única pausa é
+   `aguardando_material`, e essa é deliberada: espera por insumo é falha de
+   suprimento, não da equipe de campo.
+
+   Isso muda o que cada número significa. Com os padrões originais, um chamado
+   crítico aberto numa sexta às 18h estaria atrasado no sábado às 22h, e um
+   alto, no sábado à tarde — com equipe de horário comercial, os dois nasciam
+   condenados.
+
+   Ajustados em 20/09/2026, com a rotina da equipe ainda indefinida:
+
+   | Prioridade | Antes | Agora | Atravessa |
+   | --- | --- | --- | --- |
+   | Crítica | 4h | **8h** | uma noite |
+   | Alta | 24h | **48h** | um dia útil com folga |
+   | Média | 72h | **120h** (5 dias) | um fim de semana |
+   | Baixa | 168h | **240h** (10 dias) | com sobra |
+
+   Folgados de propósito. Prazo apertado demais é pior que frouxo demais:
+   se tudo nasce vermelho, "atrasado" vira ruído, ninguém olha mais, e o
+   indicador morre. Frouxo se conserta com dado real; apertado destrói a
+   medida antes de ela existir.
+
+   A crítica em 8h segue curta de propósito. Se um chamado crítico estourar
+   num fim de semana, o vermelho não é ruído — é o registro de que não havia
+   ninguém para atender uma emergência, que é justamente o que o piloto
+   precisa descobrir.
+
+   **Revise no fim do piloto**, com o que a equipe de fato entregou:
+
+   ```sql
+   SELECT prioridade,
+          count(*) AS concluidos,
+          round(percentile_cont(0.5) WITHIN GROUP (
+            ORDER BY extract(epoch FROM data_conclusao - data_abertura)/3600
+          )::numeric, 1) AS mediana_horas,
+          round(percentile_cont(0.9) WITHIN GROUP (
+            ORDER BY extract(epoch FROM data_conclusao - data_abertura)/3600
+          )::numeric, 1) AS p90_horas
+     FROM chamado
+    WHERE data_conclusao IS NOT NULL
+    GROUP BY prioridade;
+   ```
+
+   O p90 é o candidato natural a prazo: é o que a equipe cumpre em nove de
+   cada dez casos. Um SLA colado na mediana reprova metade dos chamados por
+   construção.
 4. **Pessoas** — pela tela de Usuários. O cadastro público só cria
    solicitante; técnico, gestor e administrador saem daqui. Deixe pelo menos
    dois administradores ativos: o sistema impede remover o último, mas dois

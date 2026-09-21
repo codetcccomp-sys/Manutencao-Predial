@@ -25,10 +25,29 @@ const recuperacaoService = require('../services/recuperacao.service');
  * variável, cai no endereço da requisição — que é o certo em
  * desenvolvimento, onde as duas coisas sobem na mesma máquina.
  */
+// Endereços em que o palpite pelo `Host` é seguro: são os de desenvolvimento,
+// onde front e back sobem na mesma máquina.
+const HOST_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+
 function urlDoApp(req) {
   const configurada = String(process.env.URL_APP || '').trim();
   if (configurada) return configurada.replace(/\/+$/, '');
-  return `${req.protocol}://${req.get('host')}`.replace(/\/api$/, '');
+
+  // Sem `URL_APP`, a única pista disponível é o cabeçalho `Host` — e quem
+  // escolhe esse cabeçalho é quem faz a requisição, não o servidor. Um pedido
+  // com `Host: sitedoatacante.exemplo` e o e-mail da vítima faria o link de
+  // redefinição apontar para o atacante, e o token da vítima chegaria por
+  // e-mail num endereço que ele controla. O endpoint é público e não exige
+  // autenticação nenhuma, então basta saber o e-mail de alguém.
+  //
+  // `trust proxy`, que este mesmo trabalho ligou para corrigir o `http://`,
+  // torna isso pior: passa a confiar também no `X-Forwarded-Proto`.
+  //
+  // Por isso o palpite vale só para host local. Em qualquer outro caso, sem a
+  // variável configurada, não há endereço em que confiar — e mandar um link
+  // errado é pior que não mandar.
+  const host = req.get('host') || '';
+  return HOST_LOCAL.test(host) ? `${req.protocol}://${host}` : null;
 }
 
 const registrar = asyncHandler(async (req, res) => {
@@ -64,13 +83,26 @@ const solicitarRecuperacao = asyncHandler(async (req, res) => {
 
   if (pedido) {
     const urlBase = urlDoApp(req);
-    const link = await recuperacaoService.enviarEmail(pedido, urlBase);
 
-    // Sem SMTP configurado o e-mail vira log; registrar o link aqui é o que
-    // mantém a funcionalidade utilizável em desenvolvimento e numa instalação
-    // ainda sem servidor de e-mail.
-    if (!require('../services/email.service').estaConfigurado()) {
-      console.info(`[recuperacao] link gerado (SMTP ausente): ${link}`);
+    if (urlBase) {
+      const link = await recuperacaoService.enviarEmail(pedido, urlBase);
+
+      // Sem SMTP configurado o e-mail vira log; registrar o link aqui é o que
+      // mantém a funcionalidade utilizável em desenvolvimento e numa instalação
+      // ainda sem servidor de e-mail.
+      if (!require('../services/email.service').estaConfigurado()) {
+        console.info(`[recuperacao] link gerado (SMTP ausente): ${link}`);
+      }
+    } else {
+      // Configuração faltando, não erro de quem pediu. A resposta continua a
+      // mesma de sempre — distinguir aqui contaria a qualquer um se o e-mail
+      // tem cadastro —, mas o pedido é descartado para não ocupar vaga no
+      // limite de pendentes por uma hora.
+      console.error(
+        `[recuperacao] URL_APP não configurada e o Host "${req.get('host')}" não é local; ` +
+          'e-mail não enviado. Cadastre URL_APP com o endereço do app.'
+      );
+      await recuperacaoService.descartar(pedido.pedidoId);
     }
   }
 

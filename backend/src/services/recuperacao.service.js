@@ -134,13 +134,30 @@ async function enviarEmail({ token, usuario, pedidoId }, urlBase) {
   });
 
   if (!enviado && pedidoId && email.estaConfigurado()) {
-    await pool.query('UPDATE recuperacao_senha SET usado_em = now() WHERE id = $1', [pedidoId]);
-    console.error(
-      `[recuperacao] pedido ${pedidoId} descartado: o e-mail não saiu, e ele só ocuparia vaga.`
-    );
+    await descartar(pedidoId, 'o e-mail não saiu, e ele só ocuparia vaga');
   }
 
   return link;
+}
+
+/**
+ * Mata um pedido que não serve para nada.
+ *
+ * O try/catch não é zelo excessivo: sem ele, uma falha de banco aqui vira 500
+ * — e esse 500 só acontece quando a conta EXISTE, porque o caminho todo é
+ * pulado quando ela não existe. Quem quisesse descobrir se um e-mail tem
+ * cadastro compararia as respostas. É a mesma enumeração que a mensagem
+ * uniforme do endpoint existe para impedir, entrando de novo pela porta dos
+ * fundos.
+ */
+async function descartar(pedidoId, motivo = 'não serve mais') {
+  if (!pedidoId) return;
+  try {
+    await pool.query('UPDATE recuperacao_senha SET usado_em = now() WHERE id = $1', [pedidoId]);
+    console.error(`[recuperacao] pedido ${pedidoId} descartado: ${motivo}.`);
+  } catch (err) {
+    console.error(`[recuperacao] falha ao descartar o pedido ${pedidoId}:`, err.message);
+  }
 }
 
 /**
@@ -201,4 +218,4 @@ async function redefinir(token, senhaNova) {
   });
 }
 
-module.exports = { solicitar, enviarEmail, redefinir, VALIDADE_MINUTOS, MAX_PENDENTES };
+module.exports = { solicitar, enviarEmail, redefinir, descartar, VALIDADE_MINUTOS, MAX_PENDENTES };

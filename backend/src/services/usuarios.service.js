@@ -82,7 +82,12 @@ async function atualizar(id, { nome, perfil, ativo }, autor) {
   const params = [];
 
   for (const [coluna, valor] of [
-    ['nome', nome === undefined ? undefined : normalizarNome(nome)],
+    // `null` é tratado como ausente, e não como "apague o nome". O validador
+    // já faz isso (pula null antes de medir minLength), mas o serviço não
+    // fazia: `normalizarNome(null)` devolve '', que passava pela checagem de
+    // `undefined` e ia parar no UPDATE. Antes disso, o NOT NULL da tabela
+    // barrava; depois da normalização, o nome era apagado em silêncio.
+    ['nome', nome === undefined || nome === null ? undefined : normalizarNome(nome)],
     ['perfil', perfil],
     ['ativo', ativo],
   ]) {

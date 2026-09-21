@@ -39,6 +39,18 @@ function Confirmacao({
   const caixa = useRef(null);
   const origemDoFoco = useRef(null);
 
+  // `onCancelar` numa ref, e não na lista de dependências.
+  //
+  // Quem chama passa uma seta criada na hora — `onCancelar={() => setX(null)}`
+  // —, então a função é outra a cada render. Com ela nas dependências, o efeito
+  // se refazia a cada render enquanto o diálogo estava aberto, e a limpeza
+  // rodava junto: o foco voltava para o botão ATRÁS do diálogo, fora de um
+  // `aria-modal`, sem ninguém ter fechado nada. Durante `carregando` o efeito
+  // nem reconquistava o foco, porque o botão de recusa está desabilitado e
+  // `.focus()` num elemento desabilitado não faz nada.
+  const cancelar = useRef(onCancelar);
+  cancelar.current = onCancelar;
+
   useEffect(() => {
     if (!aberto) return undefined;
 
@@ -50,7 +62,7 @@ function Confirmacao({
     function aoTeclar(evento) {
       if (evento.key === 'Escape') {
         evento.preventDefault();
-        onCancelar();
+        cancelar.current();
         return;
       }
       if (evento.key !== 'Tab') return;
@@ -78,7 +90,7 @@ function Confirmacao({
       // origem pode ter sumido junto com o item removido.
       if (origemDoFoco.current?.isConnected) origemDoFoco.current.focus();
     };
-  }, [aberto, onCancelar]);
+  }, [aberto]);
 
   if (!aberto) return null;
 

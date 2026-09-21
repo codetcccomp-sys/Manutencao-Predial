@@ -195,12 +195,17 @@ function Usuarios() {
                   {/* O seletor não tem rótulo visível — a coluna já diz o que
                       é —, mas precisa de nome acessível próprio: numa tela com
                       vinte usuários, um leitor de tela anunciaria vinte
-                      "caixas de seleção" idênticas. */}
-                  <label className="sr-only" htmlFor={`perfil-${u.id}`}>
-                    Perfil de {u.nome}
-                  </label>
+                      "caixas de seleção" idênticas.
+
+                      `aria-label`, e não `<label htmlFor>`: a Tabela desenha a
+                      MESMA coluna duas vezes, como linha de tabela e como
+                      bloco, escondendo uma das duas por CSS. Um `id` aqui
+                      apareceria duas vezes no documento, e o `htmlFor` casaria
+                      sempre com a primeira — a escondida. No celular, o
+                      seletor visível ficava sem nome acessível nenhum. O
+                      `aria-label` não depende de id e por isso não quebra. */}
                   <select
-                    id={`perfil-${u.id}`}
+                    aria-label={`Perfil de ${u.nome}`}
                     value={u.perfil}
                     disabled={u.id === usuario.id}
                     onChange={(e) => alterar(u.id, { perfil: e.target.value })}

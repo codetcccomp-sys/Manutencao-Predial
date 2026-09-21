@@ -143,3 +143,66 @@ describe('Confirmação de ação sem volta', () => {
     expect(screen.getByRole('button', { name: 'Voltar' })).toBeDisabled();
   });
 });
+
+describe('O foco não escapa ao confirmar', () => {
+  it('ao confirmar, o foco não volta para o botão atrás do diálogo', async () => {
+    const usuario = userEvent.setup();
+
+    // O caminho exato: a pessoa clica em "Confirmar", o componente entra em
+    // `carregando` e redesenha. Se `onCancelar` — uma seta nova a cada render
+    // — estiver nas dependências do efeito, a limpeza roda e devolve o foco ao
+    // gatilho. O efeito reentra em seguida e tentaria recolocar o foco na
+    // recusa, mas durante `carregando` ela está desabilitada e `.focus()` num
+    // elemento desabilitado não faz nada. Resultado: o foco fica no botão
+    // ATRÁS de um `aria-modal`, enquanto a ação irreversível corre.
+    function Tela() {
+      const [aberto, setAberto] = useState(false);
+      const [carregando, setCarregando] = useState(false);
+      return (
+        <>
+          <button onClick={() => setAberto(true)}>Cancelar chamado</button>
+          <Confirmacao
+            aberto={aberto}
+            carregando={carregando}
+            titulo="Tem certeza?"
+            rotuloConfirmar="Fazer"
+            onConfirmar={() => setCarregando(true)}
+            onCancelar={() => setAberto(false)}
+          >
+            Isto não tem volta.
+          </Confirmacao>
+        </>
+      );
+    }
+
+    render(<Tela />);
+    const gatilho = screen.getByRole('button', { name: 'Cancelar chamado' });
+    await usuario.click(gatilho);
+    await usuario.click(screen.getByRole('button', { name: 'Fazer' }));
+
+    expect(screen.getByRole('button', { name: 'Fazer' })).toBeDisabled();
+    expect(document.activeElement, 'o foco voltou para trás do diálogo').not.toBe(gatilho);
+  });
+
+  it('o Esc continua chamando o onCancelar atual depois de redesenhar', async () => {
+    const usuario = userEvent.setup();
+    const primeiro = vi.fn();
+    const segundo = vi.fn();
+
+    // A ref precisa acompanhar a prop. Guardá-la só no primeiro render faria o
+    // Esc chamar uma função velha — que, num componente de verdade, fecharia
+    // um estado que já não existe.
+    const tela = (aoCancelar) => (
+      <Confirmacao aberto titulo="Tem certeza?" onConfirmar={() => {}} onCancelar={aoCancelar}>
+        Isto não tem volta.
+      </Confirmacao>
+    );
+
+    const { rerender } = render(tela(primeiro));
+    rerender(tela(segundo));
+    await usuario.keyboard('{Escape}');
+
+    expect(segundo).toHaveBeenCalledOnce();
+    expect(primeiro).not.toHaveBeenCalled();
+  });
+});

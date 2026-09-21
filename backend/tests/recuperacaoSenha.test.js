@@ -346,3 +346,66 @@ describe('Para onde o link de redefinição aponta', () => {
     expect(link).toMatch(/^https?:\/\/[^/]+\/redefinir-senha\?token=/);
   });
 });
+
+describe('O Host da requisição não decide para onde vai o link', () => {
+  const original = process.env.URL_APP;
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.URL_APP;
+    else process.env.URL_APP = original;
+    jest.restoreAllMocks();
+  });
+
+  it('sem URL_APP, um Host forjado não vira link de redefinição', async () => {
+    // O endpoint é público. Sem esta barreira, qualquer um manda o e-mail da
+    // vítima com `Host: sitedoatacante.exemplo` e o token dela chega na caixa
+    // dela apontando para o endereço do atacante — que só precisa esperar o
+    // clique. `trust proxy`, ligado para corrigir o `http://`, deixaria o
+    // atacante escolher o esquema também.
+    delete process.env.URL_APP;
+    const espiao = jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(true);
+
+    const resp = await request(app)
+      .post('/auth/recuperar-senha')
+      .set('X-Real-IP', IP)
+      .set('Host', 'sitedoatacante.exemplo')
+      .send({ email });
+
+    // A resposta é a de sempre: distinguir aqui contaria quem tem cadastro.
+    expect(resp.status).toBe(200);
+    expect(espiao).not.toHaveBeenCalled();
+  });
+
+  it('e o pedido não fica ocupando vaga por uma hora', async () => {
+    delete process.env.URL_APP;
+    jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(true);
+
+    await request(app)
+      .post('/auth/recuperar-senha')
+      .set('X-Real-IP', IP)
+      .set('Host', 'sitedoatacante.exemplo')
+      .send({ email });
+
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS total FROM recuperacao_senha
+        WHERE usuario_id = $1 AND usado_em IS NULL AND expira_em > now()`,
+      [usuarioId]
+    );
+    expect(rows[0].total).toBe(0);
+  });
+
+  it('com URL_APP configurada, o Host forjado é ignorado', async () => {
+    process.env.URL_APP = 'https://conserva-predial.vercel.app';
+    const espiao = jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(true);
+
+    await request(app)
+      .post('/auth/recuperar-senha')
+      .set('X-Real-IP', IP)
+      .set('Host', 'sitedoatacante.exemplo')
+      .send({ email });
+
+    const texto = espiao.mock.calls.at(-1)[0].texto;
+    expect(texto).toContain('https://conserva-predial.vercel.app/redefinir-senha');
+    expect(texto).not.toContain('sitedoatacante');
+  });
+});

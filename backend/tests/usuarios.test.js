@@ -237,3 +237,38 @@ describe('Nome sem espaço sobrando', () => {
     expect(resp.body.usuario.nome).toBe('João Técnico');
   });
 });
+
+describe('Nome nulo não apaga o nome', () => {
+  it('PATCH com nome: null é tratado como campo ausente', async () => {
+    const alvo = await criarUsuarioELogar('tecnico');
+    const nomeOriginal = alvo.usuario.nome;
+
+    // `null` escapa do validador (ele pula null antes de medir minLength) e,
+    // depois que o serviço passou a normalizar, `normalizarNome(null)` devolvia
+    // '' — que ia para o UPDATE e apagava o nome. Antes da normalização o NOT
+    // NULL da tabela barrava; o conserto de um abriu o buraco do outro.
+    const resp = await request(app)
+      .patch(`/usuarios/${alvo.usuario.id}`)
+      .set(comoAdmin())
+      .send({ nome: null, perfil: 'gestor' });
+
+    expect(resp.status).toBe(200);
+
+    const { rows } = await pool.query('SELECT nome FROM usuario WHERE id = $1', [alvo.usuario.id]);
+    expect(rows[0].nome).toBe(nomeOriginal);
+    expect(rows[0].nome).not.toBe('');
+  });
+
+  it('e sozinho não conta como campo para atualizar', async () => {
+    const alvo = await criarUsuarioELogar('tecnico');
+
+    const resp = await request(app)
+      .patch(`/usuarios/${alvo.usuario.id}`)
+      .set(comoAdmin())
+      .send({ nome: null });
+
+    // Sem nenhum campo de verdade, o pedido não tem o que fazer.
+    expect(resp.status).toBe(422);
+    expect(resp.body.erro.codigo).toBe('NADA_A_ATUALIZAR');
+  });
+});
