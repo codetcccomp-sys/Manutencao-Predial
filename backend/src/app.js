@@ -61,13 +61,14 @@ app.use(
       // resposta mentia sobre o que tinha acontecido. Quem via a tela ia
       // procurar banco caído e servidor quebrado, enquanto a API estava
       // perfeitamente de pé e apenas recusando a origem. Agora diz o que é.
-      callback(
-        new AppError(
-          `Origem não permitida: ${origin}. Cadastre-a em DOMINIOS_FIXOS, em backend/src/app.js.`,
-          403,
-          'ORIGEM_NAO_PERMITIDA'
-        )
+      // A pista de conserto vai para o log, não para a resposta: o nome do
+      // arquivo e o da constante são detalhe de dentro, e a resposta de um
+      // endpoint público não é lugar de contá-los. Quem precisa da instrução
+      // é quem opera o servidor, e essa pessoa lê o log.
+      console.error(
+        `[cors] origem recusada: ${origin}. Cadastre-a em DOMINIOS_FIXOS, em backend/src/app.js.`
       );
+      callback(new AppError('Origem não permitida.', 403, 'ORIGEM_NAO_PERMITIDA'));
     },
   })
 );

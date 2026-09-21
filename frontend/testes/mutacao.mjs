@@ -347,6 +347,20 @@ const MUTACOES = [
     para: '<Aviso tipo="info" titulo="Nada foi importado. Corrija e envie o arquivo de novo:">',
     spec: 'testes/Cadastros.test.jsx',
   },
+  {
+    descricao: 'foco volta para trás do diálogo enquanto a ação corre',
+    arquivo: 'src/components/ui/Confirmacao.jsx',
+    de: '  }, [aberto]);',
+    para: '  }, [aberto, onCancelar]);',
+    spec: 'testes/Confirmacao.test.jsx',
+  },
+  {
+    descricao: 'seletor de perfil volta a depender de id, que a tabela duplica',
+    arquivo: 'src/pages/Usuarios.jsx',
+    de: '                    aria-label={`Perfil de ${u.nome}`}',
+    para: '                    id={`perfil-${u.id}`}',
+    spec: 'testes/Usuarios.test.jsx',
+  },
 ];
 
 /**

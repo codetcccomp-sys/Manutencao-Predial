@@ -109,6 +109,19 @@ aviso mede o processo errado.
 
 ### 2.2 E-mail (decisão, não obrigação)
 
+> **Se configurar SMTP, configure `URL_APP` junto.** Ela guarda o endereço do
+> APP — `https://conserva-predial.vercel.app` —, que é para onde o link de
+> redefinição de senha aponta. Sem ela a API não tem como saber esse endereço:
+> front e back são aplicações em domínios diferentes.
+>
+> A única pista que sobraria é o cabeçalho `Host` da requisição, e esse
+> cabeçalho é escolhido por quem faz o pedido. Um pedido com
+> `Host: sitedoatacante.exemplo` e o e-mail de alguém faria o link chegar na
+> caixa da vítima apontando para o atacante — e o endpoint é público, não pede
+> autenticação. Por isso, fora de desenvolvimento e sem `URL_APP`, o e-mail
+> não é enviado e a falha vai para o log.
+
+
 Sem `SMTP_HOST` configurado, as notificações existem só no sino do cabeçalho —
 o envio vira registro em log e nada mais muda. Isso funciona, mas muda o que o
 piloto mede: quem não abrir o sistema não fica sabendo de nada, e o tempo de

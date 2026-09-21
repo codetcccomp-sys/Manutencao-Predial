@@ -66,6 +66,7 @@ describe('Origens recusadas', () => {
   });
 
   it('diz que o problema é a origem, em vez de fingir que o servidor caiu', async () => {
+    const registro = jest.spyOn(console, 'error').mockImplementation(() => {});
     const resp = await request(app)
       .post('/auth/login')
       .set('Origin', 'https://endereco-novo-ainda-nao-cadastrado.vercel.app')
@@ -73,12 +74,22 @@ describe('Origens recusadas', () => {
 
     // A recusa devolvia 500 com "Erro interno no servidor.". Quem via aquilo
     // ia procurar banco caído e servidor quebrado — enquanto a API estava de
-    // pé, funcionando, e apenas recusando a origem. A mensagem diz o que
-    // aconteceu e onde se conserta.
+    // pé, funcionando, e apenas recusando a origem. O código diz o que
+    // aconteceu.
     expect(resp.body.erro.codigo).toBe('ORIGEM_NAO_PERMITIDA');
-    expect(resp.body.erro.mensagem).toContain('endereco-novo-ainda-nao-cadastrado.vercel.app');
-    expect(resp.body.erro.mensagem).toContain('DOMINIOS_FIXOS');
     expect(resp.body.erro.mensagem).not.toContain('Erro interno');
+
+    // Mas a instrução de conserto NÃO vai na resposta: o nome do arquivo e o
+    // da constante são detalhe de dentro, e este endpoint é público. Quem
+    // precisa da instrução opera o servidor, e essa pessoa lê o log.
+    expect(resp.body.erro.mensagem).not.toContain('DOMINIOS_FIXOS');
+    expect(resp.body.erro.mensagem).not.toContain('src/app.js');
+
+    const doLog = registro.mock.calls.flat().join(' ');
+    expect(doLog).toContain('endereco-novo-ainda-nao-cadastrado.vercel.app');
+    expect(doLog).toContain('DOMINIOS_FIXOS');
+
+    registro.mockRestore();
   });
 
   it('não deixa um domínio de terceiro passar só por terminar igual', async () => {
