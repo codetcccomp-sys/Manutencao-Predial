@@ -4,7 +4,7 @@ A RNF01 pede que a política de retenção esteja definida **antes da
 homologação**. Este documento é o rascunho dela, levantado do banco de
 produção e do código — não de um modelo genérico.
 
-> **O que falta você decidir está marcado com 🔲.** São quatro pontos, e
+> **O que falta você decidir está marcado com 🔲.** São cinco pontos, e
 > nenhum deles é técnico: dependem de quem responde pela instituição.
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
 
@@ -126,9 +126,17 @@ Um plano escrito às pressas no dia do incidente não é um plano.
 
 Dados úteis para esse plano:
 
-- O banco é PostgreSQL gerenciado pelo Supabase, com backup automático.
+- O banco é PostgreSQL gerenciado pelo Supabase. **No plano Free não há backup
+  automático restaurável** — a documentação do Supabase é explícita, e a
+  recomendação deles é exportar por conta própria. O que existir será o
+  `pg_dump` da seção 2.3 do roteiro de piloto. Num incidente, recuperar o
+  estado anterior depende inteiramente de alguém ter rodado aquele comando.
 - Só o `DATABASE_URL` dá acesso, e ele é variável de ambiente na Vercel,
   marcada como *sensitive*.
+- A conexão entre a aplicação e o banco verifica o certificado do servidor
+  (cadeia e hostname) desde 23/09/2026. Antes disso ela era criptografada mas
+  não autenticada: aceitava qualquer certificado. Se o plano de incidente
+  precisar considerar a janela anterior a essa data, é este o buraco.
 - Trocar a senha do banco invalida todas as sessões de aplicação, mas **não**
   os tokens JWT já emitidos: eles valem até expirar. Revogar de verdade exige
   trocar o `JWT_SECRET`, o que derruba todo mundo de uma vez — e é isso que se
