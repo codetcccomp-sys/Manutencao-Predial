@@ -7,10 +7,16 @@ produção e do código — não de um modelo genérico.
 > **Decidido em 23/09/2026:** prazos de retenção (seção 2), base legal
 > (seção 4), remoção sob pedido (seção 5) e plano de incidente (seção 6).
 >
-> **Restam dois 🔲**, e nenhum é escolha — são fatos que só você tem: em que
-> instituição o piloto vai rodar (e se ela é pública ou privada), e o nome
-> completo do responsável. A justificativa das duas naturezas já está escrita,
-> incluindo o teste de ponderação exigido no caso privado; falta marcar qual.
+> **Restam três 🔲**, e nenhum é escolha — são fatos que só a equipe tem:
+>
+> 1. Em que instituição o piloto vai rodar, e se ela é pública ou privada
+>    (a justificativa das duas já está escrita, com o teste de ponderação
+>    exigido no caso privado — falta marcar qual).
+> 2. O nome dessa instituição como controladora.
+> 3. Os sobrenomes completos da equipe técnica.
+>
+> O contato do titular já está definido, que é o que faz o documento
+> responder a um pedido real.
 >
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
 
@@ -181,19 +187,63 @@ prática.
 expectativa de quem usa, e o titular tem como se opor — pelo procedimento da
 seção 5. O legítimo interesse se sustenta.
 
-**Pessoa de contato para pedido de acesso ou exclusão:**
+### Quem responde pelo quê
+
+São três papéis distintos, e amontoá-los numa linha só é o erro mais comum
+deste tipo de documento.
+
+**Controlador** — quem decide que o tratamento acontece, e responde por ele
+perante a ANPD.
 
 | | |
 | --- | --- |
-| Papel | Administrador principal do sistema |
+| Instituição | 🔲 `________________________` |
+
+Não é a equipe do projeto. Quem decide que o prédio vai usar este sistema para
+tratar dados de quem trabalha nele é a instituição; a equipe construiu e opera.
+A distinção muda quem responde se algo der errado, e o documento anterior
+sugeria, por omissão, o contrário.
+
+**Contato do titular** — quem recebe e responde pedido de acesso, correção ou
+remoção (seção 5).
+
+| | |
+| --- | --- |
+| Nome | Issamuel Amorim de Sousa Júnior |
 | Contato | `code.tcc.comp@gmail.com` |
+
+**Uma pessoa, não a equipe.** Este papel não se divide: uma lista de cinco
+nomes faz cada um supor que outro respondeu, e o pedido fica sem resposta
+dentro do prazo. É o caso em que "todos" quer dizer "ninguém".
+
+O nome acima é o de quem detém a conta administradora e a caixa que receberia
+o pedido hoje — ou seja, quem de fato consegue atendê-lo.
 
 > Este documento vive num repositório privado. Se ele for publicado junto com
 > o TCC, o endereço vai junto — vale trocá-lo por um institucional antes, ou
 > tirar esta linha da versão pública.
 
-🔲 **Nome completo do responsável.** Um documento formal de proteção de dados
-precisa de uma pessoa nomeada, não só de um endereço.
+**Supervisão acadêmica**
+
+| | |
+| --- | --- |
+| Professor responsável | Aucionio Miranda |
+
+**Equipe técnica** — quem construiu e opera o sistema.
+
+| Papel | Nome |
+| --- | --- |
+| Gerente do projeto | Abraão Henrique |
+| Integrante | Issamuel Amorim de Sousa Júnior |
+| Integrante | Pedro Henrique |
+| Integrante | Francisco Osmano |
+| Integrante | Maria Clara |
+| Integrante | Felipe Sousa |
+
+🔲 **Completar os nomes.** Os da equipe vieram do bloco de aprovação do Termo
+de Abertura v1.2, onde aparecem sem sobrenome completo. Num documento de
+proteção de dados isso não identifica ninguém com segurança. Só o do contato
+do titular está completo — os demais aguardam.
 
 ---
 
