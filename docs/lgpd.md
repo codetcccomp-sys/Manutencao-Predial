@@ -4,8 +4,12 @@ A RNF01 pede que a política de retenção esteja definida **antes da
 homologação**. Este documento é o rascunho dela, levantado do banco de
 produção e do código — não de um modelo genérico.
 
-> **O que falta você decidir está marcado com 🔲.** São cinco pontos, e
-> nenhum deles é técnico: dependem de quem responde pela instituição.
+> **Decidido em 23/09/2026:** prazos de retenção (seção 2), base legal
+> (seção 4), remoção sob pedido (seção 5) e plano de incidente (seção 6).
+>
+> **Restam dois 🔲**, e nenhum é escolha — são fatos que só você tem: se a
+> instituição é pública ou privada, e o nome completo do responsável.
+>
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
 
 ---
@@ -58,9 +62,25 @@ O que **nunca é apagado**, por decisão de projeto:
   mas preserva o que ela escreveu, para o histórico do chamado não ficar com
   buracos.
 
-🔲 **Decidir: por quanto tempo o registro de manutenção deve ser guardado.**
-Chamado costuma ter prazo próprio na instituição, ligado ao patrimônio.
-Conta de pessoa desligada, não — e hoje ela fica indefinidamente.
+### Prazos definidos
+
+Dois prazos, porque são duas coisas diferentes:
+
+| O quê | Prazo | Depois |
+| --- | --- | --- |
+| Chamado, histórico, comentário, avaliação, anexo | **5 anos** a partir da conclusão | Descarte |
+| Conta de pessoa desligada | **2 anos** após o desligamento | Anonimização (seção 5) |
+
+O registro de manutenção fica cinco anos porque é documentação do patrimônio,
+não dado sobre a pessoa: o que interessa ali é o que foi feito no prédio. A
+conta segue prazo mais curto porque o que ela guarda — nome e e-mail — é
+sobre a pessoa e nada mais.
+
+**Nenhum dos dois prazos é executado automaticamente hoje.** A anonimização de
+conta existe como procedimento sob pedido (seção 5); o descarte de chamados
+antigos não existe, e nada no sistema apaga chamado. Quando o piloto chegar
+a cinco anos, isso precisará de código — o que é um problema de 2031, mas
+ficar escrito evita que vire surpresa.
 
 ---
 
@@ -82,8 +102,25 @@ de um administrador autenticado.
 
 ## 4. Base legal e responsável
 
-🔲 **Base legal.** Em geral, execução de atividade da instituição — mas
-confirme com quem responde por isso. Não é uma decisão de engenharia.
+### Base legal
+
+Depende da natureza da instituição, e são as duas únicas que cabem aqui:
+
+| Se a instituição for | Base legal | LGPD |
+| --- | --- | --- |
+| Pública | Execução de política pública / atribuição legal | art. 7º, III |
+| Privada | Legítimo interesse | art. 7º, IX |
+
+Em nenhum dos dois casos é consentimento, e vale dizer por quê: consentimento
+teria de ser livre, e quem precisa abrir chamado para consertar a própria sala
+de trabalho não está em posição de recusar. Base legal escolhida errado é pior
+que base legal ausente, porque parece resolvida.
+
+O dado tratado é o mínimo para a finalidade — nome, e-mail e o que a pessoa
+escreveu no chamado —, o que sustenta qualquer das duas.
+
+🔲 **Marcar qual das duas linhas se aplica.** É fato sobre a instituição, não
+escolha: pública ou privada. A justificativa já está escrita nas duas.
 
 **Pessoa de contato para pedido de acesso ou exclusão:**
 
@@ -101,28 +138,97 @@ precisa de uma pessoa nomeada, não só de um endereço.
 
 ---
 
-## 5. O procedimento que o sistema não tem
+## 5. Como atender um pedido de remoção
 
 **Desativar uma pessoa não apaga o que ela escreveu, e isso é proposital.**
+Para o pedido de remoção existe um procedimento separado.
 
-Se a política exigir remoção de dados pessoais, ela vai precisar de um
-procedimento explícito — anonimizar o nome e o e-mail, mantendo o chamado e o
-histórico intactos. Hoje esse procedimento **não existe no sistema**.
+### Na prática
 
-Decidir isto antes é bem mais barato do que depois: anonimizar de verdade
-significa mexer em `usuario`, nos textos livres de `comentario` e `avaliacao`
-(onde alguém pode ter escrito o nome de outra pessoa) e nos anexos.
+Um administrador chama, autenticado:
 
-🔲 **Decidir: a política vai exigir remoção sob pedido?**
-Se sim, é trabalho de código, e é melhor fazê-lo antes de haver dado real
-para migrar.
+```
+POST /usuarios/:id/anonimizar
+```
+
+Só administrador executa, e **ninguém executa na própria conta**: a ação não
+tem desfazer e tira o acesso no mesmo instante, então exige um segundo par de
+olhos. O último administrador ativo também não pode ser anonimizado, pela
+mesma razão que não pode ser desativado — recuperar o sistema exigiria acesso
+direto ao banco.
+
+Rodar duas vezes é recusado: a segunda passagem não teria o que apagar e só
+moveria a data, fazendo parecer um pedido novo.
+
+É `POST` e não `DELETE` de propósito. Um `DELETE` que deixa a linha no banco
+engana quem lê a rota, e alguém poderia "completar" o DELETE mais tarde
+achando que conserta uma implementação pela metade — levando junto todo o
+histórico do prédio.
+
+### Decidido: sim, por anonimização
+
+A política exige atender pedido de remoção, e o atendimento é **anonimizar a
+pessoa, preservando o registro da manutenção**.
+
+Não é exclusão, e a diferença importa: apagar a linha de `usuario` arrastaria
+ou quebraria todo chamado, comentário e evento de histórico ligado a ela — o
+prédio perderia o registro do que foi consertado por causa de um pedido sobre
+dado pessoal. Anonimizar separa as duas coisas: some quem era, fica o que foi
+feito.
+
+**O que a anonimização faz:**
+
+| Campo | Vira |
+| --- | --- |
+| `nome` | `Usuário removido` |
+| `email` | endereço-lápide em `.invalid`, que nenhum servidor entrega |
+| `senha_hash` | valor impossível de casar com qualquer senha |
+| `ativo` | `false` |
+| `anonimizado_em` | data do pedido, para provar que foi atendido |
+
+Apaga junto o que só existe por causa da pessoa: suas notificações, suas
+tentativas de login e seus pedidos de recuperação de senha — este último é o
+que guarda IP.
+
+Preserva chamados, comentários, avaliações, anexos e histórico, agora
+assinados por "Usuário removido".
+
+É irreversível por definição: nada guarda o nome original.
+
+> **Limite conhecido, e declarado de propósito.** A anonimização alcança os
+> campos da pessoa, não o texto que outras pessoas escreveram. Se alguém citou
+> um nome no corpo de um comentário, aquele nome continua lá. Varrer texto
+> livre em busca de nomes daria falso positivo em palavra comum e falso
+> negativo em apelido — e apagar por engano o conteúdo técnico do chamado é
+> dano certo contra risco incerto.
+>
+> O procedimento para esse caso é manual: quem receber o pedido busca o nome
+> nos comentários e edita os que existirem. Não é automático, e fingir que é
+> seria pior.
 
 ---
 
 ## 6. O que fazer se houver vazamento
 
-🔲 **Definir, mesmo que em três linhas**, quem é avisado e em que prazo.
-Um plano escrito às pressas no dia do incidente não é um plano.
+### O plano
+
+Ao suspeitar de acesso indevido, nesta ordem:
+
+1. **Trocar `JWT_SECRET` na Vercel e fazer o redeploy.** Derruba todas as
+   sessões na hora, inclusive as de quem entrou indevidamente. É o primeiro
+   passo porque é o único que interrompe um acesso em curso.
+2. **Trocar a senha do banco no Supabase** e atualizar `DATABASE_URL`.
+3. **Avisar o responsável (seção 4) em até 24 horas** do momento em que a
+   suspeita surgiu — não do momento em que ela foi confirmada.
+4. **Avisar os titulares afetados em até 72 horas**, se houver risco a eles.
+   Vazamento de nome e e-mail de quem abriu chamado de manutenção é risco
+   baixo; vazamento dos anexos pode não ser, porque foto de ambiente pode ter
+   gente dentro.
+5. **Registrar o que aconteceu por escrito**, ainda no mesmo dia: o que
+   vazou, de quando até quando, e como se descobriu.
+
+A ordem não é burocrática. O passo 1 primeiro porque avisar alguém enquanto o
+acesso continua aberto é gastar as horas que importam.
 
 Dados úteis para esse plano:
 

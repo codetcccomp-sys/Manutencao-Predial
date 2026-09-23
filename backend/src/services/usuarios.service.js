@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { normalizarNome } = require('./auth.service');
 
@@ -66,6 +67,23 @@ async function atualizar(id, { nome, perfil, ativo }, autor) {
     throw new AppError('Você não pode alterar o próprio perfil.', 422, 'AUTO_REBAIXAMENTO');
   }
 
+  // Conta anonimizada não volta. Reativar devolveria acesso a uma conta cujo
+  // dono pediu para sair, e cujo nome e e-mail já não existem: quem entrasse
+  // ali estaria numa conta sem identidade, assinando chamados como "Usuário
+  // removido". O `ativo = false` da anonimização não é uma desativação comum
+  // e o botão "Reativar" da tela não pode tratá-lo como tal.
+  const { rows: anonima } = await pool.query(
+    'SELECT 1 FROM usuario WHERE id = $1 AND anonimizado_em IS NOT NULL',
+    [id]
+  );
+  if (anonima[0]) {
+    throw new AppError(
+      'Esta conta foi anonimizada a pedido e não pode ser alterada.',
+      422,
+      'CONTA_ANONIMIZADA'
+    );
+  }
+
   const deixaDeAdministrar =
     alvo.perfil === 'administrador' &&
     ((perfil !== undefined && perfil !== 'administrador') || ativo === false);
@@ -109,4 +127,79 @@ async function atualizar(id, { nome, perfil, ativo }, autor) {
   return rows[0];
 }
 
-module.exports = { listar, buscarPorId, atualizar };
+/**
+ * Atende pedido de remoção anonimizando a pessoa (LGPD, docs/lgpd.md §5).
+ *
+ * Não apaga a linha, e a diferença é o ponto inteiro: `usuario.id` é
+ * referenciado por chamado, comentário, avaliação, anexo, notificação,
+ * histórico e equipe. Apagar arrastaria o registro da manutenção junto —
+ * o prédio perderia a memória do que foi consertado por causa de um pedido
+ * sobre dado pessoal. Some quem era, fica o que foi feito.
+ *
+ * É irreversível: nada guarda o nome ou o e-mail originais. Por isso as
+ * mesmas travas do `atualizar`, e uma a mais — quem já foi anonimizado não
+ * volta a ser anonimizado, porque a segunda passagem não teria o que apagar
+ * e só serviria para mover a data e fingir um pedido novo.
+ */
+async function anonimizar(id, autor) {
+  const alvo = await buscarPorId(id);
+
+  if (alvo.id === autor.id) {
+    // Quem anonimiza a si mesmo perde o acesso no mesmo instante, e a conta
+    // não volta. Se for de fato o pedido da pessoa, outro administrador
+    // executa — assim existe um segundo par de olhos numa ação sem desfazer.
+    throw new AppError(
+      'Você não pode anonimizar a própria conta. Peça a outro administrador.',
+      422,
+      'AUTO_ANONIMIZACAO'
+    );
+  }
+
+  if (alvo.perfil === 'administrador' && (await contarAdministradoresAtivos(alvo.id)) === 0) {
+    throw new AppError(
+      'Este é o último administrador ativo. Promova outro antes de anonimizá-lo.',
+      422,
+      'ULTIMO_ADMINISTRADOR'
+    );
+  }
+
+  const { rows: jaFoi } = await pool.query(
+    'SELECT anonimizado_em FROM usuario WHERE id = $1 AND anonimizado_em IS NOT NULL',
+    [id]
+  );
+  if (jaFoi[0]) {
+    throw new AppError('Esta conta já foi anonimizada.', 422, 'JA_ANONIMIZADO');
+  }
+
+  return transacao(async (client) => {
+    // Some o que só existe por causa da pessoa. O pedido de recuperação é o
+    // que mais importa aqui: é a tabela que guarda IP.
+    await client.query('DELETE FROM notificacao WHERE usuario_id = $1', [id]);
+    await client.query('DELETE FROM recuperacao_senha WHERE usuario_id = $1', [id]);
+    await client.query('DELETE FROM tentativa_login WHERE email = $1', [alvo.email]);
+
+    const { rows } = await client.query(
+      `UPDATE usuario
+          SET nome           = 'Usuário removido',
+              -- Endereço-lápide em .invalid, domínio que a RFC 2606 reserva
+              -- para nunca existir. Um domínio inventado qualquer devolveria
+              -- cada aviso do sistema na caixa do remetente — foi o que as 27
+              -- devoluções de @exemplo.demo ensinaram.
+              email          = 'removido-' || id || '@anonimizado.invalid',
+              -- Não é hash de senha nenhuma: bcrypt nunca produz este valor,
+              -- então nenhuma senha digitada casa com ele. Deixar o hash
+              -- antigo manteria a senha da pessoa guardada depois de ela
+              -- pedir para sair.
+              senha_hash     = 'conta-anonimizada-sem-acesso',
+              ativo          = FALSE,
+              anonimizado_em = now()
+        WHERE id = $1
+        RETURNING ${CAMPOS}, anonimizado_em`,
+      [id]
+    );
+
+    return rows[0];
+  });
+}
+
+module.exports = { listar, buscarPorId, atualizar, anonimizar };
