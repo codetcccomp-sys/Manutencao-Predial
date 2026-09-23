@@ -1,22 +1,37 @@
 # Dados pessoais e retenção
 
+> ## O que este documento é, e o que não é
+>
+> **É um artefato acadêmico**, produzido para o trabalho de conclusão de curso
+> que originou o sistema. Atende a RNF01 do Termo de Abertura v1.2, que pede a
+> política de retenção definida antes da homologação.
+>
+> **Não é** política institucional adotada. Nenhuma instituição o aprovou,
+> assinou ou formalizou, e ele não foi revisado por quem responde juridicamente
+> por tratamento de dados. Quem o encontrar junto ao TCC não deve entendê-lo
+> como compromisso firmado por ninguém além da equipe que o escreveu.
+>
+> Isso não o torna decorativo: o conteúdo foi levantado do banco de produção e
+> do código, não de um modelo genérico, e o que ele descreve o sistema de fato
+> faz — inclusive o procedimento de remoção da seção 5, que existe como rota
+> testada. Se o piloto um dia rodar com dados de pessoas reais, este documento
+> é a base pronta para a instituição revisar e adotar.
+
 A RNF01 pede que a política de retenção esteja definida **antes da
-homologação**. Este documento é o rascunho dela, levantado do banco de
-produção e do código — não de um modelo genérico.
+homologação**. Este documento a define.
 
 > **Decidido em 23/09/2026:** prazos de retenção (seção 2), base legal
 > (seção 4), remoção sob pedido (seção 5) e plano de incidente (seção 6).
 >
-> **Restam três 🔲**, e nenhum é escolha — são fatos que só a equipe tem:
+> **Restam três 🔲.** Nenhum bloqueia o trabalho acadêmico — o raciocínio das
+> alternativas já está escrito, que é o que a RNF01 pede. São campos a
+> preencher **se e quando** o sistema passar a tratar dados de pessoas reais:
 >
-> 1. Em que instituição o piloto vai rodar, e se ela é pública ou privada
+> 1. Em que instituição o piloto roda, e se ela é pública ou privada
 >    (a justificativa das duas já está escrita, com o teste de ponderação
 >    exigido no caso privado — falta marcar qual).
 > 2. O nome dessa instituição como controladora.
 > 3. Os sobrenomes completos da equipe técnica.
->
-> O contato do titular já está definido, que é o que faz o documento
-> responder a um pedido real.
 >
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
 
