@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const authController = require('../controllers/auth.controller');
 const { validate } = require('../validators/validate');
-const { limitarLogin } = require('../middlewares/rateLimit');
+const { limitarLogin, limitarRecuperacao } = require('../middlewares/rateLimit');
 
 const router = Router();
 
@@ -28,9 +28,14 @@ router.post(
 );
 
 // RF01: recuperação segura de senha.
+//
+// O limitador vem depois do `validate`: assim um corpo malformado é recusado
+// sem gastar uma linha do contador, e quem erra o formato do e-mail não
+// caminha para o bloqueio.
 router.post(
   '/recuperar-senha',
   validate({ email: { obrigatorio: true, tipo: 'string', email: true } }),
+  limitarRecuperacao,
   authController.solicitarRecuperacao
 );
 

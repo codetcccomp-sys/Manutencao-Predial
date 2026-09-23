@@ -121,6 +121,50 @@ aviso mede o processo errado.
 > autenticação. Por isso, fora de desenvolvimento e sem `URL_APP`, o e-mail
 > não é enviado e a falha vai para o log.
 
+> **`DB_CA_CERT` é obrigatória, e a aplicação não sobe sem ela.**
+>
+> A conexão com o banco rodava sem verificar o certificado do servidor:
+> criptografada e não autenticada. A documentação do Supabase é direta sobre o
+> que isso significa — o modo `require` "sempre usa SSL, mas não verifica o
+> certificado do servidor nem o hostname". Quem conseguisse se colocar entre a
+> Vercel e o Supabase apresentaria um certificado qualquer, seria aceito, e a
+> partir daí leria toda consulta, todo hash de senha e todo chamado, podendo
+> ainda alterar as respostas no caminho.
+>
+> Baixe o certificado em **Dashboard → Project Settings → Database → SSL
+> Configuration** e cole o PEM inteiro em `DB_CA_CERT`, nas variáveis do
+> projeto do backend na Vercel. O certificado de uma CA é público: ele existe
+> para ser distribuído, e não é segredo.
+>
+> A aplicação recusa subir em produção sem ele de propósito. A alternativa
+> seria voltar ao modo fraco sozinha, e uma conexão interceptável que funciona
+> normalmente não dá sinal nenhum de que está interceptável — descobre-se
+> depois, se é que se descobre.
+
+### Limite do pedido de recuperação de senha
+
+O endpoint `POST /auth/recuperar-senha` tem dois tetos, e eles existem para
+proteger coisas diferentes:
+
+| Teto | Valor | Protege de |
+| --- | --- | --- |
+| Pedidos por IP | 15 por hora | script casual vindo de um endereço só |
+| Envios no sistema | 100 por dia | esgotamento da cota do provedor |
+
+O segundo é o que importa. O Gmail entrega cerca de 500 mensagens por dia, e
+quando essa cota acaba **todo** e-mail do sistema para junto — inclusive o
+aviso de atraso do RF08, que o sistema manda sozinho e que ninguém está
+esperando na tela para notar que não chegou. Os 100 deixam 400 de folga para
+o que o sistema precisa mandar por conta própria.
+
+Estourar o teto trava a recuperação de senha e não trava o resto. É a escolha
+certa porque a recuperação tem saída — um administrador redefine a senha pela
+tela de Usuários — e o aviso de atraso não tem nenhuma.
+
+Se um prédio grande passar a barrar gente de verdade, o número a mexer é o de
+pedidos por IP, em `backend/src/middlewares/rateLimit.js`. Um prédio inteiro
+sai por um IP só.
+
 
 Sem `SMTP_HOST` configurado, as notificações existem só no sino do cabeçalho —
 o envio vira registro em log e nada mais muda. Isso funciona, mas muda o que o
