@@ -28,7 +28,13 @@ function chamado(extra = {}) {
  * vez do comportamento da tela.
  */
 function responder(chamados, paginacao = {}) {
-  api.get.mockImplementation(async (_caminho, config) => ({
+  api.get.mockImplementation(async (caminho, config) => {
+    // A tela pede o resumo para o número de "em aberto" no topo; devolver a
+    // forma de uma listagem faria o componente ler `totais` de onde não há.
+    if (caminho === '/relatorios/resumo') {
+      return { data: { totais: { em_aberto: chamados.length } } };
+    }
+    return {
     data: {
       chamados,
       paginacao: {
@@ -39,7 +45,8 @@ function responder(chamados, paginacao = {}) {
         ...paginacao,
       },
     },
-  }));
+    };
+  });
 }
 
 const montar = () =>
@@ -49,8 +56,24 @@ const montar = () =>
     </MemoryRouter>
   );
 
-/** Os parâmetros do último GET /chamados. */
-const ultimosParams = () => api.get.mock.calls.at(-1)[1].params;
+/**
+ * Os parâmetros do último GET de `/chamados`.
+ *
+ * O filtro por caminho não é zelo: a tela passou a pedir também
+ * `/relatorios/resumo`, para o número de "em aberto" no topo, e mais dois
+ * GET de `/chamados` com `limite: 1` só para contar os cartões do topo.
+ *
+ * Sem o filtro, o helper pegava a última chamada qualquer — ora a do resumo,
+ * sem `params`, ora uma contagem com `atrasados: 'true'` fixo. Os testes
+ * passavam a medir a chamada errada e acusavam filtro onde não havia.
+ *
+ * `pagina` é o que separa: só a consulta da LISTA pagina. As de contagem
+ * pedem uma linha e leem o total.
+ */
+const ultimosParams = () =>
+  api.get.mock.calls
+    .filter(([caminho, config]) => caminho === '/chamados' && config?.params?.pagina !== undefined)
+    .at(-1)[1].params;
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -239,13 +262,24 @@ describe('Estado vazio e carregamento', () => {
   });
 
   it('a região anuncia que está carregando, e o esqueleto fica fora disso', async () => {
-    let liberar;
-    api.get.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          liberar = () => resolve({ data: { chamados: [], paginacao: { pagina: 1, limite: 20, total: 0, paginas: 0 } } });
+    // Uma lista de resolvedores, e não um só.
+    //
+    // A tela dispara quatro requisições ao abrir: a lista e as três contagens
+    // do topo. Com uma variável única, cada chamada sobrescrevia a anterior e
+    // `liberar()` resolvia apenas a última — a promessa da lista ficava
+    // pendente para sempre, e a região nunca parava de anunciar carregamento.
+    const pendentes = [];
+    const liberar = () =>
+      pendentes.forEach((resolve) =>
+        resolve({
+          data: {
+            chamados: [],
+            paginacao: { pagina: 1, limite: 20, total: 0, paginas: 0 },
+            totais: { em_aberto: 0 },
+          },
         })
-    );
+      );
+    api.get.mockImplementation(() => new Promise((resolve) => pendentes.push(resolve)));
 
     const { container } = montar();
 

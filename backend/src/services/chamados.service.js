@@ -18,6 +18,33 @@ const EM_ATRASO = `(
   AND now() > prazo_estimado
 )`;
 
+/**
+ * Ordenações que a lista aceita.
+ *
+ * Mapa fechado, e não texto vindo da requisição: `ORDER BY` não aceita
+ * parâmetro do driver, então qualquer trecho que chegasse de fora entraria na
+ * consulta por interpolação — que é injeção de SQL pela porta que o resto do
+ * código fecha com $1, $2. Nome desconhecido cai no padrão em vez de recusar:
+ * ordenação errada não justifica derrubar a tela.
+ *
+ * `recentes` é o padrão histórico e serve para quem acompanha o que chegou.
+ *
+ * `prazo` existe para a fila de quem executa. A pergunta de um técnico é "o
+ * que eu faço agora", e a resposta é o que está mais perto de estourar — que
+ * frequentemente é o mais ANTIGO, ou seja, o último da ordenação por data.
+ *
+ * O `NULLS LAST` é redundante e está escrito assim de propósito: no Postgres
+ * o ASC já ordena nulo por último (o padrão só muda para NULLS FIRST no DESC).
+ * Escrever explícito custa nada e diz a intenção — chamado sem prazo não é
+ * urgente, é indefinido, e indefinido não abre fila de trabalho. Quem for
+ * inverter esta ordenação um dia herda o cuidado em vez de descobrir o padrão
+ * na hora errada.
+ */
+const ORDENACOES = {
+  recentes: 'data_abertura DESC, id DESC',
+  prazo: 'prazo_estimado ASC NULLS LAST, data_abertura ASC, id ASC',
+};
+
 // Transições de estado permitidas (RN implícitas no fluxo de atendimento).
 const TRANSICOES = {
   aberto: ['em_triagem', 'cancelado'],
@@ -93,6 +120,20 @@ async function listar(usuario, filtros = {}) {
   if (filtros.atrasados === 'true') {
     condicoes.push(EM_ATRASO);
   }
+
+  // Chamado em aberto sem técnico designado.
+  //
+  // É o recorte que a gestão mais precisa e o único que não dava para pedir.
+  // A diferença dele para "atrasado" é quem pode agir: num chamado atrasado
+  // com técnico, alguém já está com ele na mão; sem técnico, ninguém está —
+  // e o relógio corre igual. O atraso da distribuição é invisível na lista
+  // ordenada por data, porque o chamado parado não se move nem chama atenção.
+  //
+  // `estado NOT IN (concluido, cancelado)` junto: chamado encerrado sem
+  // técnico é normal (foi cancelado antes de distribuir) e não é pendência.
+  if (filtros.sem_tecnico === 'true') {
+    condicoes.push("tecnico_id IS NULL AND estado NOT IN ('concluido', 'cancelado')");
+  }
   // RF03 pede protocolo pesquisável. Buscar também no título custa nada e é
   // o que a pessoa tenta primeiro quando não anotou o número.
   if (filtros.busca && filtros.busca.trim()) {
@@ -104,6 +145,7 @@ async function listar(usuario, filtros = {}) {
   const offset = (pagina - 1) * limite;
 
   const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
+  const ordem = ORDENACOES[filtros.ordenar] || ORDENACOES.recentes;
 
   // count(*) OVER () traz o total junto com a página, numa varredura só, em
   // vez de repetir o mesmo WHERE num SELECT count separado.
@@ -112,7 +154,7 @@ async function listar(usuario, filtros = {}) {
     `SELECT *, ${EM_ATRASO} AS em_atraso, count(*) OVER () AS total_registros
        FROM chamado
        ${where}
-      ORDER BY data_abertura DESC, id DESC
+      ORDER BY ${ordem}
       LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );

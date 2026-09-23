@@ -6,7 +6,7 @@ import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
 import RecuperarSenha from './pages/RecuperarSenha';
 import RedefinirSenha from './pages/RedefinirSenha';
-import Dashboard from './pages/Dashboard';
+import Inicio from './pages/Inicio';
 import NovoChamado from './pages/NovoChamado';
 import ChamadoDetalhe from './pages/ChamadoDetalhe';
 import Relatorios from './pages/Relatorios';
@@ -30,7 +30,7 @@ function App() {
               </RotaProtegida>
             }
           >
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Inicio />} />
             <Route path="/chamados/novo" element={<NovoChamado />} />
             <Route path="/chamados/:id" element={<ChamadoDetalhe />} />
             <Route path="/relatorios" element={<Relatorios />} />

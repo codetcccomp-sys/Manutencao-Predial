@@ -212,11 +212,24 @@ describe('As travas', () => {
   it('não deixa o sistema sem administrador', async () => {
     // Mesma trava do `atualizar`, pela mesma razão: recuperar o sistema
     // exigiria acesso direto ao banco.
-    await pool.query(
-      "UPDATE usuario SET ativo = FALSE WHERE perfil = 'administrador' AND id <> $1 AND id <> $2",
-      [admin.id, outroAdmin.id]
+    //
+    // Para `outroAdmin` virar o último administrador ativo é preciso desativar
+    // todos os outros — e o banco é compartilhado com as demais suítes e com
+    // os testes de ponta a ponta. A primeira versão deste teste desativava
+    // todo mundo e, no `finally`, reativava só as duas contas que ele mesmo
+    // criou. O `admin_e2e` ficava desativado para sempre, e a suíte de ponta a
+    // ponta passava a falhar com 401 no login e 429 logo depois — longe daqui,
+    // sem nenhuma pista de que a causa era este arquivo.
+    //
+    // O RETURNING guarda exatamente quem foi desligado, para devolver
+    // exatamente esses — nem menos (o bug), nem mais (reativar quem já estava
+    // inativo antes, por decisão de outro teste).
+    const { rows: desligados } = await pool.query(
+      `UPDATE usuario SET ativo = FALSE
+        WHERE perfil = 'administrador' AND ativo AND id <> $1
+        RETURNING id`,
+      [outroAdmin.id]
     );
-    await pool.query('UPDATE usuario SET ativo = FALSE WHERE id = $1', [admin.id]);
 
     try {
       const resp = await request(app)
@@ -232,9 +245,8 @@ describe('As travas', () => {
       expect(resp2.status).toBe(422);
       expect(resp2.body.erro.codigo).toBe('ULTIMO_ADMINISTRADOR');
     } finally {
-      await pool.query('UPDATE usuario SET ativo = TRUE WHERE id IN ($1, $2)', [
-        admin.id,
-        outroAdmin.id,
+      await pool.query('UPDATE usuario SET ativo = TRUE WHERE id = ANY($1::int[])', [
+        desligados.map((r) => r.id),
       ]);
     }
   });

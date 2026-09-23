@@ -100,18 +100,34 @@ const MUTACOES = [
     spec: 'testes/Dashboard.test.jsx',
   },
   {
+    // Estava DESATUALIZADA antes de o cartão sair do Dashboard: o trecho que
+    // ela procurava deixou de existir no redesenho, e a suíte passou a
+    // reportar falha sem que ninguém notasse. Agora mira o componente
+    // partilhado, que é onde o cartão vive nas três telas por perfil.
     descricao: 'cartão de chamado deixa de encolher',
-    arquivo: 'src/pages/Dashboard.jsx',
-    de: 'gap-3 min-w-0 hover:shadow-md',
-    para: 'gap-3 hover:shadow-md',
+    arquivo: 'src/components/chamados/CartaoDeChamado.jsx',
+    de: `<li className="min-w-0">
+      <Link
+        to={\`/chamados/\${chamado.id}\`}
+        className="flex min-w-0 items-center`,
+    para: `<li>
+      <Link
+        to={\`/chamados/\${chamado.id}\`}
+        className="flex items-center`,
     motor: 'playwright',
     spec: 'e2e/layout.spec.js',
   },
   {
+    // Também estava DESATUALIZADA na main: a classe mudou no redesenho. E a
+    // classe nova se repete em cinco selects da mesma tela — o harness troca
+    // só a primeira ocorrência, então o trecho começa no fim do comentário
+    // que só o select de técnico tem, para mutar o select certo.
     descricao: 'select de técnico deixa de encolher',
     arquivo: 'src/pages/ChamadoDetalhe.jsx',
-    de: 'className="border rounded px-3 py-2 w-full min-w-0"',
-    para: 'className="border rounded px-3 py-2"',
+    de: `comprido esticava a página inteira no celular. */
+                className="w-full min-w-0 rounded`,
+    para: `comprido esticava a página inteira no celular. */
+                className="rounded`,
     motor: 'playwright',
     spec: 'e2e/layout.spec.js',
   },
