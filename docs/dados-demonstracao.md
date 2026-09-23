@@ -57,7 +57,7 @@ Não são aleatórios puros. As proporções foram escolhidas para que os
 relatórios mostrem operação, não um caso extremo:
 
 - **60% concluídos**, o resto distribuído pelos demais estados
-- **82% dentro do prazo** — o suficiente para o indicador ter as duas cores
+- **75% dentro do prazo** — o suficiente para o indicador ter as duas cores
 - **40% dos chamados em aberto estão atrasados**, não 100%: painel todo
   vermelho parece defeito, não operação
 - Diagnóstico e serviço **amarrados ao problema**: "Porta desalinhada" fecha
@@ -66,8 +66,46 @@ relatórios mostrem operação, não um caso extremo:
   nas salas
 - Nota média **4,24**, com alguns 2 e 3 — avaliação toda 5 não convence
 
-Conferido: nenhum chamado conclui antes de abrir, nenhum evento de histórico
-antecede a abertura do seu chamado.
+### O 82% que virou 75%
+
+A primeira versão deste documento dizia 82% dentro do prazo. O número estava
+apoiado em três chamados impossíveis.
+
+Os três — `SMP-DEMO-010`, `032` e `044` — traziam a conclusão datada **antes**
+do início da execução, e `inicio_execucao` nulo. Nessa ordem, eles contavam
+como pontuais: a conclusão caía poucas horas depois da abertura, dentro do
+prazo, enquanto o evento que colocava o chamado em andamento acontecia horas
+mais tarde. Um chamado não conclui antes de começar.
+
+Ao endireitar a ordem, os três aparecem pelo que são. Os três são de
+prioridade **crítica**, cujo prazo é de 8 horas, e o evento de início de
+execução acontece 9 horas depois da abertura: o prazo já tinha vencido uma
+hora antes de alguém encostar no chamado. Nenhuma data de conclusão os torna
+pontuais.
+
+Poderia ter mexido em mais datas para o número voltar a 82%. Não mexi, e a
+razão cabe numa pergunta de banca: "como você chegou nesses 82%?". Dado
+ajustado para bater com um número anotado antes não tem resposta boa. 75%
+mostra as duas cores no indicador igual, que era o objetivo real.
+
+### Conferido
+
+Oito verificações, todas em zero:
+
+| Verificação | |
+| --- | --- |
+| Evento de histórico com data no futuro | 0 |
+| Concluído sem `inicio_execucao` | 0 |
+| Conclusão antes do início da execução | 0 |
+| Início da execução antes da abertura | 0 |
+| Conclusão antes da abertura | 0 |
+| Evento anterior à abertura do seu chamado | 0 |
+| Cadeia de estados quebrada (o `estado_anterior` não bate com o evento que veio antes) | 0 |
+| Estado atual do chamado diferente do último evento do histórico | 0 |
+
+A penúltima pegou quatro cancelamentos que diziam vir de `em_triagem` quando
+o chamado estava em `atribuido` — na tela de marcos isso apareceria como uma
+transição que não aconteceu.
 
 ## Apagar antes do piloto real
 

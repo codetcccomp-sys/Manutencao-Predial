@@ -181,16 +181,82 @@ O que não serve é descobrir no fim que ninguém recebia aviso.
 
 ### 2.3 Backup, e a restauração testada
 
-O Supabase mantém backup automático no plano em uso. Um backup que nunca foi
-restaurado não é um backup — é uma suposição. Antes de entrar dado de pessoa
-real:
+Um backup que nunca foi restaurado não é um backup — é uma suposição.
 
-1. Confira no painel do Supabase que o backup automático está ativo e qual é a
-   janela de retenção do plano.
-2. Faça um teste de restauração: restaure para um projeto ou branch separado e
-   confira que `usuario`, `chamado` e `historico_chamado` voltam com conteúdo.
-3. Anote quanto tempo o teste levou. Esse é o seu tempo de recuperação real, e
-   é o número que interessa no dia em que fizer falta.
+> **Este projeto está no plano Free, e no Free não existe backup para
+> restaurar pelo painel.** A documentação do Supabase é direta: *"backups de
+> banco não estão disponíveis para download em projetos do plano Free"*, e a
+> recomendação deles é exportar por conta própria e guardar fora.
+>
+> A versão anterior desta seção mandava conferir o backup automático no painel
+> e restaurá-lo. Isso descrevia um plano pago. Seguir aquele roteiro daria a
+> impressão de que existe rede de proteção onde não existe — que é pior do que
+> não ter roteiro nenhum.
+
+O backup, aqui, é seu. Antes de entrar dado de pessoa real:
+
+1. **Tire o dump.** Pegue a string de conexão em Connect → Session pooler, no
+   painel do projeto, e rode:
+
+   ```bash
+   pg_dump "postgresql://postgres.cwchhmstcyqxizwwusxn:SENHA@aws-0-sa-east-1.pooler.supabase.com:5432/postgres" \
+     --no-owner --no-privileges -Fc -f conserva-$(date +%F).dump
+   ```
+
+   Sem `pg_dump` na máquina, o mesmo sai com a CLI do Supabase:
+   `npx supabase db dump --db-url "<a mesma string>" -f conserva-$(date +%F).sql`
+
+2. **Guarde fora do Supabase e fora do computador.** Um backup que mora ao
+   lado do que ele protege não protege de nada. Drive, pendrive, e-mail para
+   si mesmo — qualquer coisa que sobreviva ao sumiço da máquina.
+
+3. **Restaure de verdade, uma vez.** Crie um projeto Supabase novo (o Free
+   permite outro) e traga o dump para dentro:
+
+   ```bash
+   pg_restore --no-owner --no-privileges -d "<string do projeto novo>" conserva-AAAA-MM-DD.dump
+   ```
+
+   Depois confira que voltou com conteúdo:
+
+   ```sql
+   SELECT (SELECT count(*) FROM usuario)           AS usuarios,
+          (SELECT count(*) FROM chamado)           AS chamados,
+          (SELECT count(*) FROM historico_chamado) AS eventos;
+   ```
+
+   **Só este passo prova alguma coisa.** Os dois primeiros produzem um arquivo;
+   o terceiro é o que responde se o arquivo serve.
+
+4. **Anote quanto tempo levou.** Esse é o seu tempo de recuperação real, e é o
+   número que interessa no dia em que fizer falta.
+
+5. **Apague o projeto de teste** depois de conferir, para não confundir com o
+   de produção mais tarde.
+
+Com dado real entrando, repita o passo 1 semanalmente. É um comando.
+
+### 2.3.1 O projeto pausa sozinho
+
+Outra coisa que o plano Free muda, e que derruba o sistema inteiro quando
+acontece: **o Supabase pausa projetos Free com pouca atividade num período de
+7 dias.** Pausado, não há login, não há chamado, não há relatório.
+
+Não é hipótese: já aconteceu com o outro projeto desta conta.
+
+O que segura é o próprio uso — a documentação diz que *"algumas requisições ao
+banco por dia ao longo da semana anterior já bastam"*. O agendador do aviso de
+atraso (RF08) faz exatamente isso a cada passagem, o que significa que ele
+sustenta duas coisas ao mesmo tempo: o RF08 e o projeto acordado. **E ele já
+parou uma vez em silêncio**, no episódio do `CRON_SECRET` mal digitado.
+
+O Supabase manda dois e-mails: um aviso cerca de uma semana antes, e a
+confirmação depois que pausou. O aviso chega na mesma caixa que recebe as
+notificações de demonstração — daí o filtro de `+demo.` recomendado em
+`docs/dados-demonstracao.md` não ser só arrumação.
+
+Se pausar, dá para restaurar pelo painel por até 90 dias. Passado isso, o que
+resta é o dump do passo 1.
 
 ### 2.4 Carga inicial
 
