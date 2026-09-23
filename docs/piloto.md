@@ -9,6 +9,24 @@ Este documento é o roteiro: o que precisa estar pronto antes do primeiro
 chamado real, o que medir, e o que declarar de antemão como limitação para que
 não vire surpresa no meio do caminho.
 
+> ## O que este documento é
+>
+> **É o protocolo do piloto, não o relatório dele.** Descreve como o período
+> deve ser conduzido para que a pergunta do §4.3 tenha resposta — não afirma
+> que foi conduzido.
+>
+> **O piloto pode não acontecer dentro do prazo do trabalho**, e isso é comum:
+> depende de uma instituição ceder um prédio, de pessoas reais aceitarem usar
+> o sistema e de semanas de calendário que um TCC nem sempre tem. Se for o
+> caso, **o protocolo continua valendo como contribuição** — método definido
+> antes da coleta é resultado de engenharia, e é o que separa um plano de
+> avaliação de uma intenção.
+>
+> O que não pode acontecer está na seção 6: preencher as respostas do §4.3 com
+> os números da massa de demonstração. Se o piloto não rodou, a resposta é
+> "não rodou, e eis o que seria necessário" — que é uma resposta honesta e
+> defensável. A outra não é.
+
 ---
 
 ## 1. A medida de antes
@@ -462,10 +480,39 @@ Conhecidas, decididas, e melhor ditas no começo:
 - **Não há exclusão de nada**, por decisão: locais e equipes são desativados,
   comentários e histórico não somem. Ver o item 2.5 sobre o que isso implica
   para dado pessoal.
+- **A conclusão do §4.3 depende de um piloto que pode não acontecer.** É a
+  limitação de maior peso da lista, e não é técnica: nenhuma linha de código
+  produz a comparação entre antes e depois. Ela precisa de um prédio real,
+  pessoas reais e semanas de calendário. Se o trabalho terminar sem esse
+  período, o que se demonstra é que **o sistema funciona e está instrumentado
+  para medir** — não que a manutenção melhorou. As duas afirmações são
+  diferentes, e trocar uma pela outra é o erro que a seção 6 existe para
+  evitar.
 
 ---
 
 ## 6. No fim
+
+### Se o piloto não rodou
+
+Escreva isso, com todas as letras, e siga para o trabalho seguinte:
+
+> O piloto com dados reais não foi executado no período do trabalho. Os dados
+> presentes no sistema são de demonstração, criados para exercitá-lo, e não
+> sustentam conclusão sobre eficiência. O protocolo de avaliação está definido
+> em `docs/piloto.md` e pode ser executado por quem der continuidade.
+
+**Não preencha as perguntas abaixo com os números da demonstração.** É a única
+coisa neste documento que seria desonesta, e é também a mais fácil de fazer
+sem perceber: os relatórios respondem bonito, os gráficos enchem, e a diferença
+entre "o sistema mede isso" e "medimos isso" some numa frase mal escrita.
+
+A diferença reaparece na primeira pergunta sobre a origem dos dados — e aí
+reaparece como problema, não como ressalva. Declarar desde o início é a
+posição forte: o §4.3 pede que método e indicadores estejam definidos antes da
+comparação, e eles estão. O que falta é o campo, não o trabalho.
+
+### Se o piloto rodou
 
 Responder, com os números na mão e as três primeiras respostas por escrito:
 
