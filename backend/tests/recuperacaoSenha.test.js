@@ -12,6 +12,21 @@ const { ipDaSuite } = require('./apoio/ip');
 // distinto, para não dividir a cota por IP com as suítes que rodam em paralelo.
 const IP = ipDaSuite(__filename);
 
+// Aqui a separação precisa ser mais fina que por suíte: o pedido de
+// recuperação tem teto por IP (15 por hora), e este arquivo sozinho chama o
+// endpoint treze vezes. Com um IP só para tudo, o arquivo passaria hoje e
+// quebraria no dia em que ganhasse mais dois testes — uma falha que não diria
+// nada sobre o código, só sobre quantos testes couberam.
+//
+// Cada chamada se apresenta como um cliente próprio. O que se está testando
+// aqui é o fluxo de recuperação; o teto por IP tem suíte própria, onde ele é
+// o assunto e não um teto a respeitar.
+let contadorDeClientes = 0;
+function ipDoTeste() {
+  contadorDeClientes += 1;
+  return `${IP}-c${contadorDeClientes}`;
+}
+
 const email = `recupera_${Date.now()}@exemplo.com`;
 let usuarioId;
 
@@ -38,9 +53,10 @@ afterAll(async () => {
 
 describe('POST /auth/recuperar-senha', () => {
   it('responde igual para e-mail existente e inexistente', async () => {
-    const existente = await request(app).post('/auth/recuperar-senha').send({ email });
+    const existente = await request(app).post('/auth/recuperar-senha').set('X-Real-IP', ipDoTeste()).send({ email });
     const inexistente = await request(app)
       .post('/auth/recuperar-senha')
+      .set('X-Real-IP', ipDoTeste())
       .send({ email: `nao_existe_${Date.now()}@exemplo.com` });
 
     expect(existente.status).toBe(inexistente.status);
@@ -48,7 +64,7 @@ describe('POST /auth/recuperar-senha', () => {
   });
 
   it('cria o pedido guardando apenas o hash do token', async () => {
-    await request(app).post('/auth/recuperar-senha').send({ email });
+    await request(app).post('/auth/recuperar-senha').set('X-Real-IP', ipDoTeste()).send({ email });
 
     const { rows } = await pool.query(
       'SELECT token_hash, expira_em, usado_em FROM recuperacao_senha WHERE usuario_id = $1',
@@ -66,7 +82,7 @@ describe('POST /auth/recuperar-senha', () => {
   it('não gera token para conta inativa', async () => {
     await pool.query('UPDATE usuario SET ativo = FALSE WHERE id = $1', [usuarioId]);
     try {
-      const resp = await request(app).post('/auth/recuperar-senha').send({ email });
+      const resp = await request(app).post('/auth/recuperar-senha').set('X-Real-IP', ipDoTeste()).send({ email });
       expect(resp.status).toBe(200);
 
       const { rows } = await pool.query(
@@ -83,7 +99,7 @@ describe('POST /auth/recuperar-senha', () => {
 
   it('limita pedidos pendentes simultâneos', async () => {
     for (let i = 0; i < recuperacao.MAX_PENDENTES + 2; i += 1) {
-      await request(app).post('/auth/recuperar-senha').send({ email });
+      await request(app).post('/auth/recuperar-senha').set('X-Real-IP', ipDoTeste()).send({ email });
     }
 
     const { rows } = await pool.query(
@@ -103,10 +119,10 @@ describe('POST /auth/redefinir-senha', () => {
       .send({ token, senha: 'novaSenha456' });
     expect(resp.status).toBe(200);
 
-    const comNova = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'novaSenha456' });
+    const comNova = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'novaSenha456' });
     expect(comNova.status).toBe(200);
 
-    const comAntiga = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+    const comAntiga = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha123' });
     expect(comAntiga.status).toBe(401);
 
     // Devolve ao estado inicial para os demais testes.
@@ -169,9 +185,9 @@ describe('POST /auth/redefinir-senha', () => {
   it('libera o bloqueio por tentativas de login', async () => {
     // Erra a senha até bloquear.
     for (let i = 0; i < 6; i += 1) {
-      await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'errada' });
+      await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'errada' });
     }
-    const bloqueado = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+    const bloqueado = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha123' });
     expect(bloqueado.status).toBe(429);
 
     const token = await tokenMaisRecente();
@@ -179,7 +195,7 @@ describe('POST /auth/redefinir-senha', () => {
 
     // Quem acabou de provar ser dono da conta não deve seguir barrado por
     // erros anteriores.
-    const depois = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+    const depois = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha123' });
     expect(depois.status).toBe(200);
   });
 
@@ -312,7 +328,7 @@ describe('Para onde o link de redefinição aponta', () => {
     // entregaria a redefinição a quem só sabe o e-mail. Ele é lido do banco
     // pelo token, que é o mesmo caminho do e-mail.
     const espiao = jest.spyOn(servicoEmail, 'enviar').mockResolvedValue(true);
-    await request(app).post('/auth/recuperar-senha').set('X-Real-IP', IP).send({ email });
+    await request(app).post('/auth/recuperar-senha').set('X-Real-IP', ipDoTeste()).send({ email });
     const texto = espiao.mock.calls.at(-1)[0].texto;
     espiao.mockRestore();
     return texto.match(/https?:\/\/\S+/)[0];
@@ -367,7 +383,7 @@ describe('O Host da requisição não decide para onde vai o link', () => {
 
     const resp = await request(app)
       .post('/auth/recuperar-senha')
-      .set('X-Real-IP', IP)
+      .set('X-Real-IP', ipDoTeste())
       .set('Host', 'sitedoatacante.exemplo')
       .send({ email });
 
@@ -382,7 +398,7 @@ describe('O Host da requisição não decide para onde vai o link', () => {
 
     await request(app)
       .post('/auth/recuperar-senha')
-      .set('X-Real-IP', IP)
+      .set('X-Real-IP', ipDoTeste())
       .set('Host', 'sitedoatacante.exemplo')
       .send({ email });
 
@@ -400,7 +416,7 @@ describe('O Host da requisição não decide para onde vai o link', () => {
 
     await request(app)
       .post('/auth/recuperar-senha')
-      .set('X-Real-IP', IP)
+      .set('X-Real-IP', ipDoTeste())
       .set('Host', 'sitedoatacante.exemplo')
       .send({ email });
 

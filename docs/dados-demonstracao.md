@@ -14,15 +14,39 @@ eficiência. Esta massa serve para o primeiro caso e não serve para o segundo.
 | Histórico | 310 eventos | derivado dos chamados |
 | Avaliações | 41 | |
 | Comentários | 32 | |
-| Pessoas | 9 | e-mail `@exemplo.demo` |
+| Pessoas | 9 | e-mail `code.tcc.comp+demo.*@gmail.com` |
 | Equipes | 3 | |
 | Locais | 36 | `Sede / ...` |
 
-Os protocolos dizem `DEMO` em vez da data, e os e-mails usam um domínio que
-não existe. É de propósito: daqui a seis meses, com dado real no mesmo banco,
-tem de ser possível distinguir um do outro sem depender de memória. Um
+Os protocolos dizem `DEMO` em vez da data, e os e-mails carregam `+demo.` no
+nome. É de propósito: daqui a seis meses, com dado real no mesmo banco, tem de
+ser possível distinguir um do outro sem depender de memória. Um
 `SMP-20260920-A3F1C2` fictício ao lado de um verdadeiro seria
 indistinguível — e contaminaria a medida do piloto em silêncio.
+
+### Por que os e-mails apontam para uma caixa real
+
+A primeira versão usava `@exemplo.demo`, um domínio que não existe. Parecia a
+escolha segura, e era o contrário: em 21/09 o agendador do RF08 varreu os 14
+chamados vencidos, mandou 27 avisos, e o Gmail devolveu cada um com
+`NXDOMAIN` para a caixa do remetente. Endereço inventado não some no vazio —
+ele volta, e volta para quem enviou.
+
+Sustentado, esse padrão (envio repetido para domínio inexistente) é o que
+marca uma conta como origem de spam. Pior que isso: a devolução falsa enterra
+a verdadeira, e a que importa é a do dia em que um técnico de verdade for
+cadastrado com o e-mail digitado errado.
+
+O `+demo.nome` resolve os dois: o Gmail ignora o que vem depois do `+` na
+entrega, então tudo cai na caixa de sempre, sem devolução nenhuma. E a
+apresentação ganha uma coisa que não tinha — dá para mostrar a notificação
+chegando de verdade no celular enquanto se demonstra o chamado.
+
+O sistema continua sem saber que esses endereços são de teste: ele tenta
+entregar a todo mundo, sempre. Um campo `recebe_email` no usuário resolveria
+isso de forma definitiva, e é o caminho certo se algum dia houver conta de
+teste em produção de verdade — mas é migração mais código, e não muda nada
+para o piloto.
 
 Se preferir protocolos realistas para a apresentação, troque-os; só anote em
 algum lugar qual faixa de `id` é fictícia, porque a rastreabilidade se perde.
@@ -66,15 +90,18 @@ DELETE FROM historico_chamado WHERE chamado_id IN (SELECT id FROM demo);
 
 DELETE FROM chamado WHERE protocolo LIKE 'SMP-DEMO-%';
 
+-- O padrão precisa do `+demo.`: sem ele, 'code.tcc.comp%@gmail.com' casaria
+-- também com a conta do administrador, que é real e não deve ser apagada.
 DELETE FROM equipe_tecnico WHERE usuario_id IN
-  (SELECT id FROM usuario WHERE email LIKE '%@exemplo.demo');
+  (SELECT id FROM usuario WHERE email LIKE 'code.tcc.comp+demo.%@gmail.com');
 DELETE FROM notificacao WHERE usuario_id IN
-  (SELECT id FROM usuario WHERE email LIKE '%@exemplo.demo');
-DELETE FROM usuario WHERE email LIKE '%@exemplo.demo';
+  (SELECT id FROM usuario WHERE email LIKE 'code.tcc.comp+demo.%@gmail.com');
+DELETE FROM usuario WHERE email LIKE 'code.tcc.comp+demo.%@gmail.com';
 
 -- Confira antes de confirmar: as três contagens devem dar zero.
 SELECT (SELECT count(*) FROM chamado WHERE protocolo LIKE 'SMP-DEMO-%') AS chamados,
-       (SELECT count(*) FROM usuario WHERE email LIKE '%@exemplo.demo')  AS pessoas,
+       (SELECT count(*) FROM usuario
+         WHERE email LIKE 'code.tcc.comp+demo.%@gmail.com')              AS pessoas,
        (SELECT count(*) FROM historico_chamado h
           LEFT JOIN chamado c ON c.id = h.chamado_id WHERE c.id IS NULL) AS orfaos;
 

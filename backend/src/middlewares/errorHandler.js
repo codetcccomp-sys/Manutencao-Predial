@@ -1,8 +1,34 @@
+/**
+ * Onde cada desfecho é registrado, e por quê.
+ *
+ * Tudo aqui saía como `console.error`, inclusive o que é funcionamento
+ * normal. Nos logs de produção do piloto, "Token inválido ou expirado" já
+ * aparecia marcado como ERRO sete vezes: um JWT expirar é o combinado, não um
+ * defeito. O efeito de marcar o esperado como erro é que o inesperado deixa
+ * de se destacar — no dia em que algo quebrar de verdade, vai estar no meio
+ * dessa lista.
+ *
+ * A divisão segue quem pode consertar o quê:
+ *
+ * - **4xx é do cliente.** Senha errada, token vencido, campo faltando, origem
+ *   não cadastrada. O servidor fez o certo ao recusar. Vai como `warn`, que é
+ *   visível quando se procura e some do painel de erros.
+ * - **5xx é nosso.** Aqui alguém precisa agir, e precisa do stack: `err.message`
+ *   sozinho diz "Cannot read properties of undefined" sem dizer onde. Era
+ *   exatamente ao contrário do necessário — ruído demais no esperado, detalhe
+ *   de menos no inesperado.
+ */
 function errorHandler(err, req, res, next) {
   const status = err.status || 500;
   const isProd = process.env.NODE_ENV === 'production';
+  const onde = `${req.method} ${req.originalUrl}`;
 
-  console.error(`[ERRO] ${req.method} ${req.originalUrl} ->`, err.message);
+  if (status >= 500) {
+    // O stack e não a mensagem: é a única chance de saber de onde veio.
+    console.error(`[ERRO] ${onde} ->`, err.stack || err.message);
+  } else {
+    console.warn(`[RECUSA ${status}] ${onde} ->`, err.message);
+  }
 
   res.status(status).json({
     erro: {

@@ -99,6 +99,88 @@ async function limitarLogin(req, res, next) {
   next();
 }
 
+// Teto do pedido de recuperação de senha.
+//
+// Dois números, porque são dois riscos diferentes e um não cobre o outro.
+//
+// O teto por IP segura o script casual. Sozinho ele não protege a cota: IP se
+// troca. Está generoso de propósito — um prédio inteiro sai por um IP só,
+// então o limite tem de caber num dia ruim de segunda-feira sem barrar
+// ninguém. Quinze pedidos por hora vindos do mesmo endereço já é estranho
+// para doze contas cadastradas.
+const MAX_PEDIDOS_POR_IP = 15;
+const JANELA_RECUPERACAO_MINUTOS = 60;
+
+// O teto diário é o que de fato protege a cota, porque vale para todos os IPs
+// somados. Cem envios de recuperação por dia é folgado para o piloto e deixa
+// quatrocentos da cota do Gmail para o que o sistema precisa mandar sozinho:
+// o aviso de atraso, a notificação de chamado designado.
+//
+// Estourar este teto para a recuperação de senha e não para o resto é
+// deliberado: quem não consegue redefinir a senha tem saída — um
+// administrador redefine — e o aviso de atraso não tem nenhuma.
+const MAX_ENVIOS_POR_DIA = 100;
+
+async function limparRecuperacoesAntigas() {
+  try {
+    await pool.query(
+      `DELETE FROM tentativa_recuperacao WHERE criado_em < now() - interval '${RETENCAO_HORAS} hours'`
+    );
+  } catch (err) {
+    console.error('[rateLimit] falha ao limpar tentativas de recuperação:', err.message);
+  }
+}
+
+/**
+ * Barra o pedido de recuperação antes de qualquer trabalho.
+ *
+ * O registro do pedido vem ANTES da checagem, e não depois: contar só o que
+ * passa faria o próprio teto liberar uma vaga a cada recusa, e o limite nunca
+ * fecharia. Registrar sempre também é o que impede o contador de virar
+ * oráculo — ele não distingue e-mail cadastrado de e-mail inventado.
+ */
+async function limitarRecuperacao(req, res, next) {
+  const ip = ipDoCliente(req);
+
+  try {
+    await pool.query('INSERT INTO tentativa_recuperacao (ip) VALUES ($1)', [ip]);
+
+    const { rows } = await pool.query(
+      `SELECT
+         (SELECT count(*) FROM tentativa_recuperacao
+           WHERE ip = $1
+             AND criado_em > now() - interval '${JANELA_RECUPERACAO_MINUTOS} minutes') AS por_ip,
+         (SELECT count(*) FROM recuperacao_senha
+           WHERE criado_em > now() - interval '24 hours')                              AS envios_hoje`,
+      [ip]
+    );
+
+    const porIp = Number(rows[0].por_ip);
+    const enviosHoje = Number(rows[0].envios_hoje);
+
+    if (porIp > MAX_PEDIDOS_POR_IP || enviosHoje >= MAX_ENVIOS_POR_DIA) {
+      // A mensagem é a mesma nos dois casos, e não diz qual teto estourou:
+      // "o limite do sistema acabou" contaria a quem tentou que o ataque
+      // funcionou, e daria a ele o retorno que falta para calibrar o próximo.
+      return next(
+        new AppError(
+          'Muitos pedidos de recuperação de senha. Tente novamente mais tarde ou ' +
+            'peça a um administrador para redefinir sua senha.',
+          429,
+          'MUITOS_PEDIDOS'
+        )
+      );
+    }
+  } catch (err) {
+    // Mesma escolha do login: contador indisponível não pode virar
+    // indisponibilidade do sistema.
+    console.error('[rateLimit] falha ao verificar limite de recuperação:', err.message);
+  }
+
+  if (Math.random() < CHANCE_LIMPEZA) limparRecuperacoesAntigas();
+  next();
+}
+
 /**
  * Registra o desfecho da tentativa. Um login bem-sucedido apaga as falhas
  * anteriores daquele e-mail: sem isso, alguém que errou a senha quatro vezes,
@@ -122,7 +204,15 @@ async function registrarTentativa(email, ip, sucesso) {
 
 module.exports = {
   limitarLogin,
+  limitarRecuperacao,
   registrarTentativa,
   ipDoCliente,
-  LIMITES: { JANELA_MINUTOS, MAX_FALHAS_POR_EMAIL, MAX_FALHAS_POR_IP },
+  LIMITES: {
+    JANELA_MINUTOS,
+    MAX_FALHAS_POR_EMAIL,
+    MAX_FALHAS_POR_IP,
+    MAX_PEDIDOS_POR_IP,
+    JANELA_RECUPERACAO_MINUTOS,
+    MAX_ENVIOS_POR_DIA,
+  },
 };
