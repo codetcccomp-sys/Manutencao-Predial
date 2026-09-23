@@ -7,9 +7,33 @@ perfis de acesso, fluxo de atendimento auditado e relatórios de desempenho.
 - **Frontend**: React + Vite + Tailwind
 - **Hospedagem**: Vercel (duas aplicações) com PostgreSQL no Supabase
 
-Para colocar o sistema em uso real com um prédio de verdade, veja
-[docs/piloto.md](docs/piloto.md): o que precisa estar configurado antes do
-primeiro chamado, o que medir e o que declarar como limitação.
+## Sobre o projeto
+
+**É um trabalho de conclusão de curso**, construído a partir do Termo de
+Abertura de Projeto v1.2. O sistema funciona e está no ar, mas não está em uso
+por nenhuma instituição.
+
+**Os dados que estão lá são fictícios.** Os 73 chamados, as 9 pessoas e as
+avaliações foram criados para exercitar o sistema e demonstrá-lo. Nenhum
+descreve manutenção que aconteceu de verdade, e por isso **não sustentam
+conclusão sobre eficiência** — o §4.3 do Termo separa as duas coisas com todas
+as letras. Ver [docs/dados-demonstracao.md](docs/dados-demonstracao.md), que
+explica como reconhecê-los e como apagá-los.
+
+O cadastro no endereço público é aberto: qualquer pessoa consegue criar uma
+conta de solicitante. É assim de propósito enquanto o sistema é demonstração,
+e é a primeira coisa a fechar se ele passar a atender um prédio real.
+
+### Documentos
+
+| | |
+| --- | --- |
+| [docs/piloto.md](docs/piloto.md) | O protocolo para usar o sistema num prédio real: o que configurar antes do primeiro chamado, o que medir, o que declarar como limitação |
+| [docs/dados-demonstracao.md](docs/dados-demonstracao.md) | O que é fictício, como reconhecer e como apagar antes do uso real |
+| [docs/lgpd.md](docs/lgpd.md) | Dados pessoais, retenção e o procedimento de remoção sob pedido |
+
+Os três são artefatos acadêmicos. Nenhum foi adotado ou assinado por
+instituição alguma.
 
 ## Endereços
 
