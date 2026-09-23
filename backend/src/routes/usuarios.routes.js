@@ -31,4 +31,15 @@ router.patch(
   usuariosController.atualizar
 );
 
+// Atende pedido de remoção (LGPD, docs/lgpd.md §5).
+//
+// POST e não DELETE: o recurso não é apagado. Um DELETE que deixa a linha no
+// banco engana quem lê a rota, e este é o pior lugar para enganar — alguém
+// pode acabar "completando" o DELETE mais tarde, achando que corrige uma
+// implementação pela metade, e levar junto todo o histórico do prédio.
+//
+// Só administrador, e o serviço ainda recusa a própria conta: a ação não tem
+// desfazer, então exige um segundo par de olhos.
+router.post('/:id/anonimizar', authorize('administrador'), usuariosController.anonimizar);
+
 module.exports = router;

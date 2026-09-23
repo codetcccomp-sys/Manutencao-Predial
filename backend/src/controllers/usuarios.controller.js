@@ -25,4 +25,9 @@ const me = asyncHandler(async (req, res) => {
   res.json({ usuario });
 });
 
-module.exports = { listar, criar, atualizar, me };
+const anonimizar = asyncHandler(async (req, res) => {
+  const usuario = await usuariosService.anonimizar(req.params.id, req.usuario);
+  res.json({ usuario });
+});
+
+module.exports = { listar, criar, atualizar, me, anonimizar };
