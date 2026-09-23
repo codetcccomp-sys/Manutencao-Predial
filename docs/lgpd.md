@@ -7,8 +7,10 @@ produção e do código — não de um modelo genérico.
 > **Decidido em 23/09/2026:** prazos de retenção (seção 2), base legal
 > (seção 4), remoção sob pedido (seção 5) e plano de incidente (seção 6).
 >
-> **Restam dois 🔲**, e nenhum é escolha — são fatos que só você tem: se a
-> instituição é pública ou privada, e o nome completo do responsável.
+> **Restam dois 🔲**, e nenhum é escolha — são fatos que só você tem: em que
+> instituição o piloto vai rodar (e se ela é pública ou privada), e o nome
+> completo do responsável. A justificativa das duas naturezas já está escrita,
+> incluindo o teste de ponderação exigido no caso privado; falta marcar qual.
 >
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
 
@@ -104,7 +106,13 @@ de um administrador autenticado.
 
 ### Base legal
 
-Depende da natureza da instituição, e são as duas únicas que cabem aqui:
+A base legal é escolhida por quem controla os dados, para uma atividade
+concreta. Uma instituição é pública **ou** privada — não as duas. Mas o
+sistema é software que pode ser instalado em qualquer uma delas, e por isso
+esta seção tem dois níveis: o que vale para o sistema, e o que vale para o
+prédio onde ele está rodando.
+
+#### No nível do sistema: as duas hipóteses que cabem
 
 | Se a instituição for | Base legal | LGPD |
 | --- | --- | --- |
@@ -112,15 +120,66 @@ Depende da natureza da instituição, e são as duas únicas que cabem aqui:
 | Privada | Legítimo interesse | art. 7º, IX |
 
 Em nenhum dos dois casos é consentimento, e vale dizer por quê: consentimento
-teria de ser livre, e quem precisa abrir chamado para consertar a própria sala
-de trabalho não está em posição de recusar. Base legal escolhida errado é pior
-que base legal ausente, porque parece resolvida.
+teria de ser **livre**, e quem precisa abrir chamado para consertar a própria
+sala de trabalho não está em posição de recusar. Base legal escolhida errado é
+pior que base legal ausente, porque parece resolvida.
 
 O dado tratado é o mínimo para a finalidade — nome, e-mail e o que a pessoa
 escreveu no chamado —, o que sustenta qualquer das duas.
 
-🔲 **Marcar qual das duas linhas se aplica.** É fato sobre a instituição, não
-escolha: pública ou privada. A justificativa já está escrita nas duas.
+**As duas não são equivalentes, e a diferença é do titular, não nossa:**
+
+| | Pública (art. 7º, III) | Privada (art. 7º, IX) |
+| --- | --- | --- |
+| Titular pode se opor ao tratamento | Não, nos mesmos termos | **Sim** (art. 18, §2º) |
+| Exige teste de ponderação registrado | Não | **Sim** |
+
+Por isso "depende" não encerra o assunto: sob legítimo interesse existe um
+direito que sob execução de política pública não existe do mesmo jeito. Deixar
+os dois abertos sem dizer qual vale deixaria esse direito sem resposta.
+
+#### No nível deste piloto
+
+🔲 **Preencher quando souber onde o sistema vai rodar:**
+
+| | |
+| --- | --- |
+| Instituição | `________________________` |
+| Natureza | ( ) pública — art. 7º, III &nbsp;&nbsp; ( ) privada — art. 7º, IX |
+
+É fato sobre a instituição, não escolha de projeto. A justificativa das duas
+já está escrita acima; falta só marcar qual.
+
+#### Teste de ponderação, para o caso privado
+
+Escrito por antecipação. Se o piloto for numa instituição pública, esta parte
+sobra sem custo; se for privada, ela é exigida e já existe — em vez de ser
+redigida às pressas no dia em que alguém perguntar.
+
+**Finalidade.** Receber, distribuir e acompanhar pedidos de manutenção predial,
+e medir o desempenho do atendimento (§4.3 do Termo). Sem identificar quem pede
+não há como avisar sobre o andamento nem apurar quem atendeu.
+
+**Necessidade.** São tratados nome, e-mail institucional, perfil de acesso e o
+que a pessoa escreveu no chamado. Não há coleta de dado sensível, de documento
+de identificação, de telefone nem de endereço residencial. O IP é guardado só
+para conter ataque de senha, por 24 horas, e no pedido de recuperação, por 7
+dias.
+
+**Expectativa do titular.** Quem abre um chamado de manutenção espera ser
+identificado nele: é a condição para o problema ser resolvido e para a pessoa
+receber a resposta. Não há uso secundário — nada é usado para publicidade,
+perfilamento ou avaliação de desempenho individual de quem pede.
+
+**Salvaguardas.** Acesso por perfil, verificado por teste automatizado
+(seção 3); senha guardada só como hash bcrypt; conexão com o banco verificada
+por certificado; retenção definida (seção 2); e procedimento de anonimização
+sob pedido (seção 5), que é o próprio direito de oposição sendo atendido na
+prática.
+
+**Conclusão.** O tratamento é o mínimo para a finalidade, está dentro da
+expectativa de quem usa, e o titular tem como se opor — pelo procedimento da
+seção 5. O legítimo interesse se sustenta.
 
 **Pessoa de contato para pedido de acesso ou exclusão:**
 
