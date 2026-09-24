@@ -148,6 +148,65 @@ describe('Ordenação por prazo', () => {
   });
 });
 
+describe('Situação: em aberto ou encerrado', () => {
+  it('a fila por prazo não é tomada pelo histórico encerrado', async () => {
+    // O cenário exato do achado da revisão. Encerrados têm os prazos mais
+    // antigos, então na ordenação por prazo vêm primeiro; a tela cortava os
+    // encerrados DEPOIS de receber a página, e com histórico longo os
+    // chamados em aberto nem chegavam.
+    const marca = `sit${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+    const encerrados = [];
+    for (let i = 0; i < 3; i += 1) {
+      const id = await chamadoCom({ titulo: `${marca} velho ${i}`, prazoEmHoras: -500 - i, tecnicoId: tecnico.id });
+      await pool.query("UPDATE chamado SET estado = 'concluido', servico_realizado = 'Serviço concluído no teste.' WHERE id = $1", [id]);
+      encerrados.push(id);
+    }
+    const aberto = await chamadoCom({ titulo: `${marca} aberto`, prazoEmHoras: 5, tecnicoId: tecnico.id });
+
+    // Página de 2: sem o filtro, só caberiam encerrados.
+    const semFiltro = await request(app)
+      .get('/chamados')
+      .query({ ordenar: 'prazo', busca: marca, limite: 2 })
+      .set('Authorization', `Bearer ${tecnico.token}`);
+    expect(semFiltro.body.chamados.map((c) => c.id)).not.toContain(aberto);
+
+    const comFiltro = await request(app)
+      .get('/chamados')
+      .query({ ordenar: 'prazo', busca: marca, limite: 2, situacao: 'abertos' })
+      .set('Authorization', `Bearer ${tecnico.token}`);
+    expect(comFiltro.body.chamados.map((c) => c.id)).toEqual([aberto]);
+    // E o total da paginação conta só os abertos — é o número que as telas
+    // usam para contar.
+    expect(comFiltro.body.paginacao.total).toBe(1);
+  });
+
+  it('"encerrados" traz concluídos e cancelados, e nada em aberto', async () => {
+    const marca = `enc${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+    const concluido = await chamadoCom({ titulo: `${marca} a`, prazoEmHoras: 5 });
+    const cancelado = await chamadoCom({ titulo: `${marca} b`, prazoEmHoras: 5 });
+    const aberto = await chamadoCom({ titulo: `${marca} c`, prazoEmHoras: 5 });
+    await pool.query("UPDATE chamado SET estado = 'concluido', servico_realizado = 'Serviço concluído no teste.' WHERE id = $1", [concluido]);
+    await pool.query("UPDATE chamado SET estado = 'cancelado' WHERE id = $1", [cancelado]);
+
+    const resp = await request(app)
+      .get('/chamados')
+      .query({ busca: marca, situacao: 'encerrados' })
+      .set('Authorization', `Bearer ${admin.token}`);
+
+    const ids = resp.body.chamados.map((c) => c.id).sort();
+    expect(ids).toEqual([concluido, cancelado].sort());
+    expect(ids).not.toContain(aberto);
+  });
+
+  it('valor desconhecido não filtra nem quebra', async () => {
+    const resp = await request(app)
+      .get('/chamados')
+      .query({ situacao: "abertos' OR 1=1--" })
+      .set('Authorization', `Bearer ${admin.token}`);
+    expect(resp.status).toBe(200);
+  });
+});
+
 describe('Chamados sem técnico', () => {
   it('traz só os que estão em aberto e sem ninguém designado', async () => {
     const semNinguem = await chamadoCom({ titulo: `Orfao ${Date.now()}`, prazoEmHoras: 50 });

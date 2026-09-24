@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const usuariosService = require('../src/services/usuarios.service');
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -166,13 +167,25 @@ describe('PATCH /usuarios/:id', () => {
         .set(comoAdmin())
         .send({ ativo: false });
 
+      // A versão anterior deste teste usava o token do `promovido` DEPOIS de
+      // desativá-lo, e esperava a trava do último administrador. Funcionava
+      // porque o token de uma conta desligada continuava valendo por 8 horas
+      // — o teste dependia do buraco que ele mesmo não via. Agora a conta
+      // desligada é recusada na porta:
       const resp = await request(app)
         .patch(`/usuarios/${admin.usuario.id}`)
         .set('Authorization', `Bearer ${promovido.token}`)
         .send({ ativo: false });
+      expect(resp.status).toBe(401);
+      expect(resp.body.erro.codigo).toBe('SESSAO_ENCERRADA');
 
-      expect(resp.status).toBe(422);
-      expect(resp.body.erro.codigo).toBe('ULTIMO_ADMINISTRADOR');
+      // E a trava deixou de ser alcançável pela API: quem chama precisa ser um
+      // administrador ATIVO e diferente do alvo, então sempre sobra pelo menos
+      // um. Ela fica como defesa para chamada direta ao serviço (script de
+      // manutenção, rotina futura), e é nesse nível que se testa.
+      await expect(
+        usuariosService.atualizar(admin.usuario.id, { ativo: false }, { id: promovido.usuario.id })
+      ).rejects.toMatchObject({ code: 'ULTIMO_ADMINISTRADOR' });
     } finally {
       await pool.query('UPDATE usuario SET ativo = TRUE WHERE id = ANY($1::int[])', [
         desativados.map((u) => u.id),

@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const usuariosService = require('../src/services/usuarios.service');
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -239,16 +240,99 @@ describe('As travas', () => {
       // Cai na trava da própria conta antes; o que importa é que não passa.
       expect(resp.status).toBe(422);
 
+      // O `admin` foi desligado acima, e o token dele deixou de valer: a
+      // versão anterior deste teste esperava daqui a trava do último
+      // administrador, e só a alcançava porque um administrador desligado
+      // continuava agindo por 8 horas.
       const resp2 = await request(app)
         .post(`/usuarios/${outroAdmin.id}/anonimizar`)
         .set(comoAdmin());
-      expect(resp2.status).toBe(422);
-      expect(resp2.body.erro.codigo).toBe('ULTIMO_ADMINISTRADOR');
+      expect(resp2.status).toBe(401);
+
+      // Pela API a trava não é mais alcançável — quem chama é um
+      // administrador ativo e diferente do alvo, então sempre sobra um. Ela
+      // fica como defesa para chamada direta ao serviço, e é assim que se
+      // prova que continua de pé.
+      await expect(
+        usuariosService.anonimizar(outroAdmin.id, { id: admin.id })
+      ).rejects.toMatchObject({ code: 'ULTIMO_ADMINISTRADOR' });
     } finally {
       await pool.query('UPDATE usuario SET ativo = TRUE WHERE id = ANY($1::int[])', [
         desligados.map((r) => r.id),
       ]);
     }
+  });
+
+  it('técnico com chamado em aberto não é anonimizado', async () => {
+    // A conta anonimizada não entra mais, e o chamado continuaria designado a
+    // ela — fora do filtro "sem técnico" e fora da fila de qualquer pessoa.
+    const tecnico = await novaConta('tecnico');
+    const { rows: local } = await pool.query('SELECT id FROM local LIMIT 1');
+    const { rows: categoria } = await pool.query('SELECT id FROM categoria LIMIT 1');
+    const { body } = await request(app)
+      .post('/chamados')
+      .set(comoAdmin())
+      .send({
+        titulo: 'Chamado com técnico que vai sair',
+        descricao: 'Designado a quem pediu remoção.',
+        categoria_id: categoria[0].id,
+        local_id: local[0].id,
+      });
+    await pool.query("UPDATE chamado SET tecnico_id = $1, estado = 'em_andamento' WHERE id = $2", [
+      tecnico.id,
+      body.chamado.id,
+    ]);
+
+    const resp = await request(app).post(`/usuarios/${tecnico.id}/anonimizar`).set(comoAdmin());
+
+    expect(resp.status).toBe(422);
+    expect(resp.body.erro.codigo).toBe('CHAMADOS_EM_ABERTO');
+    // Nada mudou na conta: a recusa vem antes de qualquer escrita.
+    const { rows } = await pool.query('SELECT nome, anonimizado_em FROM usuario WHERE id = $1', [
+      tecnico.id,
+    ]);
+    expect(rows[0].anonimizado_em).toBeNull();
+
+    // Depois de o chamado ser encerrado, a anonimização passa.
+    await pool.query("UPDATE chamado SET estado = 'cancelado' WHERE id = $1", [body.chamado.id]);
+    await request(app).post(`/usuarios/${tecnico.id}/anonimizar`).set(comoAdmin()).expect(200);
+  });
+
+  it('dois pedidos ao mesmo tempo não reescrevem a data do atendimento', async () => {
+    // Um clique duplo bastava: as duas requisições passavam a checagem, que
+    // ficava fora da transação, e a segunda sobrescrevia `anonimizado_em` —
+    // a prova de QUANDO o pedido foi atendido virava a data do segundo clique.
+    const alvo = await novaConta();
+
+    const [a, b] = await Promise.all([
+      request(app).post(`/usuarios/${alvo.id}/anonimizar`).set(comoAdmin()),
+      request(app).post(`/usuarios/${alvo.id}/anonimizar`).set(comoAdmin()),
+    ]);
+
+    const status = [a.status, b.status].sort();
+    expect(status).toEqual([200, 422]);
+    const recusa = a.status === 422 ? a : b;
+    expect(recusa.body.erro.codigo).toBe('JA_ANONIMIZADO');
+
+    // E a data gravada é a da resposta que deu certo, não de uma posterior.
+    const ok = a.status === 200 ? a : b;
+    const { rows } = await pool.query('SELECT anonimizado_em FROM usuario WHERE id = $1', [alvo.id]);
+    expect(new Date(rows[0].anonimizado_em).toISOString()).toBe(
+      new Date(ok.body.usuario.anonimizado_em).toISOString()
+    );
+  });
+
+  it('a listagem diz quem foi anonimizado, para a tela não oferecer "Reativar"', async () => {
+    const alvo = await novaConta();
+    await request(app).post(`/usuarios/${alvo.id}/anonimizar`).set(comoAdmin()).expect(200);
+
+    const { body } = await request(app)
+      .get('/usuarios')
+      .query({ incluir_inativos: 'true' })
+      .set(comoAdmin());
+    const linha = body.usuarios.find((u) => u.id === alvo.id);
+
+    expect(linha.anonimizado_em).toBeTruthy();
   });
 
   it('só administrador anonimiza', async () => {

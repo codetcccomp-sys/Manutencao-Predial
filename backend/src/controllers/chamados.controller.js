@@ -7,13 +7,14 @@ const criar = asyncHandler(async (req, res) => {
 });
 
 const listar = asyncHandler(async (req, res) => {
-  const { estado, categoria_id, atrasados, sem_tecnico, busca, ordenar, pagina, limite } =
+  const { estado, categoria_id, atrasados, sem_tecnico, situacao, busca, ordenar, pagina, limite } =
     req.query;
   const resultado = await chamadosService.listar(req.usuario, {
     estado,
     categoria_id,
     atrasados,
     sem_tecnico,
+    situacao,
     busca,
     ordenar,
     pagina,
