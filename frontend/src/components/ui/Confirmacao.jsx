@@ -51,6 +51,17 @@ function Confirmacao({
   const cancelar = useRef(onCancelar);
   cancelar.current = onCancelar;
 
+  // `carregando` também numa ref, pela mesma razão: o efeito que instala o
+  // Esc só se refaz quando `aberto` muda, e leria um `carregando` congelado.
+  //
+  // Enquanto a ação corre, recusar não é mais uma saída. O botão "Voltar" já
+  // ficava desabilitado nesse intervalo — de propósito —, mas o Esc e o clique
+  // fora do diálogo passavam por cima dele: o diálogo fechava, a pessoa
+  // entendia que tinha desistido, e o cancelamento que ela acabara de
+  // confirmar terminava de ser gravado mesmo assim.
+  const ocupado = useRef(carregando);
+  ocupado.current = carregando;
+
   useEffect(() => {
     if (!aberto) return undefined;
 
@@ -62,7 +73,7 @@ function Confirmacao({
     function aoTeclar(evento) {
       if (evento.key === 'Escape') {
         evento.preventDefault();
-        cancelar.current();
+        if (!ocupado.current) cancelar.current();
         return;
       }
       if (evento.key !== 'Tab') return;
@@ -99,7 +110,7 @@ function Confirmacao({
       className="fixed inset-0 z-50 flex items-end justify-center bg-navy/40 p-4 sm:items-center"
       // Clicar fora fecha, e fechar é "não" — mesma regra do Esc.
       onClick={(e) => {
-        if (e.target === e.currentTarget) onCancelar();
+        if (e.target === e.currentTarget && !carregando) onCancelar();
       }}
     >
       <div

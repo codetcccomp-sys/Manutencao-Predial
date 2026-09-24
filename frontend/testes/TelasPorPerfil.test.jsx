@@ -39,15 +39,17 @@ const CHAMADOS = [
     prioridade: 'media',
     prazo_estimado: daqui(3),
     em_atraso: false,
+    tecnico_id: 7,
   },
   {
     id: 2,
     protocolo: 'SMP-002',
     titulo: 'Lâmpada queimada',
-    estado: 'atribuido',
+    estado: 'aberto',
     prioridade: 'baixa',
     prazo_estimado: daqui(30),
     em_atraso: false,
+    tecnico_id: null,
   },
   {
     id: 3,
@@ -57,6 +59,7 @@ const CHAMADOS = [
     prioridade: 'alta',
     prazo_estimado: daqui(10),
     em_atraso: false,
+    tecnico_id: 7,
   },
   {
     id: 4,
@@ -69,16 +72,43 @@ const CHAMADOS = [
   },
 ];
 
+/**
+ * Um servidor em miniatura: filtra pelos mesmos parâmetros que a API aceita.
+ *
+ * A versão anterior devolvia a lista inteira qualquer que fosse o pedido,
+ * porque as telas faziam o corte no navegador. Depois que o corte passou para
+ * o servidor, um duplê que ignora os parâmetros mediria a si mesmo: a tela
+ * poderia parar de pedir `situacao=abertos` e continuar passando.
+ */
+const ENCERRADO = ['concluido', 'cancelado'];
+function servidor(url, config = {}) {
+  if (url === '/relatorios/resumo') {
+    // Se a tela voltar a pedir o relatório inteiro para ler um número, o
+    // teste que conta as chamadas percebe.
+    return Promise.resolve({ data: { totais: { em_aberto: 999 } } });
+  }
+  const p = config.params || {};
+  let lista = CHAMADOS;
+  if (p.situacao === 'abertos') lista = lista.filter((c) => !ENCERRADO.includes(c.estado));
+  if (p.situacao === 'encerrados') lista = lista.filter((c) => ENCERRADO.includes(c.estado));
+  if (p.sem_tecnico === 'true') {
+    lista = lista.filter((c) => !c.tecnico_id && !ENCERRADO.includes(c.estado));
+  }
+  if (p.atrasados === 'true') lista = lista.filter((c) => c.em_atraso);
+  if (p.busca) lista = lista.filter((c) => c.protocolo.includes(p.busca) || c.titulo.includes(p.busca));
+  const total = lista.length;
+  const limite = Number(p.limite) || 20;
+  return Promise.resolve({
+    data: {
+      chamados: lista.slice(0, limite),
+      paginacao: { pagina: 1, limite, total, paginas: Math.max(1, Math.ceil(total / limite)) },
+    },
+  });
+}
+
 function montarComo(perfil) {
   usuarioAtual.valor = { id: 9, nome: 'Fulano', perfil };
-  api.get.mockImplementation((url) => {
-    if (url === '/relatorios/resumo') {
-      return Promise.resolve({ data: { totais: { em_aberto: 12 } } });
-    }
-    return Promise.resolve({
-      data: { chamados: CHAMADOS, paginacao: { pagina: 1, limite: 20, total: 4, paginas: 1 } },
-    });
-  });
+  api.get.mockImplementation(servidor);
   return render(
     <MemoryRouter>
       <Inicio />
@@ -145,9 +175,49 @@ describe('Quem pede', () => {
     expect(await screen.findByText('Vazamento resolvido')).toBeTruthy();
   });
 
-  it('separa o que corre do que já terminou', async () => {
+  it('resposta atrasada de uma busca antiga não sobrescreve a nova', async () => {
+    // Digitar "Torneira" e logo "Porta" dispara duas consultas, e a rede não
+    // garante a ordem de volta. Se a de "Torneira" chegasse por último, a
+    // lista mostraria o resultado velho embaixo do texto novo.
+    montarComo('solicitante');
+    const campo = await screen.findByLabelText('Buscar');
+    const { fireEvent, waitFor } = await import('@testing-library/react');
+
+    const segurar = {};
+    api.get.mockImplementation((url, config = {}) => {
+      const termo = config.params?.busca;
+      if (termo === 'Torneira' || termo === 'Porta') {
+        return new Promise((resolve) => {
+          segurar[termo] = () => servidor(url, config).then(resolve);
+        });
+      }
+      return servidor(url, config);
+    });
+
+    fireEvent.change(campo, { target: { value: 'Torneira' } });
+    await waitFor(() => expect(segurar.Torneira).toBeDefined(), { timeout: 2000 });
+    fireEvent.change(campo, { target: { value: 'Porta' } });
+    await waitFor(() => expect(segurar.Porta).toBeDefined(), { timeout: 2000 });
+
+    // A nova volta primeiro; a velha, depois.
+    segurar.Porta();
+    expect(await screen.findByText('Porta emperrada')).toBeTruthy();
+    segurar.Torneira();
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(screen.queryByText('Torneira pingando')).toBeNull();
+    expect(screen.getByText('Porta emperrada')).toBeTruthy();
+  });
+
+  it('separa o que corre do que já terminou, no servidor', async () => {
     montarComo('solicitante');
     await screen.findByRole('heading', { level: 1 });
+    await screen.findByText('Torneira pingando');
+
+    // O corte é pedido ao servidor. Feito no navegador sobre uma página de
+    // cem, quem passasse de cem pedidos perdia os mais antigos em aberto.
+    const primeira = chamadasDeChamados().find(([, c]) => c?.params?.limite !== 1);
+    expect(primeira[1].params.situacao).toBe('abertos');
 
     // O concluído não aparece na aba de em andamento.
     expect(screen.queryByText('Vazamento resolvido')).toBeNull();
@@ -161,15 +231,16 @@ describe('Quem executa', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Minha fila' })).toBeTruthy();
   });
 
-  it('pede a lista ordenada por prazo', async () => {
+  it('pede a lista ordenada por prazo, e só o que está em aberto', async () => {
     montarComo('tecnico');
     await screen.findByRole('heading', { level: 1 });
 
-    // Sem isto a fila chega na ordem de chegada, e nenhum agrupamento no
-    // navegador conserta: o que ficou fora da página não tem como ser
-    // reordenado aqui.
+    // Sem `ordenar` a fila chega na ordem de chegada. Sem `situacao`, os
+    // encerrados — prazos mais antigos — ocupam a página primeiro, e com
+    // histórico longo a fila aparece vazia com trabalho designado.
     const [, config] = chamadasDeChamados()[0];
     expect(config.params.ordenar).toBe('prazo');
+    expect(config.params.situacao).toBe('abertos');
   });
 
   it('separa o que trava no técnico do que trava em terceiro', async () => {
@@ -222,10 +293,23 @@ describe('Quem distribui', () => {
 
   it('o número de "em aberto" não é o total da lista', async () => {
     montarComo('gestor');
-    // A lista devolve 4 chamados; o resumo diz 12 em aberto. Se a tela usasse
-    // o total da listagem, mostraria 4 — e a escala contra a qual os outros
-    // dois números são lidos estaria errada.
-    expect(await screen.findByText('12')).toBeTruthy();
+    // São 4 chamados, 3 em aberto. Se a tela usasse o total da listagem,
+    // mostraria 4 — e a escala contra a qual os outros dois números são
+    // lidos estaria errada.
+    const cartao = (await screen.findByText('Em aberto')).closest('div');
+    expect(within(cartao).getByText('3')).toBeTruthy();
+  });
+
+  it('conta "em aberto" com uma consulta leve, não com o relatório inteiro', async () => {
+    montarComo('gestor');
+    await screen.findByText('Em aberto');
+    // O painel lia um número de /relatorios/resumo, que roda cinco consultas
+    // de agregação e descartava quatro.
+    expect(api.get.mock.calls.some(([url]) => url === '/relatorios/resumo')).toBe(false);
+    const pediu = chamadasDeChamados().some(
+      ([, c]) => c?.params?.situacao === 'abertos' && Number(c?.params?.limite) === 1
+    );
+    expect(pediu).toBe(true);
   });
 });
 
@@ -264,6 +348,13 @@ describe('prazoEmPalavras', () => {
   it('devolve null sem prazo, em vez de inventar urgência', () => {
     expect(prazoEmPalavras(null, agora)).toBeNull();
     expect(prazoEmPalavras('nao e uma data', agora)).toBeNull();
+  });
+
+  it('na fronteira, sobe de unidade em vez de escrever "60 minutos"', () => {
+    // A faixa era escolhida antes de arredondar: 59 min 45 s caía nos minutos
+    // e virava "60 minutos"; 23 h 40 min caía nas horas e virava "24 horas".
+    expect(prazoEmPalavras('2026-09-23T12:59:45Z', agora).texto).toBe('vence em 1 hora');
+    expect(prazoEmPalavras('2026-09-24T11:40:00Z', agora).texto).toBe('vence em 1 dia');
   });
 
   it('não escreve "1 horas"', () => {

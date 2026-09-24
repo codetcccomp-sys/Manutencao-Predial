@@ -7,6 +7,7 @@ import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import Botao from '../components/ui/Botao';
 import { Esqueleto, Regiao } from '../components/ui/Estados';
+import Confirmacao from '../components/ui/Confirmacao';
 
 const PERFIS = [
   { valor: 'solicitante', rotulo: 'Solicitante' },
@@ -34,6 +35,9 @@ function Usuarios() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
+  // Quem está para ser anonimizado. `null` é o diálogo fechado.
+  const [aAnonimizar, setAAnonimizar] = useState(null);
+  const [anonimizando, setAnonimizando] = useState(false);
 
   const carregar = useCallback(() => {
     setCarregando(true);
@@ -65,6 +69,33 @@ function Usuarios() {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível cadastrar o usuário.');
     } finally {
       setSalvando(false);
+    }
+  }
+
+  /**
+   * Atende um pedido de remoção (LGPD, docs/lgpd.md §5).
+   *
+   * A rota existia e a tela não sabia dela: anonimizar exigia chamar a API
+   * na mão. E a tela ainda oferecia "Reativar" para a conta anonimizada — um
+   * botão que falhava sempre, porque conta anonimizada não volta.
+   */
+  async function anonimizar() {
+    setErro('');
+    setAviso('');
+    setAnonimizando(true);
+    try {
+      await api.post(`/usuarios/${aAnonimizar.id}/anonimizar`);
+      setAviso(`${aAnonimizar.nome} foi anonimizado. Os chamados continuam no histórico.`);
+      setAAnonimizar(null);
+      carregar();
+    } catch (err) {
+      // A recusa mais comum é de técnico com chamado em aberto, e a mensagem
+      // do servidor já diz quantos e o que fazer. O diálogo fecha para a
+      // pessoa ler o aviso e ir reatribuir.
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível anonimizar.');
+      setAAnonimizar(null);
+    } finally {
+      setAnonimizando(false);
     }
   }
 
@@ -207,7 +238,7 @@ function Usuarios() {
                   <select
                     aria-label={`Perfil de ${u.nome}`}
                     value={u.perfil}
-                    disabled={u.id === usuario.id}
+                    disabled={u.id === usuario.id || Boolean(u.anonimizado_em)}
                     onChange={(e) => alterar(u.id, { perfil: e.target.value })}
                     className={`rounded px-2 py-1 text-xs ${PERFIL_COR[u.perfil]} disabled:cursor-not-allowed`}
                     title={u.id === usuario.id ? 'Não é possível alterar o próprio perfil.' : undefined}
@@ -225,7 +256,9 @@ function Usuarios() {
               chave: 'ativo',
               rotulo: 'Situação',
               conteudo: (u) =>
-                u.ativo ? (
+                u.anonimizado_em ? (
+                  <span className="text-tinta-2">Anonimizado</span>
+                ) : u.ativo ? (
                   <span className="text-sucesso">Ativo</span>
                 ) : (
                   <span className="text-tinta-2">Desligado</span>
@@ -234,23 +267,51 @@ function Usuarios() {
             {
               chave: 'acoes',
               rotulo: 'Ações',
-              conteudo: (u) => (
-                <Botao
-                  variante="discreta"
-                  tamanho="sm"
-                  disabled={u.id === usuario.id}
-                  onClick={() => alterar(u.id, { ativo: !u.ativo })}
-                  title={u.id === usuario.id ? 'Não é possível desativar a própria conta.' : undefined}
-                >
-                  {u.ativo ? 'Desligar' : 'Reativar'}
-                </Botao>
-              ),
+              conteudo: (u) =>
+                // Conta anonimizada não tem ação nenhuma: não volta, e a
+                // segunda anonimização é recusada. Oferecer "Reativar" aqui
+                // era oferecer um botão que falha sempre.
+                u.anonimizado_em ? (
+                  <span className="text-xs text-tinta-2">—</span>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <Botao
+                      variante="discreta"
+                      tamanho="sm"
+                      disabled={u.id === usuario.id}
+                      onClick={() => alterar(u.id, { ativo: !u.ativo })}
+                      title={u.id === usuario.id ? 'Não é possível desativar a própria conta.' : undefined}
+                    >
+                      {u.ativo ? 'Desligar' : 'Reativar'}
+                    </Botao>
+                    {u.id !== usuario.id && (
+                      <Botao variante="discreta" tamanho="sm" onClick={() => setAAnonimizar(u)}>
+                        Anonimizar
+                      </Botao>
+                    )}
+                  </div>
+                ),
             },
           ]}
         />
         )}
         </Regiao>
       </div>
+
+      <Confirmacao
+        aberto={Boolean(aAnonimizar)}
+        titulo={aAnonimizar ? `Anonimizar ${aAnonimizar.nome}?` : ''}
+        rotuloConfirmar="Anonimizar"
+        carregando={anonimizando}
+        onConfirmar={anonimizar}
+        onCancelar={() => setAAnonimizar(null)}
+      >
+        <p>
+          Nome, e-mail e senha são apagados e a conta não entra mais. Os chamados, comentários e
+          avaliações continuam no histórico, assinados por &quot;Usuário removido&quot;.
+        </p>
+        <p className="mt-2 font-medium">Não dá para desfazer.</p>
+      </Confirmacao>
     </div>
   );
 }

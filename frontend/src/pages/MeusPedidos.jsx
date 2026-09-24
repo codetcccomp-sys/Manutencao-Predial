@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
@@ -46,18 +46,21 @@ import { estadoEmPalavras } from '../dominio/prazo';
  * diria "nenhum chamado encontrado" para um chamado que existe.
  */
 
+// A chave de cada aba é o valor de `situacao` que o servidor entende.
 const RECORTES = [
   { chave: 'abertos', rotulo: 'Em andamento' },
-  { chave: 'concluidos', rotulo: 'Encerrados' },
+  { chave: 'encerrados', rotulo: 'Encerrados' },
 ];
 
-// O backend filtra por um estado de cada vez. "Em andamento" é tudo que não
-// terminou, então o recorte é feito aqui, sobre a página recebida — e o
-// limite é alto o bastante para que a conta feche para quem abre chamado.
+// O corte entre em andamento e encerrado é feito no SERVIDOR. A primeira
+// versão pedia cem chamados sem filtro e separava as abas no navegador: quem
+// passasse de cem pedidos perdia os mais antigos em aberto, e a contagem da
+// aba vinha menor, sem nada na tela dizendo que a lista estava cortada.
 const LIMITE = 100;
 
 function MeusPedidos() {
   const [chamados, setChamados] = useState([]);
+  const [totalAbertos, setTotalAbertos] = useState(null);
   const [recorte, setRecorte] = useState('abertos');
   const [busca, setBusca] = useState('');
   const [buscaAplicada, setBuscaAplicada] = useState('');
@@ -71,29 +74,53 @@ function MeusPedidos() {
     return () => clearTimeout(id);
   }, [busca]);
 
+  // Número da consulta mais recente. Digitar "SMP-1" e logo "SMP-12" dispara
+  // duas consultas, e nada garante que voltem na ordem em que saíram: se a
+  // de "SMP-1" chegasse por último, a lista mostraria o resultado da busca
+  // antiga embaixo do texto novo. Só a resposta da última consulta é aceita.
+  const ultimaConsulta = useRef(0);
+
+  const buscando = Boolean(buscaAplicada);
+
   const carregar = useCallback(() => {
+    const esta = ++ultimaConsulta.current;
     setCarregando(true);
     setErro('');
     api
-      // A busca vai ao servidor, e não é feita sobre a lista já carregada:
-      // quem pede há anos pode ter mais chamados do que cabem numa página, e
-      // o protocolo procurado estaria justamente no que ficou de fora.
+      // Buscando, procura nas duas abas: quem digita um protocolo quer achar
+      // o chamado, esteja ele em andamento ou encerrado. Sem busca, o
+      // servidor devolve só a aba aberta.
       .get('/chamados', {
-        params: { limite: LIMITE, ...(buscaAplicada ? { busca: buscaAplicada } : {}) },
+        params: buscando
+          ? { limite: LIMITE, busca: buscaAplicada }
+          : { limite: LIMITE, situacao: recorte },
       })
-      .then(({ data }) => setChamados(data.chamados))
-      .catch(() => setErro('Não foi possível carregar seus chamados.'))
-      .finally(() => setCarregando(false));
-  }, [buscaAplicada]);
+      .then(({ data }) => {
+        if (esta === ultimaConsulta.current) setChamados(data.chamados);
+      })
+      .catch(() => {
+        if (esta === ultimaConsulta.current) setErro('Não foi possível carregar seus chamados.');
+      })
+      .finally(() => {
+        if (esta === ultimaConsulta.current) setCarregando(false);
+      });
+  }, [buscando, buscaAplicada, recorte]);
 
   useEffect(carregar, [carregar]);
 
-  const buscando = Boolean(buscaAplicada);
-  const encerrado = (c) => c.estado === 'concluido' || c.estado === 'cancelado';
-  const visiveis = buscando
-    ? chamados
-    : chamados.filter((c) => (recorte === 'abertos' ? !encerrado(c) : encerrado(c)));
-  const abertos = chamados.filter((c) => !encerrado(c)).length;
+  // A contagem da aba "Em andamento" vem do total da paginação, não do tamanho
+  // da lista carregada: com a aba "Encerrados" aberta a lista nem tem os
+  // abertos, e mesmo na própria aba o total não pode depender de caber numa
+  // página. Uma linha pedida, o total lido.
+  useEffect(() => {
+    api
+      .get('/chamados', { params: { situacao: 'abertos', limite: 1 } })
+      .then(({ data }) => setTotalAbertos(data.paginacao.total))
+      .catch(() => setTotalAbertos(null));
+  }, []);
+
+  const visiveis = chamados;
+  const abertos = totalAbertos ?? 0;
 
   return (
     <div className="grid gap-6">
@@ -126,18 +153,21 @@ function MeusPedidos() {
         />
       </div>
 
-      {/* `tablist` e não botões soltos: o teclado percorre o grupo com as setas
-          e o leitor de tela anuncia "aba 1 de 2", em vez de dois botões sem
-          relação aparente. */}
+      {/* Dois botões de alternância num grupo rotulado, e não um `tablist`.
+          A primeira versão usava `role="tab"` e um comentário dizendo que as
+          setas do teclado percorriam o grupo — o que nunca foi implementado.
+          Aba sem navegação por setas promete ao leitor de tela um
+          comportamento que não existe; `aria-pressed` promete só o que o
+          botão faz, e o Tab já percorre os dois. */}
       {!buscando && (
-      <div role="tablist" aria-label="Situação dos pedidos" className="flex gap-2">
+      <div role="group" aria-label="Situação dos pedidos" className="flex gap-2">
         {RECORTES.map(({ chave, rotulo }) => {
           const ativo = recorte === chave;
           return (
             <button
               key={chave}
-              role="tab"
-              aria-selected={ativo}
+              type="button"
+              aria-pressed={ativo}
               onClick={() => setRecorte(chave)}
               className={`alvo-toque rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 ativo

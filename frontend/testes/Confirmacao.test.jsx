@@ -142,6 +142,38 @@ describe('Confirmação de ação sem volta', () => {
     expect(screen.getByRole('button', { name: 'Cancelar o chamado' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Voltar' })).toBeDisabled();
   });
+
+  it('durante a execução, nem Esc nem clique fora fecham o diálogo', async () => {
+    // O "Voltar" já ficava desabilitado aqui, de propósito — mas o Esc e o
+    // clique no fundo passavam por cima dele. O diálogo fechava, a pessoa
+    // entendia que tinha desistido, e o cancelamento que ela acabara de
+    // confirmar terminava de ser gravado mesmo assim.
+    const usuario = userEvent.setup();
+    render(<Palco carregando />);
+    await usuario.click(abrir());
+
+    await usuario.keyboard('{Escape}');
+    expect(dialogo()).not.toBeNull();
+
+    // O fundo escuro é o pai do diálogo; o clique nele, e não no diálogo, é
+    // o que conta como "clicar fora".
+    await usuario.click(dialogo().parentElement);
+    expect(dialogo()).not.toBeNull();
+  });
+
+  it('fora da execução, Esc e clique fora continuam fechando', async () => {
+    // A trava vale só enquanto a ação corre; fechar pelo Esc é o caminho
+    // mais curto para "não", e não pode ser tirado de quem ainda não decidiu.
+    const usuario = userEvent.setup();
+    render(<Palco />);
+    await usuario.click(abrir());
+    await usuario.keyboard('{Escape}');
+    expect(dialogo()).toBeNull();
+
+    await usuario.click(abrir());
+    await usuario.click(dialogo().parentElement);
+    expect(dialogo()).toBeNull();
+  });
 });
 
 describe('O foco não escapa ao confirmar', () => {

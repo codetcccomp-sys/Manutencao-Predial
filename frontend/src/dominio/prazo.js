@@ -36,15 +36,23 @@ export function prazoEmPalavras(prazoIso, agora = Date.now()) {
   const vencido = restante < 0;
   const distancia = Math.abs(restante);
 
+  // A faixa é escolhida pelo valor JÁ arredondado, e não pelo bruto.
+  //
+  // A primeira versão escolhia a faixa antes de arredondar: 59 min 45 s caía
+  // na faixa dos minutos e virava "60 minutos"; 23 h 40 min caía na das horas
+  // e virava "24 horas". O número certo na unidade errada — justamente no
+  // instante em que o prazo cruza uma fronteira e a leitura importa mais.
+  const minutos = Math.max(1, Math.round(distancia / 60_000));
+  const horas = Math.round(distancia / HORA);
+
   let quanto;
-  if (distancia < HORA) {
+  if (minutos < 60) {
     // Abaixo de uma hora o minuto é a unidade que muda a decisão.
-    const minutos = Math.max(1, Math.round(distancia / 60_000));
     quanto = plural(minutos, 'minuto', 'minutos');
-  } else if (distancia < DIA) {
-    quanto = plural(Math.round(distancia / HORA), 'hora', 'horas');
+  } else if (horas < 24) {
+    quanto = plural(horas, 'hora', 'horas');
   } else {
-    quanto = plural(Math.round(distancia / DIA), 'dia', 'dias');
+    quanto = plural(Math.max(1, Math.round(distancia / DIA)), 'dia', 'dias');
   }
 
   return {
