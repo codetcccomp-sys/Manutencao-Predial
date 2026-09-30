@@ -107,6 +107,31 @@ A penúltima pegou quatro cancelamentos que diziam vir de `em_triagem` quando
 o chamado estava em `atribuido` — na tela de marcos isso apareceria como uma
 transição que não aconteceu.
 
+## Trazer para perto de hoje antes de apresentar
+
+Os prazos foram desenhados relativos ao dia da carga, e o relógio não para.
+Em 30/09, dez dias depois, 22 dos 25 chamados abertos já apareciam em
+atraso: um painel todo vermelho não mostra nada, porque sem contraste entre
+"no prazo" e "atrasado" não se vê o que o sistema faz com nenhum dos dois.
+
+O script desloca **todas** as datas da demonstração pelo mesmo intervalo, de
+modo que a carga vire "agora". A ordem dos eventos, as durações e quem estoura
+o prazo voltam a ser os do dia em que a massa foi desenhada. Só mexe em
+chamados `SMP-DEMO-*`, no que pertence a eles e nas pessoas `+demo.`; dado
+real no mesmo banco fica onde está.
+
+```bash
+cd backend
+# Com a DATABASE_URL de produção no ambiente. Sem --aplicar, só mostra:
+node database/reancorar-demo.js
+node database/reancorar-demo.js --aplicar
+```
+
+Rodar duas vezes seguidas não empurra nada para o futuro: a âncora (a data de
+criação das pessoas `+demo.`) anda junto, e a segunda execução mede a partir
+da primeira. Rode **na véspera** de cada apresentação: a cada dia que passa,
+mais chamados cruzam o prazo, e o retrato se afasta do desenhado.
+
 ## Apagar antes do piloto real
 
 **Faça isto antes do primeiro chamado de verdade.** Dado fictício misturado
