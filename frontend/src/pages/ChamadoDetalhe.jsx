@@ -419,6 +419,12 @@ function ChamadoDetalhe() {
   }
 
   const podeMudarEstado = podeGerenciar || chamado.tecnico_id === usuario.id;
+  // RN05: cancelar é da gestão. O técnico vê só os passos do próprio
+  // trabalho; o servidor recusa o resto de qualquer jeito, e oferecer o botão
+  // seria convidar a um 403.
+  const proximosEstados = (PROXIMOS_ESTADOS[chamado.estado] || []).filter(
+    (estado) => podeGerenciar || estado !== 'cancelado'
+  );
   const podeAvaliar = usuario.perfil === 'solicitante' && chamado.estado === 'concluido';
 
   // Estados em que o chamado já tem responsável: distribuir de novo é
@@ -829,11 +835,11 @@ function ChamadoDetalhe() {
         </form>
       )}
 
-      {podeMudarEstado && PROXIMOS_ESTADOS[chamado.estado]?.length > 0 && (
+      {podeMudarEstado && proximosEstados.length > 0 && (
         <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
           <h2 className="font-medium text-navy">Mudar estado</h2>
           <div className="flex flex-wrap gap-2">
-            {PROXIMOS_ESTADOS[chamado.estado].map((estado) => (
+            {proximosEstados.map((estado) => (
               <button
                 key={estado}
                 onClick={() => acionarEstado(estado)}

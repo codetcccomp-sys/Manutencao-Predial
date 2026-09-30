@@ -23,9 +23,12 @@ function CartaoDeChamado({ chamado, linhaExtra, mostrarPrazo = false }) {
     <li className="min-w-0">
       <Link
         to={`/chamados/${chamado.id}`}
-        className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-borda bg-superficie p-4 shadow-sm transition hover:border-borda-forte"
+        className="flex min-w-0 flex-col items-start gap-3 rounded-lg border border-borda bg-superficie p-4 shadow-sm transition hover:border-borda-forte sm:flex-row sm:items-center sm:justify-between"
       >
-        <div className="min-w-0">
+        {/* No celular os selos descem para baixo do título. Lado a lado, numa
+            tela de 390px, eles tomavam a largura e o título virava "Quadro…" —
+            o cartão mostrava o estado de um chamado que não dava para saber qual era. */}
+        <div className="min-w-0 max-w-full">
           <p className="truncate font-medium text-navy">{chamado.titulo}</p>
 
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
@@ -44,7 +47,7 @@ function CartaoDeChamado({ chamado, linhaExtra, mostrarPrazo = false }) {
           {linhaExtra && <p className="mt-1 truncate text-xs text-tinta-2">{linhaExtra}</p>}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {chamado.em_atraso && <BadgeAtraso />}
           <BadgeEstado estado={chamado.estado} />
         </div>

@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
 import Marca from './ui/Marca';
+import { rotuloPerfil } from '../dominio/rotulos';
 
 /**
  * Invólucro das telas autenticadas.
@@ -81,7 +82,7 @@ function Layout() {
 
           <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
             <span className="truncate">
-              {usuario?.nome} <span className="text-tinta-clara">({usuario?.perfil})</span>
+              {usuario?.nome} <span className="text-tinta-clara">({rotuloPerfil(usuario?.perfil)})</span>
             </span>
             <Avisos />
             <button

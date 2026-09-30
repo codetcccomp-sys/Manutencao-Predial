@@ -405,6 +405,16 @@ describe('Confirmação antes do que não tem volta', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('o técnico designado não vê o cancelar: é decisão da gestão (RN05)', async () => {
+    montar({ como: TECNICO, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    // Os passos do próprio trabalho continuam ali; só o cancelar sai.
+    expect(screen.getByRole('button', { name: 'Aguardando material' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Concluído' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancelado' })).toBeNull();
+  });
+
   it('os outros estados seguem num clique só', async () => {
     const usuario = userEvent.setup();
     montar({ como: GESTOR, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });

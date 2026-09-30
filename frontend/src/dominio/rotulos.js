@@ -97,3 +97,19 @@ export function rotuloEstado(estado) {
 export function rotuloPrioridade(prioridade) {
   return PRIORIDADES[prioridade]?.rotulo ?? prioridade;
 }
+
+/**
+ * Perfil como gente escreve. O valor gravado é `tecnico`, sem acento, porque
+ * é chave; mostrá-lo cru no cabeçalho era exibir um identificador interno
+ * como se fosse texto.
+ */
+const PERFIS = {
+  solicitante: 'Solicitante',
+  tecnico: 'Técnico',
+  gestor: 'Gestor',
+  administrador: 'Administrador',
+};
+
+export function rotuloPerfil(perfil) {
+  return PERFIS[perfil] ?? perfil;
+}

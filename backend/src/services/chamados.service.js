@@ -353,6 +353,14 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
       throw new AppError('Você não tem permissão para alterar o estado deste chamado.', 403, 'ACESSO_NEGADO');
     }
 
+    // RN05: cancelar é decisão da gestão. O técnico designado muda o estado
+    // do próprio trabalho — iniciar, esperar material, concluir —, mas não
+    // decide que o serviço deixa de existir: isso tiraria o chamado da fila
+    // sem que quem distribui o trabalho soubesse.
+    if (novoEstado === 'cancelado' && !['administrador', 'gestor'].includes(usuario.perfil)) {
+      throw new AppError('Somente a gestão pode cancelar um chamado (RN05).', 403, 'ACESSO_NEGADO');
+    }
+
     validarTransicao(chamado.estado, novoEstado);
 
     // O §2.4 autoriza cancelar a partir de aberto, em triagem e atribuído.

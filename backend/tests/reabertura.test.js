@@ -295,6 +295,33 @@ describe('Cancelamento como exceção administrativa (§2.4)', () => {
     expect(resp.status).toBe(200);
   });
 
+  it('o técnico designado não cancela, nem com justificativa (RN05)', async () => {
+    const id = await abrir();
+    await request(app).patch(`/chamados/${id}/estado`).set(auth(gestor)).send({ estado: 'em_triagem' });
+    await request(app)
+      .patch(`/chamados/${id}/atribuir`)
+      .set(auth(gestor))
+      .send({ tecnico_id: tecnico.usuario.id });
+
+    // Em "atribuído" a transição existe no fluxo e não pede justificativa:
+    // só a regra de perfil impede.
+    const atribuido = await request(app)
+      .patch(`/chamados/${id}/estado`)
+      .set(auth(tecnico))
+      .send({ estado: 'cancelado' });
+    expect(atribuido.status).toBe(403);
+
+    await request(app).patch(`/chamados/${id}/estado`).set(auth(tecnico)).send({ estado: 'em_andamento' });
+    const emExecucao = await request(app)
+      .patch(`/chamados/${id}/estado`)
+      .set(auth(tecnico))
+      .send({ estado: 'cancelado', observacao: 'Não consigo fazer este serviço agora.' });
+    expect(emExecucao.status).toBe(403);
+
+    const detalhe = await request(app).get(`/chamados/${id}`).set(auth(gestor));
+    expect(detalhe.body.chamado.estado).toBe('em_andamento');
+  });
+
   it('exige justificativa para cancelar serviço já em execução', async () => {
     const id = await abrir();
     await request(app).patch(`/chamados/${id}/estado`).set(auth(gestor)).send({ estado: 'em_triagem' });
