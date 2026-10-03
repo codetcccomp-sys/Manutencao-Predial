@@ -123,6 +123,31 @@ describe('Anonimização na tela de usuários', () => {
     }
   });
 
+  it('recusa do servidor ao desligar técnico com chamado aparece na tela, com o motivo', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    montarCom(PESSOAS);
+    api.patch.mockRejectedValueOnce({
+      response: {
+        data: {
+          erro: {
+            codigo: 'CHAMADOS_EM_ABERTO',
+            mensagem:
+              'Esta pessoa tem 2 chamados em aberto. Reatribua antes de desativar, para nenhum ficar parado sem responsável.',
+          },
+        },
+      },
+    });
+    await screen.findAllByText('Bruno');
+
+    // Bruno é o segundo da lista; os "Desligar" vêm em ordem, um por forma da tabela.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Desligar' })[1]);
+
+    // A mensagem do servidor, e não um "não foi possível" genérico: quem lê
+    // precisa saber o que fazer — reatribuir —, não só que falhou.
+    expect(await screen.findByText(/Reatribua antes de desativar/)).toBeInTheDocument();
+    expect(api.patch).toHaveBeenCalledWith('/usuarios/2', { ativo: false });
+  });
+
   it('anonimizar pede confirmação antes e só então chama a API', async () => {
     const { fireEvent } = await import('@testing-library/react');
     montarCom(PESSOAS);
