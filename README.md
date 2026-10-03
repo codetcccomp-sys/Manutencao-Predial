@@ -31,8 +31,9 @@ e é a primeira coisa a fechar se ele passar a atender um prédio real.
 | [docs/piloto.md](docs/piloto.md) | O protocolo para usar o sistema num prédio real: o que configurar antes do primeiro chamado, o que medir, o que declarar como limitação |
 | [docs/dados-demonstracao.md](docs/dados-demonstracao.md) | O que é fictício, como reconhecer e como apagar antes do uso real |
 | [docs/lgpd.md](docs/lgpd.md) | Dados pessoais, retenção e o procedimento de remoção sob pedido |
+| [docs/apresentacao.md](docs/apresentacao.md) | Roteiro da demonstração ao vivo e checklist dos pitches de dezembro |
 
-Os três são artefatos acadêmicos. Nenhum foi adotado ou assinado por
+Os quatro são artefatos acadêmicos. Nenhum foi adotado ou assinado por
 instituição alguma.
 
 ## Endereços

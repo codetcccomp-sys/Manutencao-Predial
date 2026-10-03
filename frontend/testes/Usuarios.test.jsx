@@ -83,3 +83,74 @@ describe('Seletor de perfil na tabela de usuários', () => {
     }
   });
 });
+
+/**
+ * Anonimização pela tela (LGPD, docs/lgpd.md §5).
+ *
+ * A rota existia e a tela não sabia dela. Pior: a conta anonimizada aparecia
+ * como um "Desligado" qualquer, com o botão "Reativar" — que falhava sempre,
+ * porque conta anonimizada não volta.
+ */
+describe('Anonimização na tela de usuários', () => {
+  const ANONIMA = {
+    id: 4,
+    nome: 'Usuário removido',
+    email: 'removido-4@anonimizado.invalid',
+    perfil: 'solicitante',
+    ativo: false,
+    anonimizado_em: '2026-09-23T10:00:00Z',
+  };
+
+  function montarCom(pessoas) {
+    api.get.mockResolvedValue({ data: { usuarios: pessoas } });
+    api.post.mockResolvedValue({ data: {} });
+    return render(
+      <MemoryRouter>
+        <Usuarios />
+      </MemoryRouter>
+    );
+  }
+
+  it('conta anonimizada não oferece "Reativar" nem troca de perfil', async () => {
+    montarCom([...PESSOAS, ANONIMA]);
+    const linhas = await screen.findAllByText('Anonimizado');
+    expect(linhas.length).toBeGreaterThan(0);
+
+    // Duas formas da tabela, nenhuma com o botão que falha sempre.
+    expect(screen.queryAllByRole('button', { name: 'Reativar' })).toHaveLength(0);
+    for (const s of screen.getAllByRole('combobox', { name: 'Perfil de Usuário removido' })) {
+      expect(s).toBeDisabled();
+    }
+  });
+
+  it('anonimizar pede confirmação antes e só então chama a API', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    montarCom(PESSOAS);
+    await screen.findAllByText('Bruno');
+
+    // Um botão por forma da tabela; qualquer um serve.
+    const botoes = screen.getAllByRole('button', { name: 'Anonimizar' });
+    fireEvent.click(botoes[0]);
+
+    // Nada foi enviado só por clicar: a ação não tem volta.
+    expect(api.post).not.toHaveBeenCalled();
+    const dialogo = await screen.findByRole('dialog');
+    expect(dialogo.textContent).toMatch(/Não dá para desfazer/);
+
+    // O "Anonimizar" de DENTRO do diálogo é o que confirma; os da tabela só
+    // abrem a pergunta.
+    const { within } = await import('@testing-library/react');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Anonimizar' }));
+
+    await vi.waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    expect(api.post.mock.calls[0][0]).toMatch(/^\/usuarios\/\d+\/anonimizar$/);
+  });
+
+  it('ninguém recebe o botão de anonimizar a si mesmo', async () => {
+    montarCom(PESSOAS);
+    await screen.findAllByText('Bruno');
+    // Ana (id 1) é quem está logada. São três pessoas e duas formas da
+    // tabela: a própria conta fica sem o botão, então sobram quatro.
+    expect(screen.getAllByRole('button', { name: 'Anonimizar' })).toHaveLength(4);
+  });
+});

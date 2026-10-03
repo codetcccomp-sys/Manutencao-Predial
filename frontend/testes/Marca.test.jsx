@@ -50,6 +50,14 @@ describe('Marca', () => {
     expect(screen.getByText('Sistema de manutenção')).toBeInTheDocument();
   });
 
+  it('no cabeçalho, o perfil aparece escrito, com acento, e não como chave', () => {
+    usuarioAtual.valor = { id: 2, nome: 'Paulo', perfil: 'tecnico' };
+    montar(<Layout />);
+    expect(screen.getByText('(Técnico)')).toBeInTheDocument();
+    expect(screen.queryByText('(tecnico)')).toBeNull();
+    usuarioAtual.valor = { id: 1, nome: 'Ana', perfil: 'gestor' };
+  });
+
   it('no cabeçalho, o link de volta ao início se chama pelo nome do sistema', () => {
     montar(<Layout />);
 

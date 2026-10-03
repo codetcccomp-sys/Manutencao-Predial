@@ -269,7 +269,8 @@ Para o pedido de remoção existe um procedimento separado.
 
 ### Na prática
 
-Um administrador chama, autenticado:
+Na tela **Usuários**, o botão **Anonimizar** da pessoa. O sistema pergunta
+antes, porque a ação não tem volta. Por trás, a tela chama:
 
 ```
 POST /usuarios/:id/anonimizar
@@ -277,9 +278,22 @@ POST /usuarios/:id/anonimizar
 
 Só administrador executa, e **ninguém executa na própria conta**: a ação não
 tem desfazer e tira o acesso no mesmo instante, então exige um segundo par de
-olhos. O último administrador ativo também não pode ser anonimizado, pela
-mesma razão que não pode ser desativado — recuperar o sistema exigiria acesso
-direto ao banco.
+olhos.
+
+**Técnico com chamado em aberto não é anonimizado.** A conta não entra mais,
+e o chamado ficaria designado a ninguém que possa agir — fora do filtro "sem
+técnico" e fora da fila de qualquer pessoa. O sistema recusa e diz quantos
+chamados estão pendentes; a gestão reatribui (com justificativa e histórico,
+como pede o RF05) e depois anonimiza.
+
+**A sessão aberta cai na hora.** Até a revisão de 24/09 o acesso dependia só
+do token, que vale 8 horas: a pessoa anonimizada continuava entrando até ele
+expirar. Agora cada requisição confere a conta no banco, e a sessão de quem
+foi anonimizado — ou desligado, ou teve o perfil trocado — é encerrada na
+requisição seguinte.
+
+Conta anonimizada aparece como **Anonimizado** na lista, sem ações: não volta,
+e a segunda anonimização é recusada.
 
 Rodar duas vezes é recusado: a segunda passagem não teria o que apagar e só
 moveria a data, fazendo parecer um pedido novo.

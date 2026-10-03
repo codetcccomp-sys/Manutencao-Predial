@@ -40,6 +40,13 @@ const EM_ATRASO = `(
  * inverter esta ordenação um dia herda o cuidado em vez de descobrir o padrão
  * na hora errada.
  */
+// Mapa fechado pelo mesmo motivo das ordenações: o valor vem da requisição e
+// vira SQL. Nome desconhecido não filtra nada.
+const SITUACOES = {
+  abertos: "estado NOT IN ('concluido', 'cancelado')",
+  encerrados: "estado IN ('concluido', 'cancelado')",
+};
+
 const ORDENACOES = {
   recentes: 'data_abertura DESC, id DESC',
   prazo: 'prazo_estimado ASC NULLS LAST, data_abertura ASC, id ASC',
@@ -131,6 +138,18 @@ async function listar(usuario, filtros = {}) {
   //
   // `estado NOT IN (concluido, cancelado)` junto: chamado encerrado sem
   // técnico é normal (foi cancelado antes de distribuir) e não é pendência.
+  // Em aberto ou encerrado, filtrado no servidor.
+  //
+  // As telas por perfil faziam esse corte no navegador, sobre uma página de
+  // cem. Na fila do técnico, ordenada por prazo, os chamados encerrados — os
+  // de prazo mais antigo — vinham primeiro e ocupavam a página: com cem
+  // encerrados no histórico, a fila aparecia vazia com cinco chamados em
+  // aberto designados. Filtro feito depois da paginação só filtra o que
+  // coube na página.
+  if (SITUACOES[filtros.situacao]) {
+    condicoes.push(SITUACOES[filtros.situacao]);
+  }
+
   if (filtros.sem_tecnico === 'true') {
     condicoes.push("tecnico_id IS NULL AND estado NOT IN ('concluido', 'cancelado')");
   }
@@ -332,6 +351,14 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
 
     if (!podeAlterar) {
       throw new AppError('Você não tem permissão para alterar o estado deste chamado.', 403, 'ACESSO_NEGADO');
+    }
+
+    // RN05: cancelar é decisão da gestão. O técnico designado muda o estado
+    // do próprio trabalho — iniciar, esperar material, concluir —, mas não
+    // decide que o serviço deixa de existir: isso tiraria o chamado da fila
+    // sem que quem distribui o trabalho soubesse.
+    if (novoEstado === 'cancelado' && !['administrador', 'gestor'].includes(usuario.perfil)) {
+      throw new AppError('Somente a gestão pode cancelar um chamado (RN05).', 403, 'ACESSO_NEGADO');
     }
 
     validarTransicao(chamado.estado, novoEstado);

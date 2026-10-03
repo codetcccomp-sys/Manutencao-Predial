@@ -3,7 +3,7 @@ const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { normalizarNome } = require('./auth.service');
 
-const CAMPOS = 'id, nome, email, perfil, ativo, criado_em';
+const CAMPOS = 'id, nome, email, perfil, ativo, criado_em, anonimizado_em';
 
 /**
  * Por padrão lista só quem está ativo.
@@ -72,11 +72,7 @@ async function atualizar(id, { nome, perfil, ativo }, autor) {
   // ali estaria numa conta sem identidade, assinando chamados como "Usuário
   // removido". O `ativo = false` da anonimização não é uma desativação comum
   // e o botão "Reativar" da tela não pode tratá-lo como tal.
-  const { rows: anonima } = await pool.query(
-    'SELECT 1 FROM usuario WHERE id = $1 AND anonimizado_em IS NOT NULL',
-    [id]
-  );
-  if (anonima[0]) {
+  if (alvo.anonimizado_em) {
     throw new AppError(
       'Esta conta foi anonimizada a pedido e não pode ser alterada.',
       422,
@@ -163,21 +159,36 @@ async function anonimizar(id, autor) {
     );
   }
 
-  const { rows: jaFoi } = await pool.query(
-    'SELECT anonimizado_em FROM usuario WHERE id = $1 AND anonimizado_em IS NOT NULL',
+  // Técnico com chamado em aberto não some sem antes passar o trabalho
+  // adiante. A conta anonimizada não entra mais no sistema, e o chamado
+  // continuaria designado a ela: fora do filtro "sem técnico" (que procura
+  // `tecnico_id` nulo) e fora da fila de qualquer pessoa. Pararia calado
+  // até estourar o prazo.
+  //
+  // Recusar em vez de soltar os chamados automaticamente é deliberado: a
+  // reatribuição tem justificativa e histórico (RF05, RN05), e decidir para
+  // quem vai cada chamado é trabalho da gestão, não um efeito colateral.
+  const { rows: pendentes } = await pool.query(
+    `SELECT count(*)::int AS total FROM chamado
+      WHERE tecnico_id = $1 AND estado NOT IN ('concluido', 'cancelado')`,
     [id]
   );
-  if (jaFoi[0]) {
-    throw new AppError('Esta conta já foi anonimizada.', 422, 'JA_ANONIMIZADO');
+  if (pendentes[0].total > 0) {
+    const n = pendentes[0].total;
+    throw new AppError(
+      `Esta pessoa tem ${n} ${n === 1 ? 'chamado' : 'chamados'} em aberto. ` +
+        'Reatribua antes de anonimizar, para nenhum ficar parado sem responsável.',
+      422,
+      'CHAMADOS_EM_ABERTO'
+    );
   }
 
   return transacao(async (client) => {
-    // Some o que só existe por causa da pessoa. O pedido de recuperação é o
-    // que mais importa aqui: é a tabela que guarda IP.
-    await client.query('DELETE FROM notificacao WHERE usuario_id = $1', [id]);
-    await client.query('DELETE FROM recuperacao_senha WHERE usuario_id = $1', [id]);
-    await client.query('DELETE FROM tentativa_login WHERE email = $1', [alvo.email]);
-
+    // A anonimização vem PRIMEIRO na transação, e só acontece se a conta
+    // ainda não tiver sido anonimizada. A checagem antes, fora da transação,
+    // deixava duas requisições simultâneas passarem juntas — um clique duplo
+    // bastava —, e a segunda sobrescrevia `anonimizado_em`: a data que prova
+    // quando o pedido foi atendido passava a ser a do segundo clique.
     const { rows } = await client.query(
       `UPDATE usuario
           SET nome           = 'Usuário removido',
@@ -193,10 +204,20 @@ async function anonimizar(id, autor) {
               senha_hash     = 'conta-anonimizada-sem-acesso',
               ativo          = FALSE,
               anonimizado_em = now()
-        WHERE id = $1
-        RETURNING ${CAMPOS}, anonimizado_em`,
+        WHERE id = $1 AND anonimizado_em IS NULL
+        RETURNING ${CAMPOS}`,
       [id]
     );
+
+    if (!rows[0]) {
+      throw new AppError('Esta conta já foi anonimizada.', 422, 'JA_ANONIMIZADO');
+    }
+
+    // Some o que só existe por causa da pessoa. O pedido de recuperação é o
+    // que mais importa aqui: é a tabela que guarda IP.
+    await client.query('DELETE FROM notificacao WHERE usuario_id = $1', [id]);
+    await client.query('DELETE FROM recuperacao_senha WHERE usuario_id = $1', [id]);
+    await client.query('DELETE FROM tentativa_login WHERE email = $1', [alvo.email]);
 
     return rows[0];
   });

@@ -21,6 +21,20 @@ import fs from 'fs';
 
 const MUTACOES = [
   {
+    descricao: 'técnico volta a ver o botão de cancelar (RN05)',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: "(estado) => podeGerenciar || estado !== 'cancelado'",
+    para: '() => true',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'cabeçalho volta a mostrar o perfil como chave crua',
+    arquivo: 'src/dominio/rotulos.js',
+    de: 'return PERFIS[perfil] ?? perfil;',
+    para: 'return perfil;',
+    spec: 'testes/Marca.test.jsx',
+  },
+  {
     descricao: 'interceptor deixa de excetuar o /auth/login',
     arquivo: 'src/api/client.js',
     de: "const ehTentativaDeLogin = error.config?.url?.includes('/auth/login');",
@@ -109,11 +123,11 @@ const MUTACOES = [
     de: `<li className="min-w-0">
       <Link
         to={\`/chamados/\${chamado.id}\`}
-        className="flex min-w-0 items-center`,
+        className="flex min-w-0 flex-col`,
     para: `<li>
       <Link
         to={\`/chamados/\${chamado.id}\`}
-        className="flex items-center`,
+        className="flex flex-col`,
     motor: 'playwright',
     spec: 'e2e/layout.spec.js',
   },

@@ -103,15 +103,11 @@ function Dashboard() {
     Promise.all([
       contar({ sem_tecnico: 'true' }),
       contar({ atrasados: 'true' }),
-      // "Em aberto" não é o total: chamado concluído também conta na lista, e
-      // usar o total aqui inflaria a escala contra a qual os outros dois são
-      // lidos. O recorte certo já existe em /relatorios/resumo, e esta tela é
-      // só de gestão, que tem acesso a ele — melhor do que inventar mais um
-      // filtro na listagem para uma soma que o sistema já sabe fazer.
-      api
-        .get('/relatorios/resumo')
-        .then(({ data }) => data.totais.em_aberto)
-        .catch(() => null),
+      // "Em aberto" não é o total da lista, que inclui concluídos. A primeira
+      // versão lia `totais.em_aberto` de /relatorios/resumo — cinco consultas
+      // de agregação, com JOIN, para aproveitar um número e jogar quatro fora.
+      // Com `situacao=abertos` é a mesma contagem leve dos outros dois cartões.
+      contar({ situacao: 'abertos' }),
     ]).then(([semDono, atrasados, emAberto]) => setResumo({ semDono, atrasados, emAberto }));
   }, []);
 

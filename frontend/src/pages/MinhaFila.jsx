@@ -72,7 +72,11 @@ function MinhaFila() {
       // `ordenar=prazo` é o ponto inteiro desta tela. Sem ele a página chega
       // na ordem errada e nenhum agrupamento daqui conserta, porque o que
       // ficou de fora da página não tem como ser reordenado no navegador.
-      .get('/chamados', { params: { ordenar: 'prazo', limite: LIMITE } })
+      // `situacao=abertos` no servidor, e não o corte no navegador que havia
+      // antes: ordenados por prazo, os encerrados (prazos mais antigos) vinham
+      // primeiro e ocupavam a página de cem — com histórico longo, a fila
+      // aparecia vazia com chamados em aberto designados.
+      .get('/chamados', { params: { ordenar: 'prazo', situacao: 'abertos', limite: LIMITE } })
       .then(({ data }) => setChamados(data.chamados))
       .catch(() => setErro('Não foi possível carregar sua fila.'))
       .finally(() => setCarregando(false));
