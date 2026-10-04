@@ -23,7 +23,7 @@ homologação**. Este documento a define.
 > **Decidido em 23/09/2026:** prazos de retenção (seção 2), base legal
 > (seção 4), remoção sob pedido (seção 5) e plano de incidente (seção 6).
 >
-> **Restam três 🔲.** Nenhum bloqueia o trabalho acadêmico — o raciocínio das
+> **Restam dois 🔲.** Nenhum bloqueia o trabalho acadêmico — o raciocínio das
 > alternativas já está escrito, que é o que a RNF01 pede. São campos a
 > preencher **se e quando** o sistema passar a tratar dados de pessoas reais:
 >
@@ -31,7 +31,6 @@ homologação**. Este documento a define.
 >    (a justificativa das duas já está escrita, com o teste de ponderação
 >    exigido no caso privado — falta marcar qual).
 > 2. O nome dessa instituição como controladora.
-> 3. Os sobrenomes completos da equipe técnica.
 >
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
 
@@ -248,17 +247,17 @@ o pedido hoje — ou seja, quem de fato consegue atendê-lo.
 
 | Papel | Nome |
 | --- | --- |
-| Gerente do projeto | Abraão Henrique |
+| Gerente do projeto | Abraão Henrique de Sousa Ribeiro |
 | Integrante | Issamuel Amorim de Sousa Júnior |
-| Integrante | Pedro Henrique |
-| Integrante | Francisco Osmano |
-| Integrante | Maria Clara |
-| Integrante | Felipe Sousa |
+| Integrante | Pedro Henrique Ferreira da Silva |
+| Integrante | Francisco Osmano de Araújo Carvalho |
+| Integrante | Maria Clara Araújo Sampaio |
+| Integrante | Felipe Sousa Carvalho |
 
-🔲 **Completar os nomes.** Os da equipe vieram do bloco de aprovação do Termo
-de Abertura v1.2, onde aparecem sem sobrenome completo. Num documento de
-proteção de dados isso não identifica ninguém com segurança. Só o do contato
-do titular está completo — os demais aguardam.
+Os nomes da equipe vieram do bloco de aprovação do Termo de Abertura v1.2,
+onde aparecem sem sobrenome completo. Num documento de proteção de dados isso
+não identifica ninguém com segurança, e por isso os seis foram completados
+com os nomes informados pelo próprio grupo.
 
 ---
 

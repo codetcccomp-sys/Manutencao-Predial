@@ -211,6 +211,17 @@ Um backup que nunca foi restaurado não é um backup — é uma suposição.
 > impressão de que existe rede de proteção onde não existe — que é pior do que
 > não ter roteiro nenhum.
 
+**Qual projeto do Supabase é o de produção.** A conta tem dois, e o nome
+engana: o de produção se chama **`manutencao-predial-teste`** (referência
+`cwchhmstcyqxizwwusxn`, a mesma do `pg_dump` abaixo). É nele que o backend
+conecta, pelo pooler, com o papel `smp_backend`, e nele estão os dados de
+demonstração e os cadastros reais. O outro, "codetcccomp-sys's Project",
+não é usado pelo sistema: em 04/10/2026 não tinha nenhum log nas 24 horas
+anteriores. Para conferir de novo, no painel do projeto, em Logs, procure o
+pooler (Supavisor) com `user: "smp_backend"`: se aparece, aquele é o que está
+em uso. Faça o dump no projeto certo — um dump do outro seria um backup
+perfeito de nada.
+
 O backup, aqui, é seu. Antes de entrar dado de pessoa real:
 
 1. **Tire o dump.** Pegue a string de conexão em Connect → Session pooler, no

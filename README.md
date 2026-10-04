@@ -193,6 +193,14 @@ Para adotar o mecanismo num banco que já tem o schema criado por outro
 caminho, use `--baseline=NNN` para marcar as migrações até `NNN` como
 aplicadas sem executá-las.
 
+**Em produção, aplique sempre por `npm run migrate`, nunca colando o SQL à
+mão.** Colar funciona — foi o que aconteceu com a 015 e a 016 —, mas o
+objeto passa a existir sem a linha correspondente em `migracao`, e a
+divergência fica invisível até o `migrate` seguinte: ele tenta refazer a
+migração "pendente", esbarra em "já existe" e para, bloqueando as que vêm
+depois. Se já colou, registre o nome do arquivo em `migracao` (é o que
+`--baseline` faz) e confira com `npm run migrate -- --status`.
+
 ## Testes
 
 São três camadas, com propósitos distintos.
