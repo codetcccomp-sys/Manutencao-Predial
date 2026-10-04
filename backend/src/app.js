@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const { errorHandler, AppError } = require('./middlewares/errorHandler');
 const { NOME_SISTEMA } = require('./config/marca');
 
@@ -51,6 +52,14 @@ function origemPermitida(origin) {
   if (!origin) return true;
   return DOMINIOS_FIXOS.includes(origin) || PREVIEW_VERCEL.test(origin);
 }
+
+// Cabeçalhos de segurança (nosniff, HSTS, frame-ancestors, sem X-Powered-By…).
+// Antes do CORS, para valerem também nas respostas de recusa. Os padrões do
+// helmet servem a uma API que só devolve JSON: a CSP padrão (`default-src
+// 'self'`) não atrapalha nada que este servidor responde, e o
+// `Cross-Origin-Resource-Policy: same-origin` não se aplica às chamadas do
+// frontend, que passam pelo CORS. A CSP da interface vive em frontend/vercel.json.
+app.use(helmet());
 
 app.use(
   cors({
