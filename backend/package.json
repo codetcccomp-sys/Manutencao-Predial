@@ -11,6 +11,9 @@
     "test": "jest --runInBand",
     "test:paralelo": "jest"
   },
+  "jest": {
+    "globalTeardown": "<rootDir>/tests/apoio/globalTeardown.js"
+  },
   "dependencies": {
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",

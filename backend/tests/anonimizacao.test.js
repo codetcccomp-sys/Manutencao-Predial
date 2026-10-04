@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
 const usuariosService = require('../src/services/usuarios.service');
+const { apagarChamados } = require('./apoio/limpeza');
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -41,7 +42,18 @@ beforeAll(async () => {
   outroAdmin = await novaConta('administrador');
 });
 
+// Chamados que esta suíte abre com contas que ela mesma anonimiza. O e-mail
+// delas vira `removido-N@anonimizado.invalid`, que a limpeza geral não
+// alcança de propósito (tests/apoio/limpeza.js); então apagam-se aqui, por id.
+const chamadosCriados = [];
+
 afterAll(async () => {
+  const client = await pool.connect();
+  try {
+    await apagarChamados(client, chamadosCriados);
+  } finally {
+    client.release();
+  }
   await pool.end();
 });
 
@@ -93,6 +105,7 @@ describe('POST /usuarios/:id/anonimizar', () => {
       });
     expect(chamado.status).toBe(201);
     const chamadoId = chamado.body.chamado.id;
+    chamadosCriados.push(chamadoId);
 
     await request(app).post(`/usuarios/${alvo.id}/anonimizar`).set(comoAdmin()).expect(200);
 
