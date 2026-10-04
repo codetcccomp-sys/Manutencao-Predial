@@ -14,9 +14,12 @@
  * abriu à mão no mesmo banco, e o e-mail de teste só existe nas contas que a
  * própria suíte registrou.
  *
- * Só apaga chamados e o que depende deles. As contas de teste ficam: são
- * referenciadas por equipes, avisos e tentativas de login, e não atrapalham
- * ninguém — ao contrário do teto da exportação.
+ * As contas de teste também saem (limparUsuariosDeTeste), e por um motivo
+ * mais traiçoeiro que o teto da exportação: o aviso de atraso vai para toda a
+ * gestão quando o chamado não tem técnico, então o custo de uma varredura
+ * cresce com o número de gestores no banco. Com ~12 mil contas de gestor
+ * acumuladas, cada teste da suíte de atrasos passou de 1 s para 4 s e dois
+ * estouraram os 5 s do Jest — falha intermitente, sem nada de errado no código.
  */
 
 const PADRAO_DE_TESTE = '%@exemplo.com';
@@ -101,4 +104,83 @@ async function limparChamadosDeTeste(client, { padrao = PADRAO_DE_TESTE, ambient
   );
 }
 
-module.exports = { limparChamadosDeTeste, apagarChamados, recusarSeNaoForBancoDeTeste, PADRAO_DE_TESTE };
+// O que aponta para a conta e some junto com ela: ruído que a própria conta
+// gerou (avisos, pedidos de recuperação de senha, vínculo com equipe). Tudo o
+// mais que aponte para `usuario` — chamado, comentário, anexo, histórico, e o
+// que vier a existir — PROTEGE a conta: ela é autora de algo que ficou.
+const DEPENDENTES_DESCARTAVEIS = ['notificacao', 'recuperacao_senha', 'equipe_tecnico'];
+
+// Descobertas no catálogo, como em tabelasDependentes: uma tabela nova que
+// aponte para o usuário passa a proteger a conta sozinha, em vez de fazer a
+// limpeza morrer numa violação de chave estrangeira ou, pior, apagar história.
+async function colunasQueApontamParaUsuario(client) {
+  const { rows } = await client.query(
+    `SELECT c.conrelid::regclass::text AS tabela, a.attname AS coluna
+       FROM pg_constraint c
+       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+      WHERE c.contype = 'f' AND c.confrelid = 'usuario'::regclass`
+  );
+  return rows;
+}
+
+// Contas de teste que NÃO são da suíte: o administrador que a ponta a ponta
+// semeia uma vez (database/semear-admin.js) e usa em toda rodada. Apagá-lo
+// quebraria o e2e no banco que os dois dividem, com uma mensagem que manda
+// semear de novo — um estrago pequeno, mas evitável.
+function contasSemeadas(ambiente = process.env) {
+  return [ambiente.E2E_ADMIN_EMAIL || 'admin_e2e@exemplo.com'].map((e) => e.toLowerCase());
+}
+
+/**
+ * Apaga as contas de teste que não deixaram nada para trás. Devolve quantas.
+ *
+ * Roda depois de limparChamadosDeTeste: só então a conta que abriu chamado
+ * deixa de ser referenciada por ele. Uma conta de teste que ainda é autora de
+ * algo (um comentário num chamado de outra pessoa, por exemplo) fica, e o
+ * mesmo vale para qualquer conta fora do padrão.
+ */
+async function limparUsuariosDeTeste(
+  client,
+  { padrao = PADRAO_DE_TESTE, ambiente = process.env, preservar = contasSemeadas(ambiente) } = {}
+) {
+  recusarSeNaoForBancoDeTeste(ambiente);
+
+  const referencias = await colunasQueApontamParaUsuario(client);
+  const protetoras = referencias.filter((r) => !DEPENDENTES_DESCARTAVEIS.includes(r.tabela));
+  const semAutoria = protetoras
+    .map((r) => `AND NOT EXISTS (SELECT 1 FROM ${r.tabela} WHERE "${r.coluna}" = u.id)`)
+    .join('\n          ');
+
+  await client.query('BEGIN');
+  try {
+    const { rows } = await client.query(
+      `SELECT u.id FROM usuario u
+        WHERE u.email LIKE $1
+          AND u.email <> ALL ($2::text[])
+          ${semAutoria}`,
+      [padrao, preservar]
+    );
+    const ids = rows.map((r) => r.id);
+
+    if (ids.length > 0) {
+      for (const r of referencias.filter((r) => DEPENDENTES_DESCARTAVEIS.includes(r.tabela))) {
+        await client.query(`DELETE FROM ${r.tabela} WHERE "${r.coluna}" = ANY($1::int[])`, [ids]);
+      }
+      await client.query('DELETE FROM usuario WHERE id = ANY($1::int[])', [ids]);
+    }
+    await client.query('COMMIT');
+    return ids.length;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  }
+}
+
+module.exports = {
+  limparChamadosDeTeste,
+  limparUsuariosDeTeste,
+  contasSemeadas,
+  apagarChamados,
+  recusarSeNaoForBancoDeTeste,
+  PADRAO_DE_TESTE,
+};
