@@ -366,6 +366,12 @@ Nesta ordem, porque cada passo depende do anterior:
    > direto no banco.
    >
    > A conta de teste pode continuar existindo; o que não pode é ser a única.
+   >
+   > **Situação em 04/10/2026:** o risco foi resolvido. O banco de produção tem
+   > três administradores ativos, todos com e-mail que a equipe recebe, e a
+   > conta de teste `admin@manutencaopredial.com` foi removida (não tinha
+   > chamado, histórico nem comentário). Em outro banco, a regra acima continua
+   > valendo.
 
 Confira antes de liberar: abrir um chamado de teste, triá-lo, atribuir,
 concluir e avaliar. Depois cancele-o ou deixe-o marcado — e **não apague**:
