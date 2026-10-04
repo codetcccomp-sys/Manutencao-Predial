@@ -1,0 +1,42 @@
+# Atualizações de dependência, abertas como PR para o CI julgar.
+#
+# Patch e minor andam juntos num PR por ecossistema por semana: o volume fica
+# revisável, e o CI (356+ testes no backend, 185 de tela, e2e) é quem diz se
+# quebrou. Versão maior sai separada, de propósito: é onde mora a mudança
+# incompatível, e merece ser lida sozinha.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'deps(backend)'
+    groups:
+      backend-minor-e-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'deps(frontend)'
+    groups:
+      frontend-minor-e-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci'
