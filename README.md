@@ -143,6 +143,24 @@ O que o código faz, e onde procurar:
   único, 15 pedidos por IP por hora e 100 envios por dia, com a mesma resposta
   para e-mail cadastrado ou não — a recusa não pode servir para descobrir quem
   tem conta.
+- **Cabeçalhos de segurança.** A API usa `helmet` (nosniff, HSTS,
+  frame-ancestors, sem `X-Powered-By`), e a interface sai com uma CSP estrita
+  em `frontend/vercel.json`: scripts, estilos, imagens e conexões só da própria
+  origem (mais `data:` e `blob:` nas imagens, para os anexos), sem
+  `'unsafe-inline'` — o React aplica estilo pelo CSSOM, que a política não
+  bloqueia. O `vite preview` serve os mesmos cabeçalhos, então o e2e
+  (`e2e/seguranca.spec.js`) roda com a política da produção e falha se o
+  navegador relatar qualquer violação. Se uma tela nova precisar de recurso de
+  fora (fonte, imagem, API), a CSP precisa ser aberta de propósito, naquele
+  arquivo; o teste acusa antes de chegar à produção.
+- **Dependências.** O `npm audit` (só o que vai para produção, severidade alta
+  ou crítica) roda em `.github/workflows/auditoria.yml` quando um
+  `package*.json` muda e uma vez por semana, e o Dependabot
+  (`.github/dependabot.yml`) abre PR de atualização: patch e minor agrupados por
+  semana, versão maior sozinha. O `bcrypt` 6 e o `nodemailer` 10 entraram assim
+  — o primeiro valida os hashes gravados pelo 5 (formato igual), e o segundo é
+  coberto por `tests/emailSmtp.test.js`, que envia por SMTP de verdade a um
+  servidor de mentira.
 - **Conexão com o banco por TLS verificado.** Em produção a aplicação não sobe
   sem o certificado da autoridade do Supabase, que já está em
   `backend/database/supabase-ca.crt` (`DB_CA_CERT` o substitui sem novo
@@ -316,6 +334,10 @@ migrações pelo mesmo `npm run migrate`, suíte), frontend (testes de component
 e build) e ponta a ponta (PostgreSQL, migrações, administrador semeado,
 Chromium e a suíte do Playwright). O relatório do Playwright fica guardado
 como artefato quando algo falha.
+
+`.github/workflows/auditoria.yml` é separado do CI de propósito: advisory novo
+aparece sem ninguém ter mexido no código, e dentro do `ci.yml` ele deixaria
+vermelha qualquer PR sem relação com a falha.
 
 ## Rotas
 
