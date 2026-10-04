@@ -172,6 +172,18 @@ Custa 15 segundos (13s contra 28s). Uma suíte que falha em uma execução a cad
 três ensina a ignorar falha vermelha, e aí ela deixa de servir para qualquer
 coisa. Se precisar da velocidade e souber do risco, `npm run test:paralelo`.
 
+**A suíte limpa depois de si.** Os testes abrem chamados de verdade, e num
+banco que vive entre as rodadas eles se acumulavam: o de desenvolvimento
+chegou a 20.169, acima do teto de 20.000 da exportação, e um teste de
+exportação passou a falhar sem que o código estivesse errado. Agora, ao fim
+da execução, um gancho (`tests/apoio/globalTeardown.js`) apaga os chamados
+abertos por contas `@exemplo.com` e o que depende deles. As contas ficam.
+
+A limpeza recusa rodar com `DATABASE_URL` ou `NODE_ENV=production` — é o
+caminho do banco real —, e deixa de fora de propósito as contas anonimizadas,
+cujo chamado o sistema promete preservar. Suíte que anonimiza uma conta apaga
+o que criou por id (`apagarChamados`, em `tests/apoio/limpeza.js`).
+
 ### Frontend: componentes
 
 ```bash
