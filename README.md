@@ -59,13 +59,30 @@ incômodo de ser feio.
 | Perfil | O que enxerga | O que faz |
 | --- | --- | --- |
 | `solicitante` | os chamados que abriu | abre chamado, anexa arquivo, avalia o atendimento concluído |
-| `tecnico` | os chamados designados a ele | muda estado, lança material consumido, anexa arquivo |
-| `gestor` | todos os chamados | tudo acima, mais triagem, atribuição, cadastros e relatórios |
-| `administrador` | todos os chamados | tudo acima, mais criação de usuários de qualquer perfil |
+| `tecnico` | os chamados designados a ele | inicia, espera material e conclui; lança material consumido; anexa arquivo. **Não cancela** (RN05) |
+| `gestor` | todos os chamados | tudo acima, mais triagem, priorização, atribuição, cancelamento, cadastros e relatórios |
+| `administrador` | todos os chamados | tudo acima, mais gestão de usuários (criar, mudar perfil, desativar, anonimizar) e a regra de priorização |
 
 O cadastro público cria sempre `solicitante`. Os demais perfis só são criados
 por um administrador autenticado — do contrário bastaria mandar
 `"perfil": "administrador"` no corpo do cadastro para escalar privilégio.
+
+### Quem sai da conta
+
+Desativar uma pessoa, trocar o perfil dela ou anonimizá-la são as saídas da
+conta, e têm as mesmas travas:
+
+- **ninguém faz isso na própria conta**, e o **último administrador ativo**
+  não sai;
+- **técnico com chamado em aberto não sai**: o servidor recusa com
+  `CHAMADOS_EM_ABERTO` (422) e diz quantos chamados reatribuir. A conta
+  deixaria de entrar e o chamado ficaria designado a ela — fora do filtro
+  "sem técnico" e fora da fila de qualquer pessoa, parado até estourar o prazo;
+- **conta anonimizada não volta**: não reativa, não muda de perfil e não é
+  anonimizada de novo. O procedimento e a razão estão em
+  [docs/lgpd.md](docs/lgpd.md).
+
+Reativar e renomear não são bloqueados.
 
 ## Fluxo do chamado
 
@@ -76,8 +93,11 @@ aberto → em_triagem → atribuido → em_andamento → concluido
              └──────── reabertura (até 48h) ──────────┘
 ```
 
-Qualquer estado (menos `concluido`) pode ir para `cancelado`, e cancelar um
-serviço já em execução exige justificativa. As transições
+Qualquer estado ainda em aberto pode ir para `cancelado`, mas **só a gestão
+cancela** (RN05): o técnico designado muda o estado do próprio trabalho, não
+decide que o serviço deixa de existir — isso tiraria o chamado da fila sem que
+quem distribui soubesse. Cancelar um serviço já em execução exige
+justificativa. As transições
 são validadas no servidor, não só na interface, e cada mudança grava uma
 linha em `historico_chamado`. O tempo parado em `aguardando_material` é
 acumulado à parte e descontado das métricas de atendimento: é espera por
@@ -104,6 +124,33 @@ ficaria desatualizado entre uma escrita e outra.
 Alterar um prazo vale para chamados abertos daí em diante; os já existentes
 mantêm o prazo com que nasceram, para que uma mudança de política não
 reescreva retroativamente o histórico de cumprimento.
+
+## Segurança
+
+O que o código faz, e onde procurar:
+
+- **A sessão obedece ao banco.** O token (JWT, 8 h por padrão) só prova quem
+  é a pessoa; a cada requisição o servidor confere a conta no banco. Desativar,
+  anonimizar ou trocar o perfil de alguém encerra a sessão na hora, em vez de
+  esperar o token vencer — antes disso a pessoa desligada continuava entrando
+  por até 8 horas. Erro do banco nessa checagem é 500, não 401: um 401 mandaria
+  todo mundo de volta ao login por uma falha que não é deles.
+- **Autorização no servidor.** Perfil e relação com o chamado são conferidos
+  na API; a tela esconder um botão é só cortesia (o cancelamento do técnico,
+  por exemplo, também é recusado se alguém chamar a rota à mão).
+- **Senhas** com bcrypt. **Login**: 5 falhas por e-mail ou 20 por IP em 15
+  minutos bloqueiam novas tentativas. **Recuperação de senha**: token de uso
+  único, 15 pedidos por IP por hora e 100 envios por dia, com a mesma resposta
+  para e-mail cadastrado ou não — a recusa não pode servir para descobrir quem
+  tem conta.
+- **Conexão com o banco por TLS verificado.** Em produção a aplicação não sobe
+  sem o certificado da autoridade do Supabase, que já está em
+  `backend/database/supabase-ca.crt` (`DB_CA_CERT` o substitui sem novo
+  deploy). A alternativa, `sslmode=require`, criptografa mas não confere quem
+  está do outro lado.
+- **Anexos** conferidos pelo conteúdo do arquivo, não pelo tipo declarado.
+- **Dados pessoais**: retenção, base legal e procedimento de remoção em
+  [docs/lgpd.md](docs/lgpd.md).
 
 ## Como rodar
 
@@ -161,7 +208,7 @@ Rodam contra um PostgreSQL de verdade, não contra mocks: o que está sendo
 verificado inclui transação, bloqueio de linha, restrição de chave e
 permissão — coisas que um mock de driver só simularia.
 
-As 23 suítes compartilham um banco só, então `npm test` já roda com
+As suítes do backend compartilham um banco só, então `npm test` já roda com
 `--runInBand`. Em paralelo elas disputam as mesmas tabelas e uma delas falha
 de vez em quando — mais ou menos uma execução em três, sempre uma suíte
 diferente. O flag era documentado aqui e o script não o usava: quem rodasse
@@ -251,32 +298,42 @@ como artefato quando algo falha.
 
 ## Rotas
 
-Todas exigem `Authorization: Bearer <token>`, exceto `/health`, `/health/db`,
-`/auth/registrar` e `/auth/login`.
+Exceto as indicadas como públicas, `/health`, `/health/db` e as de agendador,
+todas exigem `Authorization: Bearer <token>`.
 
 | Método | Rota | Quem |
 | --- | --- | --- |
 | `POST` | `/auth/registrar` | público (cria `solicitante`) |
 | `POST` | `/auth/login` | público (limitado por tentativa) |
-| `POST` | `/auth/recuperar-senha`, `/auth/redefinir-senha` | público (token de uso único, 60 min) |
-| `GET` | `/chamados?pagina=&limite=&estado=&categoria_id=&atrasados=` | autenticado, escopo conforme o perfil |
+| `POST` | `/auth/recuperar-senha`, `/auth/redefinir-senha` | público (token de uso único, 60 min; pedidos limitados por IP) |
+| `GET` | `/chamados?pagina=&limite=&estado=&situacao=&categoria_id=&atrasados=&sem_tecnico=&busca=&ordenar=` | autenticado, escopo conforme o perfil. `situacao` = `abertos` ou `encerrados`; `ordenar` = `recentes` ou `prazo`; `busca` casa protocolo ou título |
 | `POST` | `/chamados` | solicitante, gestor, administrador |
 | `GET` | `/chamados/:id` | quem tem acesso ao chamado |
+| `PATCH` | `/chamados/:id` | solicitante do chamado, até a atribuição (RN03); gestão, até o chamado encerrar |
 | `PATCH` | `/chamados/:id/atribuir` | gestor, administrador |
 | `PATCH` | `/chamados/:id/priorizacao` | gestor, administrador |
-| `PATCH` | `/chamados/:id/estado` | gestão ou técnico designado |
+| `PATCH` | `/chamados/:id/estado` | gestão ou técnico designado; **cancelar, só a gestão** (RN05) |
 | `PATCH` | `/chamados/:id/execucao` | gestão ou técnico designado |
 | `POST` | `/chamados/:id/reabertura` | solicitante do chamado ou gestão, em até 48h |
 | `POST` | `/chamados/:id/avaliacao` | solicitante, chamado concluído |
+| `GET POST` | `/chamados/:id/comentarios` | quem tem acesso ao chamado; em chamado encerrado, só leitura |
 | `GET POST DELETE` | `/chamados/:id/materiais` | gestão ou técnico designado (leitura: quem vê o chamado) |
 | `GET POST DELETE` | `/chamados/:id/anexos` | quem tem acesso ao chamado |
-| `GET` | `/notificacoes` | o próprio usuário |
+| `GET` | `/usuarios/me` | o próprio usuário |
+| `GET` | `/usuarios` | gestor, administrador |
+| `POST PATCH` | `/usuarios`, `/usuarios/:id` | administrador |
+| `POST` | `/usuarios/:id/anonimizar` | administrador (ver [docs/lgpd.md](docs/lgpd.md)) |
+| `GET PATCH` | `/notificacoes`, `/notificacoes/:id/lida` | o próprio usuário |
 | `GET POST PATCH` | `/locais`, `/categorias` | leitura autenticada, escrita para gestão |
 | `POST` | `/locais/importar` | gestor, administrador |
 | `GET POST PATCH` | `/equipes`, `/materiais` | leitura autenticada, escrita para gestão |
+| `POST DELETE` | `/equipes/:id/tecnicos`, `/equipes/:id/tecnicos/:usuarioId` | gestor, administrador |
 | `GET PATCH` | `/sla`, `/sla/:prioridade` | leitura autenticada, escrita para gestão |
-| `GET POST` | `/regras-priorizacao` | leitura da vigente autenticada, versão nova para administrador |
+| `GET` | `/regras-priorizacao/vigente` | qualquer autenticado: quem abre um chamado pode saber por qual critério ele será classificado |
+| `GET POST` | `/regras-priorizacao`, `/regras-priorizacao/simular` | gestor, administrador (o `POST /regras-priorizacao`, que publica versão nova, só o administrador) |
 | `GET` | `/relatorios/resumo`, `/desempenho`, `/tecnicos` | gestor, administrador |
+| `GET` | `/relatorios/exportar/chamados.csv`, `/relatorios/exportar/resumo.pdf` | gestor, administrador |
+| `POST GET` | `/tarefas/notificar-atrasos`, `/tarefas/atrasos-pendentes` | só o agendador, com `Authorization: Bearer <CRON_SECRET>` (ver Notificações) |
 
 `GET /health/db` executa uma consulta e devolve 503 quando o banco está
 inacessível — `/health` sozinho responde `ok` mesmo com o banco fora, o que
