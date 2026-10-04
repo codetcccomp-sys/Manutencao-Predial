@@ -280,11 +280,13 @@ Só administrador executa, e **ninguém executa na própria conta**: a ação n�
 tem desfazer e tira o acesso no mesmo instante, então exige um segundo par de
 olhos.
 
-**Técnico com chamado em aberto não é anonimizado.** A conta não entra mais,
-e o chamado ficaria designado a ninguém que possa agir — fora do filtro "sem
-técnico" e fora da fila de qualquer pessoa. O sistema recusa e diz quantos
-chamados estão pendentes; a gestão reatribui (com justificativa e histórico,
-como pede o RF05) e depois anonimiza.
+**Técnico com chamado em aberto não é anonimizado, nem desativado, nem muda
+de perfil.** A conta não entra mais, e o chamado ficaria designado a ninguém
+que possa agir — fora do filtro "sem técnico" e fora da fila de qualquer
+pessoa. O sistema recusa e diz quantos chamados estão pendentes; a gestão
+reatribui (com justificativa e histórico, como pede o RF05) e depois conclui
+a saída. A regra é a mesma nos três caminhos porque o estrago é o mesmo:
+chamado parado sem responsável. Reativar e renomear não são bloqueados.
 
 **A sessão aberta cai na hora.** Até a revisão de 24/09 o acesso dependia só
 do token, que vale 8 horas: a pessoa anonimizada continuava entrando até ele

@@ -203,6 +203,95 @@ describe('PATCH /usuarios/:id', () => {
   });
 });
 
+describe('Técnico com chamado em aberto não sai da fila sem reatribuição', () => {
+  // A conta desativada não entra mais, e o chamado continua designado a ela:
+  // fora do filtro "sem técnico" (que procura tecnico_id nulo) e fora da fila
+  // de qualquer pessoa. Parado em silêncio até estourar o prazo.
+  async function tecnicoComChamado() {
+    const tecnico = await criarUsuarioELogar('tecnico');
+    const { rows: local } = await pool.query('SELECT id FROM local LIMIT 1');
+    const { rows: categoria } = await pool.query('SELECT id FROM categoria LIMIT 1');
+    const { body } = await request(app)
+      .post('/chamados')
+      .set(comoAdmin())
+      .send({
+        titulo: 'Chamado com técnico que vai sair',
+        descricao: 'Designado a quem será desativado.',
+        categoria_id: categoria[0].id,
+        local_id: local[0].id,
+      });
+    await pool.query("UPDATE chamado SET tecnico_id = $1, estado = 'em_andamento' WHERE id = $2", [
+      tecnico.usuario.id,
+      body.chamado.id,
+    ]);
+    return { tecnico: tecnico.usuario, chamadoId: body.chamado.id };
+  }
+
+  const situacao = async (id) =>
+    (await pool.query('SELECT ativo, perfil FROM usuario WHERE id = $1', [id])).rows[0];
+
+  it('recusa desativar, e a conta segue como estava', async () => {
+    const { tecnico } = await tecnicoComChamado();
+
+    const resp = await request(app)
+      .patch(`/usuarios/${tecnico.id}`)
+      .set(comoAdmin())
+      .send({ ativo: false });
+
+    expect(resp.status).toBe(422);
+    expect(resp.body.erro.codigo).toBe('CHAMADOS_EM_ABERTO');
+    expect(resp.body.erro.mensagem).toMatch(/1 chamado em aberto/);
+    expect(await situacao(tecnico.id)).toEqual({ ativo: true, perfil: 'tecnico' });
+  });
+
+  it('recusa tirar o perfil de técnico: a fila some da tela dele do mesmo jeito', async () => {
+    const { tecnico } = await tecnicoComChamado();
+
+    const resp = await request(app)
+      .patch(`/usuarios/${tecnico.id}`)
+      .set(comoAdmin())
+      .send({ perfil: 'solicitante' });
+
+    expect(resp.status).toBe(422);
+    expect(resp.body.erro.codigo).toBe('CHAMADOS_EM_ABERTO');
+    expect((await situacao(tecnico.id)).perfil).toBe('tecnico');
+  });
+
+  it('depois de o chamado ser encerrado, desativa', async () => {
+    const { tecnico, chamadoId } = await tecnicoComChamado();
+    await pool.query("UPDATE chamado SET estado = 'cancelado' WHERE id = $1", [chamadoId]);
+
+    await request(app).patch(`/usuarios/${tecnico.id}`).set(comoAdmin()).send({ ativo: false }).expect(200);
+
+    expect((await situacao(tecnico.id)).ativo).toBe(false);
+  });
+
+  it('só conta o que está em aberto: técnico sem pendência desativa e muda de perfil', async () => {
+    const livre = await criarUsuarioELogar('tecnico');
+    await request(app)
+      .patch(`/usuarios/${livre.usuario.id}`)
+      .set(comoAdmin())
+      .send({ perfil: 'gestor' })
+      .expect(200);
+    await request(app)
+      .patch(`/usuarios/${livre.usuario.id}`)
+      .set(comoAdmin())
+      .send({ ativo: false })
+      .expect(200);
+  });
+
+  it('o bloqueio vale só para sair: renomear e reativar seguem livres', async () => {
+    const { tecnico } = await tecnicoComChamado();
+
+    await request(app)
+      .patch(`/usuarios/${tecnico.id}`)
+      .set(comoAdmin())
+      .send({ nome: 'Técnico Renomeado' })
+      .expect(200);
+    await request(app).patch(`/usuarios/${tecnico.id}`).set(comoAdmin()).send({ ativo: true }).expect(200);
+  });
+});
+
 describe('Nome sem espaço sobrando', () => {
   it('apara o nome no cadastro em vez de gravá-lo cru', async () => {
     const email = `apara_${Date.now()}@exemplo.com`;

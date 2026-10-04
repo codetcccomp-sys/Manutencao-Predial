@@ -49,6 +49,38 @@ async function contarAdministradoresAtivos(exceto) {
 }
 
 /**
+ * Técnico com chamado em aberto não sai da fila sem passar o trabalho adiante.
+ *
+ * Vale para tudo que o tira do trabalho: desativar, mudar de perfil e
+ * anonimizar. A conta que saiu não entra mais, e o chamado continuaria
+ * designado a ela: fora do filtro "sem técnico" (que procura `tecnico_id`
+ * nulo) e fora da fila de qualquer pessoa. Pararia calado até estourar o
+ * prazo.
+ *
+ * Recusar em vez de soltar os chamados automaticamente é deliberado: a
+ * reatribuição tem justificativa e histórico (RF05, RN05), e decidir para
+ * quem vai cada chamado é trabalho da gestão, não um efeito colateral.
+ *
+ * `acao` completa a frase "Reatribua antes de ...".
+ */
+async function garantirSemChamadosEmAberto(id, acao) {
+  const { rows } = await pool.query(
+    `SELECT count(*)::int AS total FROM chamado
+      WHERE tecnico_id = $1 AND estado NOT IN ('concluido', 'cancelado')`,
+    [id]
+  );
+  const n = rows[0].total;
+  if (n > 0) {
+    throw new AppError(
+      `Esta pessoa tem ${n} ${n === 1 ? 'chamado' : 'chamados'} em aberto. ` +
+        `Reatribua antes de ${acao}, para nenhum ficar parado sem responsável.`,
+      422,
+      'CHAMADOS_EM_ABERTO'
+    );
+  }
+}
+
+/**
  * Altera nome, perfil ou situação de um usuário.
  *
  * Duas travas, ambas contra o mesmo acidente — ficar sem quem administre:
@@ -90,6 +122,14 @@ async function atualizar(id, { nome, perfil, ativo }, autor) {
       422,
       'ULTIMO_ADMINISTRADOR'
     );
+  }
+
+  // Reativar e renomear não tiram ninguém da fila; desativar e trocar de
+  // perfil tiram. Sem `perfil` no corpo, ou com o mesmo, nada muda de lado.
+  if (ativo === false) {
+    await garantirSemChamadosEmAberto(alvo.id, 'desativar');
+  } else if (perfil !== undefined && perfil !== 'tecnico') {
+    await garantirSemChamadosEmAberto(alvo.id, 'mudar o perfil');
   }
 
   const campos = [];
@@ -159,29 +199,7 @@ async function anonimizar(id, autor) {
     );
   }
 
-  // Técnico com chamado em aberto não some sem antes passar o trabalho
-  // adiante. A conta anonimizada não entra mais no sistema, e o chamado
-  // continuaria designado a ela: fora do filtro "sem técnico" (que procura
-  // `tecnico_id` nulo) e fora da fila de qualquer pessoa. Pararia calado
-  // até estourar o prazo.
-  //
-  // Recusar em vez de soltar os chamados automaticamente é deliberado: a
-  // reatribuição tem justificativa e histórico (RF05, RN05), e decidir para
-  // quem vai cada chamado é trabalho da gestão, não um efeito colateral.
-  const { rows: pendentes } = await pool.query(
-    `SELECT count(*)::int AS total FROM chamado
-      WHERE tecnico_id = $1 AND estado NOT IN ('concluido', 'cancelado')`,
-    [id]
-  );
-  if (pendentes[0].total > 0) {
-    const n = pendentes[0].total;
-    throw new AppError(
-      `Esta pessoa tem ${n} ${n === 1 ? 'chamado' : 'chamados'} em aberto. ` +
-        'Reatribua antes de anonimizar, para nenhum ficar parado sem responsável.',
-      422,
-      'CHAMADOS_EM_ABERTO'
-    );
-  }
+  await garantirSemChamadosEmAberto(id, 'anonimizar');
 
   return transacao(async (client) => {
     // A anonimização vem PRIMEIRO na transação, e só acontece se a conta
