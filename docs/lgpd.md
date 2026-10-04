@@ -31,8 +31,8 @@ homologação**. Este documento a define.
 >    (a justificativa das duas já está escrita, com o teste de ponderação
 >    exigido no caso privado — falta marcar qual).
 > 2. O nome dessa instituição como controladora.
-> 3. Os nomes completos de Maria Clara e Felipe Sousa; os outros quatro
->    integrantes da equipe técnica já estão completos.
+> 3. O nome completo de Felipe Sousa; os outros cinco integrantes da equipe
+>    técnica já estão completos.
 >
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
 
@@ -253,14 +253,14 @@ o pedido hoje — ou seja, quem de fato consegue atendê-lo.
 | Integrante | Issamuel Amorim de Sousa Júnior |
 | Integrante | Pedro Henrique Ferreira da Silva |
 | Integrante | Francisco Osmano de Araújo Carvalho |
-| Integrante | Maria Clara 🔲 `sobrenome` |
+| Integrante | Maria Clara Araújo Sampaio |
 | Integrante | Felipe Sousa 🔲 `nome completo` |
 
-🔲 **Completar dois nomes.** Os da equipe vieram do bloco de aprovação do
-Termo de Abertura v1.2, onde aparecem sem sobrenome completo. Num documento
-de proteção de dados isso não identifica ninguém com segurança. Os nomes de
-quatro integrantes já estão completos; faltam o de Maria Clara e o de Felipe
-Sousa, que ficam como estão até alguém informá-los.
+🔲 **Completar um nome.** Os da equipe vieram do bloco de aprovação do Termo
+de Abertura v1.2, onde aparecem sem sobrenome completo. Num documento de
+proteção de dados isso não identifica ninguém com segurança. Os nomes de cinco
+integrantes já estão completos; falta o de Felipe Sousa, que fica como está
+até alguém informá-lo.
 
 ---
 
