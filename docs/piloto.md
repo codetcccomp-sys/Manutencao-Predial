@@ -364,8 +364,11 @@ histórico.
 
 A partir do primeiro cadastro real, o banco passa a guardar nome, e-mail e o
 histórico de quem pediu o quê e quando. O Termo (RNF01) pede que a política de
-retenção seja definida **antes da homologação**; até aqui ela não existe.
-Defina e escreva, mesmo que em uma página:
+retenção seja definida **antes da homologação**. Para este projeto ela está
+escrita em [lgpd.md](lgpd.md): chamados por 5 anos, contas de pessoas
+desligadas por 2, base legal em dois níveis e plano de incidente. O que segue
+é o que **a instituição do piloto** precisa confirmar ou trocar por política
+própria; escreva, mesmo que em uma página:
 
 | Pergunta | O que precisa estar decidido |
 | --- | --- |
@@ -376,10 +379,12 @@ Defina e escreva, mesmo que em uma página:
 | Quem é o contato | Uma pessoa com nome, para pedido de acesso ou exclusão |
 
 Ponto prático: **desativar uma pessoa não apaga o que ela escreveu**, e isso é
-proposital — o histórico do chamado é registro de manutenção. Se a política
-exigir remoção de dados pessoais, ela vai precisar ser um procedimento
-explícito (anonimizar o nome, manter o chamado), e hoje esse procedimento não
-existe no sistema. Decidir isso antes é bem mais barato do que depois.
+proposital — o histórico do chamado é registro de manutenção. Para o pedido de
+remoção de dados pessoais existe um procedimento à parte: o botão
+**Anonimizar** na tela de Usuários (só o administrador, e nunca na própria
+conta) troca nome e e-mail por marcas neutras e mantém o chamado. Não tem
+volta, e técnico com chamado em aberto precisa ser reatribuído antes. O passo a
+passo está em [lgpd.md](lgpd.md), seção 5.
 
 ---
 
@@ -478,8 +483,8 @@ Conhecidas, decididas, e melhor ditas no começo:
   acontece e dá erro; não cobre o caso em que ela simplesmente deixa de
   acontecer, que é por isso que a conferência do item 4 continua na rotina.
 - **Não há exclusão de nada**, por decisão: locais e equipes são desativados,
-  comentários e histórico não somem. Ver o item 2.5 sobre o que isso implica
-  para dado pessoal.
+  comentários e histórico não somem. Para dado pessoal, a saída é a
+  anonimização da conta (item 2.5), que preserva o chamado.
 - **A conclusão do §4.3 depende de um piloto que pode não acontecer.** É a
   limitação de maior peso da lista, e não é técnica: nenhuma linha de código
   produz a comparação entre antes e depois. Ela precisa de um prédio real,
