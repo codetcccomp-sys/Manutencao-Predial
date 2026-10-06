@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
-import { useEntrada } from '../animacao/useEntrada';
+import { useListaAnimada } from '../animacao/useListaAnimada';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import Aviso from '../components/ui/Aviso';
 import Botao from '../components/ui/Botao';
@@ -67,7 +67,7 @@ function MeusPedidos() {
   const [buscaAplicada, setBuscaAplicada] = useState('');
   const [carregando, setCarregando] = useState(true);
   const refLista = useRef(null);
-  useEntrada(refLista, [chamados, carregando]);
+  useListaAnimada(refLista, [chamados, carregando]);
   const [erro, setErro] = useState('');
 
   // Mesma espera do painel da gestão: uma consulta por tecla faria a lista

@@ -39,6 +39,13 @@ export function useEntrada(ref, dependencias = []) {
         ease: CURVA,
         stagger: { amount: Math.min(0.45, alvos.length * 0.06) },
         clearProps: 'opacity,transform,filter',
+        // Estado inicial na hora. Por padrão o GSAP pode ADIAR a primeira pintura de
+        // um from() para o próximo tick do ticker, conforme o estado dele (ver
+        // `lazy` em gsap-core.js). Num navegador isso cai antes do quadro e não se
+        // vê; mas deixa de ser verdade que "o item já está escondido quando o
+        // layout effect termina", e foi um teste que dependia disso que falhou no
+        // CI sem falhar localmente.
+        lazy: false,
       });
     }, raiz);
 

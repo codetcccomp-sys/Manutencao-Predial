@@ -78,6 +78,15 @@ test('com a CSP em vigor, as telas funcionam e o navegador não relata violaçã
   expect(await painel.evaluate((el) => el.style.length)).toBeGreaterThan(0);
   violacoes.push(...(await page.evaluate(() => window.__violacoes)));
 
+  // O painel de resumo vive num portal no body, com fundo desfocado
+  // (backdrop-filter) e animação de entrada: é mais uma superfície em que uma
+  // política estrita poderia bloquear algo sem ninguém perceber.
+  await page.goto('/');
+  await page.getByRole('button', { name: /ver resumo:/i }).first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Abrir chamado completo' })).toBeVisible();
+  violacoes.push(...(await page.evaluate(() => window.__violacoes)));
+
   expect(violacoes, `violações de CSP: ${JSON.stringify(violacoes)}`).toEqual([]);
   expect(erros).toEqual([]);
 });

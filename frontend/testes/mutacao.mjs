@@ -428,6 +428,35 @@ const MUTACOES = [
     motor: 'playwright',
     spec: 'e2e/animacao.spec.js',
   },
+  {
+    descricao: 'lista deixa de deslizar os cartões que continuam (FLIP)',
+    arquivo: 'src/animacao/useListaAnimada.js',
+    de: "return a && (Math.abs(a.x - n.x) > 1 || Math.abs(a.y - n.y) > 1);",
+    para: 'return false;',
+    spec: 'testes/listaAnimada.test.jsx',
+  },
+  {
+    descricao: 'o esqueleto de carregamento apaga o retrato anterior da lista',
+    arquivo: 'src/animacao/useListaAnimada.js',
+    de: "    if (itens.length === 0) return undefined;",
+    para: "    if (itens.length === 0) {\n      anteriores.current = new Map();\n      return undefined;\n    }",
+    spec: 'testes/listaAnimada.test.jsx',
+  },
+  {
+    descricao: 'painel de resumo deixa a página atrás rolar',
+    arquivo: 'src/components/chamados/PainelDeResumo.jsx',
+    de: "    document.body.style.overflow = 'hidden';",
+    para: '    document.body.style.overflow = anterior;',
+    spec: 'testes/PainelDeResumo.test.jsx',
+  },
+  {
+    descricao: 'painel de resumo deixa de ir para o body (portal vai para #root)',
+    arquivo: 'src/components/chamados/PainelDeResumo.jsx',
+    de: '    </div>,\n    document.body\n  );',
+    para: "    </div>,\n    document.getElementById('root')\n  );",
+    motor: 'playwright',
+    spec: 'e2e/animacao.spec.js',
+  },
 ];
 
 /**

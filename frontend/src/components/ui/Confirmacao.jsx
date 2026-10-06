@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef } from 'react';
+import { useId, useRef } from 'react';
 import Botao from './Botao';
+import { useJanelaModal } from './useJanelaModal';
 
 /**
  * Pergunta antes de fazer o que não tem volta.
@@ -37,71 +38,20 @@ function Confirmacao({
   const idTitulo = useId();
   const idDescricao = useId();
   const caixa = useRef(null);
-  const origemDoFoco = useRef(null);
 
-  // `onCancelar` numa ref, e não na lista de dependências.
-  //
-  // Quem chama passa uma seta criada na hora — `onCancelar={() => setX(null)}`
-  // —, então a função é outra a cada render. Com ela nas dependências, o efeito
-  // se refazia a cada render enquanto o diálogo estava aberto, e a limpeza
-  // rodava junto: o foco voltava para o botão ATRÁS do diálogo, fora de um
-  // `aria-modal`, sem ninguém ter fechado nada. Durante `carregando` o efeito
-  // nem reconquistava o foco, porque o botão de recusa está desabilitado e
-  // `.focus()` num elemento desabilitado não faz nada.
-  const cancelar = useRef(onCancelar);
-  cancelar.current = onCancelar;
-
-  // `carregando` também numa ref, pela mesma razão: o efeito que instala o
-  // Esc só se refaz quando `aberto` muda, e leria um `carregando` congelado.
-  //
-  // Enquanto a ação corre, recusar não é mais uma saída. O botão "Voltar" já
-  // ficava desabilitado nesse intervalo — de propósito —, mas o Esc e o clique
-  // fora do diálogo passavam por cima dele: o diálogo fechava, a pessoa
-  // entendia que tinha desistido, e o cancelamento que ela acabara de
-  // confirmar terminava de ser gravado mesmo assim.
-  const ocupado = useRef(carregando);
-  ocupado.current = carregando;
-
-  useEffect(() => {
-    if (!aberto) return undefined;
-
-    origemDoFoco.current = document.activeElement;
-    // O foco começa em "Voltar", não em "Confirmar": um Enter repetido por
-    // engano não deve executar o que não tem volta.
-    caixa.current?.querySelector('[data-recusa]')?.focus();
-
-    function aoTeclar(evento) {
-      if (evento.key === 'Escape') {
-        evento.preventDefault();
-        if (!ocupado.current) cancelar.current();
-        return;
-      }
-      if (evento.key !== 'Tab') return;
-
-      const focaveis = caixa.current?.querySelectorAll('button:not([disabled])');
-      if (!focaveis?.length) return;
-      const primeiro = focaveis[0];
-      const ultimo = focaveis[focaveis.length - 1];
-
-      // A armadilha de foco é só o ciclo entre o primeiro e o último: no meio
-      // da lista o Tab do navegador já faz a coisa certa.
-      if (evento.shiftKey && document.activeElement === primeiro) {
-        evento.preventDefault();
-        ultimo.focus();
-      } else if (!evento.shiftKey && document.activeElement === ultimo) {
-        evento.preventDefault();
-        primeiro.focus();
-      }
-    }
-
-    document.addEventListener('keydown', aoTeclar);
-    return () => {
-      document.removeEventListener('keydown', aoTeclar);
-      // Devolve o foco a quem abriu. O `focus` é condicional porque o botão de
-      // origem pode ter sumido junto com o item removido.
-      if (origemDoFoco.current?.isConnected) origemDoFoco.current.focus();
-    };
-  }, [aberto]);
+  // Foco, Esc e devolução do foco vivem em useJanelaModal, que o painel lateral
+  // também usa. O foco começa em "Voltar", não em "Confirmar": um Enter repetido
+  // por engano não deve executar o que não tem volta. Enquanto `carregando`, Esc
+  // e clique fora não fecham: a ação já corre, e o diálogo fechado diria à pessoa
+  // que ela desistiu de algo que terminará de ser gravado mesmo assim.
+  useJanelaModal({
+    aberto,
+    aoFechar: onCancelar,
+    bloqueado: carregando,
+    caixa,
+    focoInicial: '[data-recusa]',
+    focaveis: 'button:not([disabled])',
+  });
 
   if (!aberto) return null;
 
