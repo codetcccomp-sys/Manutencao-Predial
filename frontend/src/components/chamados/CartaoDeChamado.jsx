@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import Icone from '../ui/Icone';
+import PainelDeResumo from './PainelDeResumo';
 import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../ui/Badge';
 import { prazoEmPalavras } from '../../dominio/prazo';
 
@@ -18,12 +21,13 @@ import { prazoEmPalavras } from '../../dominio/prazo';
  */
 function CartaoDeChamado({ chamado, linhaExtra, mostrarPrazo = false }) {
   const prazo = mostrarPrazo ? prazoEmPalavras(chamado.prazo_estimado) : null;
+  const [resumoAberto, setResumoAberto] = useState(false);
 
   return (
-    <li className="min-w-0" data-anim>
+    <li className="flex min-w-0 items-stretch gap-2" data-flip={chamado.id}>
       <Link
         to={`/chamados/${chamado.id}`}
-        className="flex min-w-0 flex-col items-start gap-3 rounded-lg border border-borda bg-superficie p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-borda-forte hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+        className="flex min-w-0 flex-1 flex-col items-start gap-3 rounded-lg border border-borda bg-superficie p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-borda-forte hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
       >
         {/* No celular os selos descem para baixo do título. Lado a lado, numa
             tela de 390px, eles tomavam a largura e o título virava "Quadro…" —
@@ -52,6 +56,24 @@ function CartaoDeChamado({ chamado, linhaExtra, mostrarPrazo = false }) {
           <BadgeEstado estado={chamado.estado} />
         </div>
       </Link>
+
+      {/* Irmão do link, e não filho: um botão dentro de âncora é interativo dentro
+          de interativo, e o leitor de tela não sabe qual dos dois anunciar. */}
+      <button
+        type="button"
+        onClick={() => setResumoAberto(true)}
+        aria-label={`Ver resumo: ${chamado.titulo}`}
+        title="Ver resumo"
+        className="alvo-toque flex shrink-0 items-center rounded-lg border border-borda bg-superficie px-2.5 text-tinta-2 shadow-sm transition hover:border-borda-forte hover:text-navy active:scale-[0.98]"
+      >
+        <Icone nome="painel" classe="h-4 w-4" />
+      </button>
+
+      <PainelDeResumo
+        chamadoId={chamado.id}
+        aberto={resumoAberto}
+        aoFechar={() => setResumoAberto(false)}
+      />
     </li>
   );
 }

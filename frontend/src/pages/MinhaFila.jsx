@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../api/client';
-import { useEntrada } from '../animacao/useEntrada';
+import { useListaAnimada } from '../animacao/useListaAnimada';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import Aviso from '../components/ui/Aviso';
 import { EstadoVazio, Esqueleto, Regiao } from '../components/ui/Estados';
@@ -65,7 +65,7 @@ function MinhaFila() {
   const [chamados, setChamados] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const refLista = useRef(null);
-  useEntrada(refLista, [chamados, carregando]);
+  useListaAnimada(refLista, [chamados, carregando]);
   const [erro, setErro] = useState('');
 
   const carregar = useCallback(() => {

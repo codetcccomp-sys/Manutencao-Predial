@@ -113,12 +113,17 @@ export default {
           from: { opacity: '0', transform: 'translateY(-6px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'painel-in': {
+          from: { transform: 'translateX(100%)' },
+          to: { transform: 'translateX(0)' },
+        },
       },
       animation: {
         'pagina-in': 'pagina-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards',
         'fundo-in': 'fundo-in 0.2s ease-out backwards',
         'modal-in': 'modal-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) backwards',
         'aviso-in': 'aviso-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'painel-in': 'painel-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards',
       },
 
       // Altura mínima de alvo tocável (WCAG 2.5.8 pede 24px; 44px é o

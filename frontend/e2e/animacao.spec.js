@@ -11,9 +11,18 @@ import { montarCenario, entrar, conferirQueCabeNaTela } from './apoio.js';
  */
 
 let cenario;
+let atribuido;
 
 test.beforeAll(async () => {
   cenario = await montarCenario();
+  // O atribuído nasce primeiro: na lista (mais recente em cima) fica abaixo dos
+  // abertos, e filtrar por "Atribuído" o faz subir ao topo — é o movimento que o
+  // FLIP precisa mostrar.
+  // Título único por execução: o banco de teste acumula as rodadas anteriores (e o
+  // desktop roda antes do celular), e dois cartões com o mesmo título tornam a busca
+  // do botão ambígua.
+  atribuido = await cenario.abrirChamado({ titulo: `Atribuído da animação ${cenario.marca}` });
+  await cenario.atribuir(atribuido.id);
   // Quatro em aberto: o suficiente para a contagem passar por valores
   // intermediários e para a lista ter mais de um cartão em sequência.
   for (let i = 0; i < 4; i += 1) {
@@ -150,6 +159,122 @@ test.describe('com movimento', () => {
       await page.waitForTimeout(1500);
       await conferirQueCabeNaTela(page, expect);
     }
+  });
+});
+
+test.describe('Fase 2: lista que se reorganiza e painel de resumo', () => {
+  test.use({ reducedMotion: 'no-preference' });
+
+  test('ao filtrar, o cartão que continua desliza até o novo lugar', async ({ page }) => {
+    await entrar(page, cenario.pessoas.gestor);
+    await page.goto('/');
+    const cartao = page.locator(`li[data-flip="${atribuido.id}"]`);
+    await expect(cartao).toBeVisible();
+    await page.waitForTimeout(1200);
+
+    // Amostra o transform do cartão a cada quadro durante a troca do filtro. Uma
+    // amostra só pode pegar o começo, o fim ou nada, conforme a máquina.
+    await page.evaluate((id) => {
+      window.__deslocamentos = [];
+      const laco = () => {
+        const li = document.querySelector(`li[data-flip="${id}"]`);
+        if (li) {
+          const m = new DOMMatrixReadOnly(getComputedStyle(li).transform);
+          window.__deslocamentos.push(Math.round(m.m42));
+        }
+        requestAnimationFrame(laco);
+      };
+      requestAnimationFrame(laco);
+    }, atribuido.id);
+
+    await page.selectOption('#filtro-estado', 'atribuido');
+    await page.waitForTimeout(1800);
+
+    const amostras = await page.evaluate(() => window.__deslocamentos);
+    // Subiu na lista: o cartão ficou ACIMA de onde estava, então começa deslocado
+    // para baixo (valor positivo) e termina em zero. Um salto brusco não passaria
+    // por valores intermediários.
+    const positivos = amostras.filter((y) => y > 0);
+    expect(positivos.length, `amostras: ${JSON.stringify(amostras.slice(-40))}`).toBeGreaterThan(2);
+    expect(Math.max(...positivos)).toBeGreaterThan(Math.min(...positivos));
+    expect(amostras[amostras.length - 1]).toBe(0);
+  });
+
+  test('o painel de resumo desliza da direita, cobre a janela e mostra o chamado', async ({ page }) => {
+    await entrar(page, cenario.pessoas.gestor);
+    await page.goto('/');
+    const abrir = page.getByRole('button', { name: new RegExp(`ver resumo: ${atribuido.titulo}`, 'i') });
+    await abrir.click();
+
+    const painel = page.getByRole('dialog');
+    await expect(painel).toBeVisible();
+    await expect(painel.getByText(atribuido.titulo)).toBeVisible();
+    await expect(painel.getByText(/descrição do problema relatado/i)).toBeVisible();
+
+    // Entra deslocado e termina no lugar. `backwards` não deixa transform residual.
+    await expect
+      .poll(() => painel.evaluate((el) => getComputedStyle(el).transform), { timeout: 4000 })
+      .toBe('none');
+
+    // Está no body (portal), e o fundo cobre a janela inteira: um ancestral com
+    // transform (o cartão, durante o FLIP) prenderia o `fixed` e o painel nasceria
+    // do tamanho do cartão.
+    const geometria = await painel.evaluate((el) => {
+      const fundo = el.parentElement;
+      const r = fundo.getBoundingClientRect();
+      const a = el.getBoundingClientRect();
+      return {
+        noBody: fundo.parentElement === document.body,
+        fundo: [r.x, r.y, r.width, r.height],
+        janela: [0, 0, innerWidth, innerHeight],
+        painelDentro: a.right <= innerWidth + 1 && a.left >= -1,
+        rolagemTravada: document.body.style.overflow,
+      };
+    });
+    expect(geometria.noBody).toBe(true);
+    expect(geometria.fundo).toEqual(geometria.janela);
+    expect(geometria.painelDentro).toBe(true);
+    expect(geometria.rolagemTravada).toBe('hidden');
+  });
+
+  test('Esc fecha o painel e devolve o foco ao botão que o abriu', async ({ page }) => {
+    await entrar(page, cenario.pessoas.gestor);
+    await page.goto('/');
+    const abrir = page.getByRole('button', { name: new RegExp(`ver resumo: ${atribuido.titulo}`, 'i') });
+    await abrir.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Fechar resumo' })).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(abrir).toBeFocused();
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  });
+
+  test('"Abrir chamado completo" leva à tela do chamado', async ({ page }) => {
+    await entrar(page, cenario.pessoas.gestor);
+    await page.goto('/');
+    await page.getByRole('button', { name: new RegExp(`ver resumo: ${atribuido.titulo}`, 'i') }).click();
+    await page.getByRole('link', { name: 'Abrir chamado completo' }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/chamados/${atribuido.id}$`));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('o painel cabe na tela e a lista não transborda, no desktop e no celular', async ({ page }) => {
+    await entrar(page, cenario.pessoas.gestor);
+    await page.goto('/');
+    await page.waitForTimeout(1500);
+    await conferirQueCabeNaTela(page, expect);
+
+    await page.getByRole('button', { name: new RegExp(`ver resumo: ${atribuido.titulo}`, 'i') }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect
+      .poll(() => page.getByRole('dialog').evaluate((el) => getComputedStyle(el).transform), { timeout: 4000 })
+      .toBe('none');
+    const larguraDoPainel = await page.getByRole('dialog').evaluate((el) => el.getBoundingClientRect().width);
+    expect(larguraDoPainel).toBeLessThanOrEqual(page.viewportSize().width);
+    await expect(page.getByRole('link', { name: 'Abrir chamado completo' })).toBeVisible();
   });
 });
 

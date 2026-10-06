@@ -298,6 +298,21 @@ camadas, e a divisão é de propósito:
   mesma regra para ele: quem pediu menos movimento recebe o valor final na hora.
   Custa cerca de 30 kB comprimidos no pacote.
 
+Além da entrada em sequência, duas peças da Fase 2:
+
+- **`useListaAnimada`** (FLIP) faz o cartão que continua na lista deslizar do lugar
+  antigo para o novo ao filtrar, e o que chega entra em sequência. Os itens se
+  identificam por `data-flip="<id>"`, e as posições são medidas relativas ao
+  contêiner, para a rolagem da página não parecer movimento. O retrato anterior
+  **sobrevive ao esqueleto de carregamento**: toda troca de filtro nestas telas troca a
+  lista por um esqueleto, e sem isso todo item pareceria novo.
+- **`PainelDeResumo`** é o painel que desliza da direita (botão ao lado de cada cartão
+  de chamado) para espiar um chamado sem sair da lista. Usa `GET /chamados/:id`, a
+  mesma permissão da tela de detalhe, e vive num **portal no `body`**: o cartão leva
+  `transform` durante o FLIP, e um `transform` no ancestral prenderia o `position: fixed`
+  do painel ao cartão. Foco, Tab e Esc vêm de `useJanelaModal`, o mesmo do diálogo de
+  confirmação.
+
 Três cuidados que quem mexer aqui precisa manter:
 
 1. **`backwards`, nunca `both`/`forwards`, nas animações CSS.** O quadro final

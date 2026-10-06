@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useEntrada } from '../animacao/useEntrada';
+import { useListaAnimada } from '../animacao/useListaAnimada';
 import NumeroAnimado from '../animacao/NumeroAnimado';
 import CartaoDeChamado from '../components/chamados/CartaoDeChamado';
 import { ESTADOS, ORDEM_ESTADOS } from '../dominio/rotulos';
@@ -51,7 +52,7 @@ function Dashboard() {
   const refResumo = useRef(null);
   const refLista = useRef(null);
   useEntrada(refResumo, [Boolean(resumo)]);
-  useEntrada(refLista, [chamados, carregando]);
+  useListaAnimada(refLista, [chamados, carregando]);
 
   // Uma consulta por tecla afogaria o banco e faria a lista piscar a cada
   // letra; espera a digitação parar antes de perguntar.

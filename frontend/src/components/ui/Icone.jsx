@@ -27,6 +27,7 @@ const CAMINHOS = {
   local: <path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11zM12 12a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />,
   busca: <path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3" />,
   sino: <path d="M18 16V11a6 6 0 10-12 0v5l-2 3h16l-2-3zM10 22h4" />,
+  painel: <path d="M4 5h16v14H4V5zM14.5 5v14" />,
 };
 
 /**
