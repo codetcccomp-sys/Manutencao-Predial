@@ -66,7 +66,7 @@ export function useListaAnimada(ref, dependencias = []) {
         gsap.fromTo(
           no,
           { x: a.x - n.x, y: a.y - n.y },
-          { x: 0, y: 0, duration: 0.5, ease: CURVA, clearProps: 'transform' }
+          { x: 0, y: 0, duration: 0.5, ease: CURVA, clearProps: 'transform', lazy: false }
         );
       });
 
@@ -79,6 +79,7 @@ export function useListaAnimada(ref, dependencias = []) {
           ease: CURVA,
           stagger: { amount: Math.min(0.45, novos.length * 0.06) },
           clearProps: 'opacity,transform,filter',
+          lazy: false, // estado inicial na hora; ver o comentário em useEntrada
         });
       }
     }, raiz);
