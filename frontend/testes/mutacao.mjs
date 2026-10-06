@@ -120,14 +120,8 @@ const MUTACOES = [
     // partilhado, que é onde o cartão vive nas três telas por perfil.
     descricao: 'cartão de chamado deixa de encolher',
     arquivo: 'src/components/chamados/CartaoDeChamado.jsx',
-    de: `<li className="min-w-0">
-      <Link
-        to={\`/chamados/\${chamado.id}\`}
-        className="flex min-w-0 flex-col`,
-    para: `<li>
-      <Link
-        to={\`/chamados/\${chamado.id}\`}
-        className="flex flex-col`,
+    de: 'className="flex min-w-0 flex-1 flex-col items-start gap-3',
+    para: 'className="flex flex-1 flex-col items-start gap-3',
     motor: 'playwright',
     spec: 'e2e/layout.spec.js',
   },
@@ -323,28 +317,28 @@ const MUTACOES = [
   },
   {
     descricao: 'o foco do diálogo começa no botão que executa',
-    arquivo: 'src/components/ui/Confirmacao.jsx',
-    de: "    caixa.current?.querySelector('[data-recusa]')?.focus();",
+    arquivo: 'src/components/ui/useJanelaModal.js',
+    de: '    caixa.current?.querySelector(focoInicial)?.focus();',
     para: "    [...caixa.current.querySelectorAll('button')].at(-1)?.focus();",
     spec: 'testes/Confirmacao.test.jsx',
   },
   {
     descricao: 'o Tab volta a escapar do diálogo para a página atrás dele',
-    arquivo: 'src/components/ui/Confirmacao.jsx',
+    arquivo: 'src/components/ui/useJanelaModal.js',
     de: "      if (evento.key !== 'Tab') return;",
     para: '      return;',
     spec: 'testes/Confirmacao.test.jsx',
   },
   {
     descricao: 'Esc deixa de fechar o diálogo',
-    arquivo: 'src/components/ui/Confirmacao.jsx',
+    arquivo: 'src/components/ui/useJanelaModal.js',
     de: "      if (evento.key === 'Escape') {",
     para: '      if (false) {',
     spec: 'testes/Confirmacao.test.jsx',
   },
   {
     descricao: 'o foco não volta para o botão que abriu o diálogo',
-    arquivo: 'src/components/ui/Confirmacao.jsx',
+    arquivo: 'src/components/ui/useJanelaModal.js',
     de: '      if (origemDoFoco.current?.isConnected) origemDoFoco.current.focus();',
     para: '      /* sem devolver o foco */',
     spec: 'testes/Confirmacao.test.jsx',
@@ -379,9 +373,9 @@ const MUTACOES = [
   },
   {
     descricao: 'foco volta para trás do diálogo enquanto a ação corre',
-    arquivo: 'src/components/ui/Confirmacao.jsx',
+    arquivo: 'src/components/ui/useJanelaModal.js',
     de: '  }, [aberto]);',
-    para: '  }, [aberto, onCancelar]);',
+    para: '  }, [aberto, aoFechar]);',
     spec: 'testes/Confirmacao.test.jsx',
   },
   {
