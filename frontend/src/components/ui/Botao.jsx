@@ -34,7 +34,7 @@ const TAMANHOS = {
 
 const BASE =
   'alvo-toque inline-flex items-center justify-center gap-2 rounded font-medium ' +
-  'transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
+  'transition active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100';
 
 function Botao({
   variante = 'secundaria',

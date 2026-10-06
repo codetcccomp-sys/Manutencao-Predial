@@ -20,10 +20,10 @@ function CartaoDeChamado({ chamado, linhaExtra, mostrarPrazo = false }) {
   const prazo = mostrarPrazo ? prazoEmPalavras(chamado.prazo_estimado) : null;
 
   return (
-    <li className="min-w-0">
+    <li className="min-w-0" data-anim>
       <Link
         to={`/chamados/${chamado.id}`}
-        className="flex min-w-0 flex-col items-start gap-3 rounded-lg border border-borda bg-superficie p-4 shadow-sm transition hover:border-borda-forte sm:flex-row sm:items-center sm:justify-between"
+        className="flex min-w-0 flex-col items-start gap-3 rounded-lg border border-borda bg-superficie p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-borda-forte hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
       >
         {/* No celular os selos descem para baixo do título. Lado a lado, numa
             tela de 390px, eles tomavam a largura e o título virava "Quadro…" —

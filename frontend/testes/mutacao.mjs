@@ -391,6 +391,43 @@ const MUTACOES = [
     para: '                    id={`perfil-${u.id}`}',
     spec: 'testes/Usuarios.test.jsx',
   },
+  {
+    descricao: 'entrada animada deixa filter/transform residuais nos itens',
+    arquivo: 'src/animacao/useEntrada.js',
+    de: "clearProps: 'opacity,transform,filter',",
+    para: '',
+    spec: 'testes/animacao.test.jsx',
+  },
+  {
+    descricao: 'contagem deixa de formatar no padrão brasileiro',
+    arquivo: 'src/animacao/NumeroAnimado.jsx',
+    de: "Math.round(n).toLocaleString('pt-BR')",
+    para: 'String(Math.round(n))',
+    spec: 'testes/animacao.test.jsx',
+  },
+  {
+    descricao: 'sem matchMedia (jsdom) o sistema passa a tentar animar',
+    arquivo: 'src/animacao/movimento.js',
+    de: "if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;",
+    para: "if (typeof window === 'undefined') return true;",
+    spec: 'testes/animacao.test.jsx',
+  },
+  {
+    descricao: 'entrada de página deixa o frame final aplicado (fixed preso ao envoltório)',
+    arquivo: 'tailwind.config.js',
+    de: "'pagina-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards'",
+    para: "'pagina-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both'",
+    motor: 'playwright',
+    spec: 'e2e/animacao.spec.js',
+  },
+  {
+    descricao: 'barra do relatório perde a transição de largura',
+    arquivo: 'src/pages/Relatorios.jsx',
+    de: ' transition-[width] duration-700 ease-out',
+    para: '',
+    motor: 'playwright',
+    spec: 'e2e/animacao.spec.js',
+  },
 ];
 
 /**

@@ -27,7 +27,7 @@ function Aviso({ tipo = 'info', titulo, children, className = '' }) {
   return (
     <div
       role={definicao.papel}
-      className={`flex items-start gap-2 rounded p-3 text-sm ${definicao.cor} ${className}`}
+      className={`flex animate-aviso-in items-start gap-2 rounded p-3 text-sm ${definicao.cor} ${className}`}
     >
       {/* O ícone reforça o tipo para quem não distingue verde de vermelho —
           e o texto continua dizendo tudo sozinho. */}

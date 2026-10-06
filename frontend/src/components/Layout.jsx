@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
 import Marca from './ui/Marca';
@@ -36,6 +36,7 @@ function ItemDeMenu({ para, children }) {
 }
 
 function Layout() {
+  const localizacao = useLocation();
   const { usuario, logout } = useAuth();
   const podeVerRelatorios = ['administrador', 'gestor'].includes(usuario?.perfil);
   const ehAdministrador = usuario?.perfil === 'administrador';
@@ -103,7 +104,12 @@ function Layout() {
         — medida de leitura confortável é outra coisa que largura de tabela.
       */}
       <main id="conteudo" className="max-w-7xl mx-auto px-4 py-8">
-        <Outlet />
+        {/* A chave é o caminho: cada tela nova remonta o envoltório e a entrada
+            (de desfocado para nítido) roda de novo. Trocar só os filtros da
+            mesma tela não muda o caminho, então não pisca. */}
+        <div key={localizacao.pathname} className="animate-pagina-in">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

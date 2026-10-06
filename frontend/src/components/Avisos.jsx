@@ -151,7 +151,7 @@ function Avisos() {
       {aberto && posicao && (
         <div
           style={posicao}
-          className="fixed bg-white text-gray-800 rounded-lg shadow-lg z-20 overflow-hidden"
+          className="fixed bg-white text-gray-800 rounded-lg shadow-lg z-20 overflow-hidden animate-modal-in origin-top-right"
         >
           <div className="flex items-center justify-between px-4 py-2 border-b">
             <span className="font-medium text-navy text-sm">Avisos</span>

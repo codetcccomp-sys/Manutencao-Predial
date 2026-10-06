@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../api/client';
+import { useEntrada } from '../animacao/useEntrada';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import Aviso from '../components/ui/Aviso';
 import { EstadoVazio, Esqueleto, Regiao } from '../components/ui/Estados';
@@ -63,6 +64,8 @@ const LIMITE = 100;
 function MinhaFila() {
   const [chamados, setChamados] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const refLista = useRef(null);
+  useEntrada(refLista, [chamados, carregando]);
   const [erro, setErro] = useState('');
 
   const carregar = useCallback(() => {
@@ -105,7 +108,7 @@ function MinhaFila() {
 
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-      <Regiao carregando={carregando}>
+      <Regiao carregando={carregando} refRegiao={refLista}>
         {carregando && <Esqueleto linhas={4} altura="h-[5.5rem]" />}
 
         {!carregando && vazia && (
