@@ -11,6 +11,10 @@ import { montarCenario, entrar } from './apoio.js';
  * se o navegador relatar QUALQUER violação.
  */
 
+// Com animação ligada: é o GSAP escrevendo estilo (opacity, filter, transform) que
+// a CSP sem 'unsafe-inline' precisa deixar passar, e só o movimento real prova isso.
+test.use({ reducedMotion: 'no-preference' });
+
 let cenario;
 let chamado;
 

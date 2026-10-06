@@ -282,6 +282,37 @@ pega a maior parte das regressões de comportamento — o interceptor de sessão
 o nome do arquivo baixado, o contador do sino, a espera da busca, a janela da
 RN03. Um teste aqui roda por commit sem custo.
 
+### Animações
+
+O sistema anima a entrada das telas, os números dos indicadores, as barras dos
+relatórios, os modais, o painel de avisos e a lista de chamados. São duas
+camadas, e a divisão é de propósito:
+
+- **CSS** (`tailwind.config.js`, `animate-pagina-in`, `animate-modal-in`,
+  `animate-fundo-in`, `animate-aviso-in`) para o que é só entrar e sair. A regra
+  global de `prefers-reduced-motion` em `index.css` zera a duração de todas.
+- **GSAP** (`src/animacao/`) para o que CSS não faz bem: `NumeroAnimado` conta de
+  um valor ao outro, e `useEntrada` faz os elementos marcados com `data-anim`
+  entrarem em sequência, de desfocados para nítidos. O GSAP anima por JavaScript
+  e não obedece à regra do CSS, então `reduzMovimento()` (em `movimento.js`) é a
+  mesma regra para ele: quem pediu menos movimento recebe o valor final na hora.
+  Custa cerca de 30 kB comprimidos no pacote.
+
+Três cuidados que quem mexer aqui precisa manter:
+
+1. **`backwards`, nunca `both`/`forwards`, nas animações CSS.** O quadro final
+   ficaria aplicado depois do fim, e um `filter` ou `transform` residual cria um
+   bloco de contenção novo: o `position: fixed` do painel de avisos e dos modais
+   passaria a se ancorar no elemento animado em vez da janela. Pelo mesmo motivo
+   `useEntrada` usa `clearProps`.
+2. **Funciona com a CSP estrita.** O GSAP escreve estilo pelo CSSOM
+   (`elemento.style`), que a política sem `'unsafe-inline'` não bloqueia. O
+   `e2e/seguranca.spec.js` roda com animação ligada para provar isso.
+3. **Estado final sempre no primeiro quadro quando não há movimento.** Os testes de
+   componente (jsdom, sem `matchMedia`) e os 59 e2e de fluxo rodam assim, e por
+   isso não esperam relógio. `e2e/animacao.spec.js` é o que exercita o movimento de
+   verdade, nos dois tamanhos de tela.
+
 ### Frontend: ponta a ponta
 
 ```bash
@@ -293,7 +324,9 @@ Playwright contra a **build**, não contra o servidor de desenvolvimento: é a
 build que vai para produção, e testar o `vite dev` deixaria de fora tudo que
 só aparece depois do empacotamento. O `playwright.config.js` sobe o backend e
 o `vite preview` sozinho, e roda tudo em dois tamanhos de tela — computador e
-celular.
+celular. Por padrão roda com movimento reduzido (`reducedMotion: 'reduce'`), para
+a entrada animada de cada tela não somar meio segundo a cada navegação; as specs
+`animacao` e `seguranca` pedem movimento por conta própria.
 
 Esta camada existe por um motivo específico: **geometria**. Todos os defeitos
 de responsividade deste projeto — o cartão de chamado esticando a página, as

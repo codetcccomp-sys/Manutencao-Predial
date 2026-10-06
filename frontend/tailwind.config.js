@@ -92,6 +92,35 @@ export default {
         none: 'none',
       },
 
+      /**
+       * Movimento. Todas usam `backwards`, nunca `both`/`forwards`: o quadro final
+       * ficaria aplicado depois do fim, e um `filter` ou `transform` residual
+       * cria um bloco de contenção novo — `position: fixed` (o painel de avisos,
+       * os modais) passaria a se ancorar no elemento animado em vez da janela.
+       * A regra de prefers-reduced-motion em index.css zera a duração de todas.
+       */
+      keyframes: {
+        'pagina-in': {
+          from: { opacity: '0', transform: 'translateY(10px)', filter: 'blur(6px)' },
+          to: { opacity: '1', transform: 'translateY(0)', filter: 'blur(0)' },
+        },
+        'fundo-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'modal-in': {
+          from: { opacity: '0', transform: 'translateY(8px) scale(0.96)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'aviso-in': {
+          from: { opacity: '0', transform: 'translateY(-6px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'pagina-in': 'pagina-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'fundo-in': 'fundo-in 0.2s ease-out backwards',
+        'modal-in': 'modal-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'aviso-in': 'aviso-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards',
+      },
+
       // Altura mínima de alvo tocável (WCAG 2.5.8 pede 24px; 44px é o
       // confortável em campo, com luva).
       minHeight: {

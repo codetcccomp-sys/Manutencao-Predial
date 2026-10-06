@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useEntrada } from '../animacao/useEntrada';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import Aviso from '../components/ui/Aviso';
 import Botao from '../components/ui/Botao';
@@ -65,6 +66,8 @@ function MeusPedidos() {
   const [busca, setBusca] = useState('');
   const [buscaAplicada, setBuscaAplicada] = useState('');
   const [carregando, setCarregando] = useState(true);
+  const refLista = useRef(null);
+  useEntrada(refLista, [chamados, carregando]);
   const [erro, setErro] = useState('');
 
   // Mesma espera do painel da gestão: uma consulta por tecla faria a lista
@@ -185,7 +188,7 @@ function MeusPedidos() {
 
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-      <Regiao carregando={carregando}>
+      <Regiao carregando={carregando} refRegiao={refLista}>
         {carregando && <Esqueleto linhas={3} altura="h-[5.5rem]" />}
 
         {!carregando && visiveis.length === 0 && buscando && (

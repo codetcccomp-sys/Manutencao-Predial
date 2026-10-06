@@ -107,7 +107,7 @@ function Confirmacao({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-navy/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex animate-fundo-in items-end justify-center bg-navy/40 p-4 backdrop-blur-[2px] sm:items-center"
       // Clicar fora fecha, e fechar é "não" — mesma regra do Esc.
       onClick={(e) => {
         if (e.target === e.currentTarget && !carregando) onCancelar();
@@ -119,7 +119,7 @@ function Confirmacao({
         aria-modal="true"
         aria-labelledby={idTitulo}
         aria-describedby={idDescricao}
-        className="w-full max-w-md rounded-lg border border-borda bg-superficie p-6 shadow-md"
+        className="w-full max-w-md animate-modal-in rounded-lg border border-borda bg-superficie p-6 shadow-md"
       >
         <h2 id={idTitulo} className="font-bold text-navy">
           {titulo}

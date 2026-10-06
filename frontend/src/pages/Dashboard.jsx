@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useEntrada } from '../animacao/useEntrada';
+import NumeroAnimado from '../animacao/NumeroAnimado';
 import CartaoDeChamado from '../components/chamados/CartaoDeChamado';
 import { ESTADOS, ORDEM_ESTADOS } from '../dominio/rotulos';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
@@ -44,6 +46,12 @@ function Dashboard() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [resumo, setResumo] = useState(null);
+  // Os indicadores entram quando o resumo chega e a lista quando os chamados chegam:
+  // são duas requisições, e uma única animação reanimaria os indicadores a cada lista.
+  const refResumo = useRef(null);
+  const refLista = useRef(null);
+  useEntrada(refResumo, [Boolean(resumo)]);
+  useEntrada(refLista, [chamados, carregando]);
 
   // Uma consulta por tecla afogaria o banco e faria a lista piscar a cada
   // letra; espera a digitação parar antes de perguntar.
@@ -161,7 +169,7 @@ function Dashboard() {
       />
 
       {resumo && (
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <div ref={refResumo} className="mb-4 grid gap-3 sm:grid-cols-3">
           {[
             {
               chave: 'semDono',
@@ -200,7 +208,11 @@ function Dashboard() {
                     cartao.alerta ? 'text-erro' : 'text-navy'
                   }`}
                 >
-                  {cartao.valor ?? '—'}
+                  {typeof cartao.valor === 'number' ? (
+                  <NumeroAnimado valor={cartao.valor} />
+                ) : (
+                  (cartao.valor ?? '—')
+                )}
                 </span>
                 <span className="text-xs text-tinta-2">{cartao.ajuda}</span>
               </>
@@ -212,6 +224,7 @@ function Dashboard() {
             return clicavel ? (
               <button
                 key={cartao.chave}
+                data-anim
                 type="button"
                 onClick={() => focar(cartao.ativo ? null : cartao.chave)}
                 aria-pressed={cartao.ativo}
@@ -222,7 +235,7 @@ function Dashboard() {
                 {conteudo}
               </button>
             ) : (
-              <div key={cartao.chave} className={`${base} border-borda`}>
+              <div key={cartao.chave} data-anim className={`${base} border-borda`}>
                 {conteudo}
               </div>
             );
@@ -295,7 +308,7 @@ function Dashboard() {
         </Aviso>
       )}
 
-      <Regiao carregando={carregando}>
+      <Regiao carregando={carregando} refRegiao={refLista}>
         {/* O esqueleto tem a forma dos cartões que vão chegar: "Carregando..."
             não dizia se vinha uma linha ou vinte, e a tela saltava quando o
             conteúdo entrava. */}

@@ -62,9 +62,9 @@ export function Esqueleto({ linhas = 3, altura = 'h-20', className = '' }) {
  * para leitor de tela é o que anuncia o carregamento, já que o esqueleto é
  * puramente visual.
  */
-export function Regiao({ carregando, rotuloCarregando = 'Carregando...', children }) {
+export function Regiao({ carregando, rotuloCarregando = 'Carregando...', children, refRegiao }) {
   return (
-    <div aria-busy={carregando || undefined}>
+    <div ref={refRegiao} aria-busy={carregando || undefined}>
       {carregando && <p className="sr-only">{rotuloCarregando}</p>}
       {children}
     </div>

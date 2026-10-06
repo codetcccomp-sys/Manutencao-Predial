@@ -34,6 +34,12 @@ export default defineConfig({
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM }
       : undefined,
+    // Movimento reduzido por padrão. O Playwright espera o elemento parar de se
+    // mover antes de clicar, então a entrada animada de cada tela somaria meio
+    // segundo a cada navegação dos 59 testes — e o que as suítes de fluxo e de
+    // layout verificam não depende de animação. As specs que testam o movimento
+    // (animacao e seguranca) pedem `no-preference` por conta própria.
+    reducedMotion: 'reduce',
     // Rastro só do que falhou: guardar tudo encheria o artefato do CI sem
     // ninguém abrir.
     trace: 'retain-on-failure',

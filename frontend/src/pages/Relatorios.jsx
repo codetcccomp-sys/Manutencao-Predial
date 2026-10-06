@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import api, { baixarArquivo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useEntrada } from '../animacao/useEntrada';
+import NumeroAnimado from '../animacao/NumeroAnimado';
+import { reduzMovimento } from '../animacao/movimento';
 import { rotuloEstado, rotuloPrioridade } from '../dominio/rotulos';
 import Tabela from '../components/ui/Tabela';
 import Aviso from '../components/ui/Aviso';
@@ -18,15 +21,28 @@ function formatarDuracao(segundos) {
 
 function Cartao({ rotulo, valor, destaque }) {
   return (
-    <div className="bg-superficie rounded-lg border border-borda shadow-sm p-4">
+    <div data-anim className="bg-superficie rounded-lg border border-borda shadow-sm p-4">
       <p className="text-xs uppercase tracking-wide text-tinta-2">{rotulo}</p>
-      <p className={`text-2xl font-bold ${destaque || 'text-navy'}`}>{valor}</p>
+      <p className={`text-2xl font-bold ${destaque || 'text-navy'}`}>
+        {typeof valor === 'number' ? <NumeroAnimado valor={valor} /> : valor}
+      </p>
     </div>
   );
 }
 
 function Barra({ rotulo, valor, total }) {
   const porcento = total > 0 ? Math.round((valor / total) * 100) : 0;
+
+  // A barra nasce vazia e cresce até o valor: a largura muda por transição de CSS
+  // (e a regra de prefers-reduced-motion a torna instantânea). `requestAnimationFrame`
+  // garante um quadro pintado com 0% antes de mudar — sem ele o navegador junta os
+  // dois estilos e a transição nunca acontece. Sem `matchMedia` (jsdom) vai direto.
+  const [largura, setLargura] = useState(() => (reduzMovimento() ? porcento : 0));
+  useEffect(() => {
+    const quadro = requestAnimationFrame(() => setLargura(porcento));
+    return () => cancelAnimationFrame(quadro);
+  }, [porcento]);
+
   return (
     <div className="grid gap-1">
       <div className="flex justify-between text-sm">
@@ -36,7 +52,10 @@ function Barra({ rotulo, valor, total }) {
         </span>
       </div>
       <div className="h-2 bg-neutro-tenue rounded overflow-hidden">
-        <div className="h-full bg-navy rounded" style={{ width: `${porcento}%` }} />
+        <div
+          className="h-full bg-navy rounded transition-[width] duration-700 ease-out"
+          style={{ width: `${largura}%` }}
+        />
       </div>
     </div>
   );
@@ -50,6 +69,8 @@ function Relatorios() {
   const [ate, setAte] = useState('');
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const refPagina = useRef(null);
+  useEntrada(refPagina, [dados]);
   const [erro, setErro] = useState('');
   const [baixando, setBaixando] = useState('');
 
@@ -115,7 +136,7 @@ function Relatorios() {
   if (!podeVer) return <Navigate to="/" replace />;
 
   return (
-    <div className="grid gap-6">
+    <div ref={refPagina} className="grid gap-6">
       <CabecalhoDePagina
         titulo="Relatórios"
         descricao="Os recortes respeitam o período selecionado — inclusive as exportações."
