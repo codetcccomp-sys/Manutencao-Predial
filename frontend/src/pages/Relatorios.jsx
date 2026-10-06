@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEntrada } from '../animacao/useEntrada';
 import NumeroAnimado from '../animacao/NumeroAnimado';
 import { reduzMovimento } from '../animacao/movimento';
+import GraficoDeLinhas from '../components/ui/GraficoDeLinhas';
 import { rotuloEstado, rotuloPrioridade } from '../dominio/rotulos';
 import Tabela from '../components/ui/Tabela';
 import Aviso from '../components/ui/Aviso';
@@ -61,6 +62,13 @@ function Barra({ rotulo, valor, total }) {
   );
 }
 
+// Fora do componente: é a identidade do array que o gráfico usa para saber se
+// precisa recalcular a escala.
+const SERIES_POR_DIA = [
+  { chave: 'abertos', rotulo: 'Abertos', cor: 'navy' },
+  { chave: 'concluidos', rotulo: 'Concluídos', cor: 'sucesso' },
+];
+
 function Relatorios() {
   const { usuario } = useAuth();
   const podeVer = ['administrador', 'gestor'].includes(usuario.perfil);
@@ -68,6 +76,10 @@ function Relatorios() {
   const [de, setDe] = useState('');
   const [ate, setAte] = useState('');
   const [dados, setDados] = useState(null);
+  // A série tem carga e falha próprias: um erro no gráfico não derruba os relatórios
+  // que já chegaram, e um relatório lento não segura o gráfico.
+  const [serie, setSerie] = useState(null);
+  const [erroSerie, setErroSerie] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const refPagina = useRef(null);
   useEntrada(refPagina, [dados]);
@@ -78,6 +90,15 @@ function Relatorios() {
     setCarregando(true);
     setErro('');
     const params = { ...(de ? { de } : {}), ...(ate ? { ate } : {}) };
+
+    setErroSerie(false);
+    api
+      .get('/relatorios/serie', { params })
+      .then(({ data }) => setSerie(data))
+      .catch(() => {
+        setSerie(null);
+        setErroSerie(true);
+      });
 
     Promise.all([
       api.get('/relatorios/resumo', { params }),
@@ -217,6 +238,35 @@ function Relatorios() {
               destaque="text-sucesso"
             />
             <Cartao rotulo="Cancelados" valor={dados.resumo.totais.cancelados} />
+          </div>
+
+          <div
+            data-anim
+            className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid min-w-0 gap-3"
+          >
+            <div>
+              <h2 className="font-medium text-navy">Chamados por dia</h2>
+              <p className="text-xs text-tinta-2 mt-0.5">
+                Abertos no período e, entre eles, os concluídos — contados no dia em que terminaram.
+              </p>
+            </div>
+
+            {erroSerie && <Aviso tipo="atencao">Não foi possível carregar o gráfico por dia.</Aviso>}
+            {!erroSerie && !serie && <p className="text-sm text-tinta-2">Carregando o gráfico...</p>}
+            {serie && (
+              <>
+                <GraficoDeLinhas
+                  dias={serie.dias}
+                  series={SERIES_POR_DIA}
+                  titulo="Chamados abertos e concluídos por dia"
+                />
+                {serie.truncado && (
+                  <p className="text-xs text-tinta-2">
+                    O período é maior que um ano: o gráfico mostra os últimos {serie.dias.length} dias.
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">

@@ -457,6 +457,35 @@ const MUTACOES = [
     motor: 'playwright',
     spec: 'e2e/animacao.spec.js',
   },
+  {
+    descricao: 'gráfico ignora a margem do eixo ao achar o dia sob o mouse',
+    arquivo: 'src/components/ui/GraficoDeLinhas.jsx',
+    de: 'evento.clientX - medidas.left - MARGEM.esquerda',
+    para: 'evento.clientX - medidas.left',
+    spec: 'testes/GraficoDeLinhas.test.jsx',
+  },
+  {
+    descricao: 'gráfico deixa de revelar a linha da esquerda para a direita',
+    arquivo: 'src/components/ui/GraficoDeLinhas.jsx',
+    de: 'if (!retangulo || reduzMovimento() || n === 0) return undefined;',
+    para: 'return undefined;',
+    spec: 'testes/GraficoDeLinhas.test.jsx',
+  },
+  {
+    descricao: 'escala vertical deixa de cobrir o maior valor (arredonda para baixo)',
+    arquivo: 'src/components/ui/GraficoDeLinhas.jsx',
+    de: 'const topo = Math.ceil(alvo / passo) * passo;',
+    para: 'const topo = Math.floor(alvo / passo) * passo;',
+    spec: 'testes/GraficoDeLinhas.test.jsx',
+  },
+  {
+    descricao: 'gráfico perde o min-w-0 e alarga a página inteira no celular',
+    arquivo: 'src/components/ui/GraficoDeLinhas.jsx',
+    de: 'className="relative min-w-0 touch-pan-y select-none rounded"',
+    para: 'className="relative touch-pan-y select-none rounded"',
+    motor: 'playwright',
+    spec: 'e2e/animacao.spec.js',
+  },
 ];
 
 /**

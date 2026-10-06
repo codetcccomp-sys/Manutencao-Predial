@@ -278,6 +278,152 @@ test.describe('Fase 2: lista que se reorganiza e painel de resumo', () => {
   });
 });
 
+test.describe('Fase 3: gráfico de chamados por dia', () => {
+  test.use({ reducedMotion: 'no-preference' });
+
+  const FUSO = 'America/Sao_Paulo';
+  const diaNoFuso = (deslocamento = 0) => {
+    const d = new Date(Date.now() + deslocamento * 86_400_000);
+    return d.toLocaleDateString('en-CA', { timeZone: FUSO });
+  };
+
+  let periodo;
+  let esperado;
+
+  test.beforeAll(async () => {
+    // Um chamado concluído hoje: sem ele a série "concluídos" seria zero e o teste
+    // não distinguiria a linha certa de uma linha chapada.
+    const concluido = await cenario.abrirChamado({ titulo: `Concluído da série ${cenario.marca}` });
+    await cenario.atribuir(concluido.id);
+    await cenario.concluir(concluido.id);
+
+    periodo = { de: diaNoFuso(-3), ate: diaNoFuso(0) };
+    const { corpo } = await cenario.pessoas.gestor.get(
+      `/relatorios/serie?de=${periodo.de}&ate=${periodo.ate}`
+    );
+    esperado = corpo;
+  });
+
+  async function abrirRelatorioNoPeriodo(page) {
+    await entrar(page, cenario.pessoas.gestor);
+    await page.goto('/relatorios');
+    const datas = page.locator('input[type="date"]');
+    await datas.nth(0).fill(periodo.de);
+    await datas.nth(1).fill(periodo.ate);
+    const grupo = page.getByRole('group', { name: /chamados abertos e concluídos por dia/i });
+    await expect(grupo).toBeVisible();
+    // No celular o gráfico fica abaixo da dobra: `mouse.move` para fora da janela não
+    // gera evento nenhum, e o teste falharia por posição, não por defeito.
+    await grupo.scrollIntoViewIfNeeded();
+    return grupo;
+  }
+
+  test('o gráfico revela a linha da esquerda para a direita', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__revelacao = [];
+      const laco = () => {
+        const r = document.querySelector('clipPath rect');
+        if (r) window.__revelacao.push(Number(r.getAttribute('width')));
+        requestAnimationFrame(laco);
+      };
+      requestAnimationFrame(laco);
+    });
+    const grupo = await abrirRelatorioNoPeriodo(page);
+    await page.waitForTimeout(1600);
+
+    const larguras = await page.evaluate(() => window.__revelacao);
+    const final = larguras[larguras.length - 1];
+    // Termina EXATAMENTE na largura do gráfico. "Maior que 200" deixou passar um
+    // defeito em que a revelação parava na metade (alvo capturado antes da medição).
+    const larguraDoSvg = Number(await grupo.locator('svg').getAttribute('width'));
+    expect(larguraDoSvg).toBeGreaterThan(200);
+    expect(final).toBe(larguraDoSvg);
+    // Passa por larguras intermediárias, e termina na inteira.
+    expect(larguras.some((w) => w > 0 && w < final * 0.9)).toBe(true);
+    expect(Math.min(...larguras)).toBeLessThan(final * 0.5);
+    await expect(grupo.locator('svg')).toBeVisible();
+  });
+
+  test('o dia sob o mouse mostra os mesmos números que a API', async ({ page }) => {
+    const grupo = await abrirRelatorioNoPeriodo(page);
+    await page.waitForTimeout(1500);
+
+    const caixa = await grupo.boundingBox();
+    // A borda direita da área útil é o último dia do período (hoje).
+    await page.mouse.move(caixa.x + caixa.width - 14, caixa.y + caixa.height / 2);
+
+    const ultimo = esperado.dias[esperado.dias.length - 1];
+    const dica = page.locator('[data-dica]');
+    await expect(dica).toBeVisible();
+    await expect(dica).toContainText(new RegExp(`Abertos:\\s*${ultimo.abertos}`));
+    await expect(dica).toContainText(new RegExp(`Concluídos:\\s*${ultimo.concluidos}`));
+    // Hoje há pelo menos um concluído e vários abertos: o teste não passa por zeros.
+    expect(ultimo.abertos).toBeGreaterThan(0);
+    expect(ultimo.concluidos).toBeGreaterThan(0);
+
+    await page.mouse.move(caixa.x - 40, caixa.y - 40);
+    await expect(dica).toHaveCount(0);
+  });
+
+  test('pelo teclado, as setas percorrem os dias e o leitor de tela é avisado', async ({ page }) => {
+    const grupo = await abrirRelatorioNoPeriodo(page);
+    await grupo.focus();
+
+    await page.keyboard.press('End');
+    const ultimo = esperado.dias[esperado.dias.length - 1];
+    const anterior = esperado.dias[esperado.dias.length - 2];
+    await expect(grupo.getByRole('status')).toContainText(`${ultimo.abertos} abertos, ${ultimo.concluidos} concluídos`);
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(grupo.getByRole('status')).toContainText(`${anterior.abertos} abertos, ${anterior.concluidos} concluídos`);
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-dica]')).toHaveCount(0);
+  });
+
+  test('o gráfico cabe na tela, no desktop e no celular, e a dica não sai dela', async ({ page }) => {
+    const grupo = await abrirRelatorioNoPeriodo(page);
+    await page.waitForTimeout(1500);
+    await conferirQueCabeNaTela(page, expect);
+
+    const caixa = await grupo.boundingBox();
+    expect(caixa.width).toBeLessThanOrEqual(page.viewportSize().width);
+
+    // Dica no extremo direito: abre para a esquerda do ponto e continua visível.
+    await page.mouse.move(caixa.x + caixa.width - 14, caixa.y + caixa.height / 2);
+    const dica = page.locator('[data-dica]');
+    await expect(dica).toBeVisible();
+    const d = await dica.boundingBox();
+    expect(d.x).toBeGreaterThanOrEqual(0);
+    expect(d.x + d.width).toBeLessThanOrEqual(page.viewportSize().width + 1);
+  });
+});
+
+test.describe('Fase 3 com movimento reduzido', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('o gráfico aparece inteiro, sem revelação', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__revelacao = [];
+      const laco = () => {
+        const r = document.querySelector('clipPath rect');
+        if (r) window.__revelacao.push(Number(r.getAttribute('width')));
+        requestAnimationFrame(laco);
+      };
+      requestAnimationFrame(laco);
+    });
+    await entrar(page, cenario.pessoas.gestor);
+    await page.goto('/relatorios');
+    await expect(page.getByRole('group', { name: /por dia/i })).toBeVisible();
+    await page.waitForTimeout(600);
+
+    const larguras = await page.evaluate(() => window.__revelacao);
+    expect(larguras.length).toBeGreaterThan(0);
+    // Todas as amostras já estão na largura final: nunca houve quadro parcial.
+    expect(new Set(larguras).size).toBe(1);
+  });
+});
+
 test.describe('com movimento reduzido', () => {
   test.use({ reducedMotion: 'reduce' });
 
