@@ -313,6 +313,18 @@ Além da entrada em sequência, duas peças da Fase 2:
   do painel ao cartão. Foco, Tab e Esc vêm de `useJanelaModal`, o mesmo do diálogo de
   confirmação.
 
+A Fase 3 acrescenta o **gráfico de chamados por dia** nos relatórios
+(`GraficoDeLinhas`, SVG puro, sem biblioteca de gráficos): a linha é revelada da
+esquerda para a direita por um recorte que cresce, a dica segue o mouse e o toque, e
+as setas percorrem os dias pelo teclado com a leitura numa região `aria-live`. Os
+números vêm de `GET /relatorios/serie`, que conta o dia no fuso da instituição (um
+chamado aberto às 22h em Brasília nasce às 01h em UTC, e contá-lo no dia seguinte
+faria o gráfico discordar de quem o abriu) e no mesmo recorte do resto do relatório.
+Um **quadro kanban com arrastar** ficou de fora de propósito: quase toda transição
+de estado exige dado que um "soltar" não traz (justificativa, técnico, serviço
+realizado) e tem regras (RN05, reabertura), então virar arrastar-e-soltar seria
+uma funcionalidade nova, com um fluxo de confirmação por transição, e não um efeito.
+
 Três cuidados que quem mexer aqui precisa manter:
 
 1. **`backwards`, nunca `both`/`forwards`, nas animações CSS.** O quadro final
@@ -423,6 +435,7 @@ todas exigem `Authorization: Bearer <token>`.
 | `GET` | `/regras-priorizacao/vigente` | qualquer autenticado: quem abre um chamado pode saber por qual critério ele será classificado |
 | `GET POST` | `/regras-priorizacao`, `/regras-priorizacao/simular` | gestor, administrador (o `POST /regras-priorizacao`, que publica versão nova, só o administrador) |
 | `GET` | `/relatorios/resumo`, `/desempenho`, `/tecnicos` | gestor, administrador |
+| `GET` | `/relatorios/serie?de=&ate=` | gestor, administrador. Abertos e concluídos por dia, no fuso da instituição; um ponto por dia (zero nos dias vazios), no máximo 366, com `truncado: true` quando corta |
 | `GET` | `/relatorios/exportar/chamados.csv`, `/relatorios/exportar/resumo.pdf` | gestor, administrador |
 | `POST GET` | `/tarefas/notificar-atrasos`, `/tarefas/atrasos-pendentes` | só o agendador, com `Authorization: Bearer <CRON_SECRET>` (ver Notificações) |
 

@@ -10,6 +10,7 @@ router.use(authenticate, authorize('administrador', 'gestor'));
 
 router.get('/resumo', relatoriosController.resumo);
 router.get('/desempenho', relatoriosController.desempenho);
+router.get('/serie', relatoriosController.serie);
 router.get('/tecnicos', relatoriosController.porTecnico);
 
 // RF10: exportação. Dois formatos porque servem a coisas diferentes — o PDF

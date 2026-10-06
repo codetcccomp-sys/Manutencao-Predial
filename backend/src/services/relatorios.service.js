@@ -133,6 +133,89 @@ async function resumo(filtros = {}) {
   };
 }
 
+// O dia de um chamado é o dia NO FUSO DA INSTITUIÇÃO, não o do servidor (UTC). Um
+// chamado aberto às 22h de segunda em Brasília nasce às 01h de terça em UTC, e
+// contá-lo na terça faria o gráfico discordar de quem abriu o chamado — justamente
+// as noites, que é quando a manutenção predial menos tem gente para conferir.
+const FUSO = process.env.FUSO_HORARIO || 'America/Sao_Paulo';
+
+// Um ano de pontos diários é o que um gráfico de linha aguenta sem virar borrão, e
+// também o que uma resposta aguenta sem virar peso: sem o teto, "desde sempre" numa
+// instituição antiga devolveria milhares de linhas para desenhar quatrocentos pixels.
+const MAXIMO_DIAS_SERIE = 366;
+
+const hojeNoFuso = () => new Date().toLocaleDateString('en-CA', { timeZone: FUSO });
+
+const somarDias = (dia, n) => {
+  const [a, m, d] = dia.split('-').map(Number);
+  return new Date(Date.UTC(a, m - 1, d + n)).toISOString().slice(0, 10);
+};
+
+const diasEntre = (ini, fim) =>
+  Math.round((Date.parse(`${fim}T00:00:00Z`) - Date.parse(`${ini}T00:00:00Z`)) / 86_400_000);
+
+/**
+ * Chamados abertos e concluídos por dia, para o gráfico de linha.
+ *
+ * O recorte é o do resto do relatório: chamados ABERTOS no período. "Concluídos"
+ * são, portanto, os desse mesmo grupo e contados no dia em que terminaram — não
+ * todo o trabalho que a equipe fechou naquele dia. Misturar os dois responderia
+ * outra pergunta ("qual o ritmo da equipe?") e faria o gráfico discordar dos
+ * totais logo acima dele. Dias sem nenhum chamado vêm com zero: um gráfico que
+ * pula os dias vazios liga pontos distantes e mente sobre o ritmo.
+ */
+async function serieDiaria(filtros = {}) {
+  // Valida de/ate antes de qualquer consulta: data malformada é 422, não "tudo".
+  const { where, params } = recorte(filtros);
+  const conector = where ? 'AND' : 'WHERE';
+  const aoFim = params.length;
+
+  return emSnapshot(async (client) => {
+    const fim = filtros.ate || hojeNoFuso();
+
+    let ini = filtros.de;
+    if (!ini) {
+      const { rows } = await client.query(
+        `SELECT min((c.data_abertura AT TIME ZONE $${aoFim + 1})::date)::text AS primeiro
+           FROM chamado c ${where}`,
+        [...params, FUSO]
+      );
+      ini = rows[0].primeiro ?? fim;
+    }
+
+    let truncado = false;
+    if (diasEntre(ini, fim) + 1 > MAXIMO_DIAS_SERIE) {
+      ini = somarDias(fim, -(MAXIMO_DIAS_SERIE - 1));
+      truncado = true;
+    }
+
+    if (ini > fim) return { de: ini, ate: fim, truncado: false, dias: [] };
+
+    const { rows } = await client.query(
+      `WITH dias AS (
+         SELECT generate_series($${aoFim + 2}::date, $${aoFim + 3}::date, interval '1 day')::date AS dia
+       ), abertos AS (
+         SELECT (c.data_abertura AT TIME ZONE $${aoFim + 1})::date AS dia, count(*)::int AS n
+           FROM chamado c ${where} GROUP BY 1
+       ), concluidos AS (
+         SELECT (c.data_conclusao AT TIME ZONE $${aoFim + 1})::date AS dia, count(*)::int AS n
+           FROM chamado c ${where} ${conector} c.estado = 'concluido' AND c.data_conclusao IS NOT NULL
+          GROUP BY 1
+       )
+       SELECT to_char(d.dia, 'YYYY-MM-DD') AS dia,
+              COALESCE(a.n, 0)::int AS abertos,
+              COALESCE(k.n, 0)::int AS concluidos
+         FROM dias d
+         LEFT JOIN abertos a ON a.dia = d.dia
+         LEFT JOIN concluidos k ON k.dia = d.dia
+        ORDER BY d.dia`,
+      [...params, FUSO, ini, fim]
+    );
+
+    return { de: ini, ate: fim, truncado, dias: rows };
+  });
+}
+
 // Tempo de atendimento desconta o período em "aguardando material": esse
 // tempo é espera por insumo, não trabalho da equipe, e mantê-lo na conta
 // faria a métrica punir a equipe por uma falha de suprimento.
@@ -355,4 +438,12 @@ async function percorrerChamados(filtros, aoReceberLote) {
   });
 }
 
-module.exports = { resumo, desempenho, porTecnico, percorrerChamados, LIMITE_EXPORTACAO };
+module.exports = {
+  resumo,
+  desempenho,
+  porTecnico,
+  serieDiaria,
+  percorrerChamados,
+  LIMITE_EXPORTACAO,
+  MAXIMO_DIAS_SERIE,
+};
