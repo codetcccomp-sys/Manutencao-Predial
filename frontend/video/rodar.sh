@@ -58,7 +58,7 @@ echo "▸ migrações e administrador"
 echo "▸ backend (porta 3333) e build (porta 4173)"
 ( cd "$BACK" && PORT=3333 NODE_ENV=test JWT_SECRET=segredo_video JWT_EXPIRES_IN=8h CRON_SECRET=video DB_NAME="$BANCO" exec node src/server.js ) >"$SAIDA.backend.log" 2>&1 &
 PIDS+=($!)
-( cd "$FRONT" && npm run build --silent >/dev/null && exec npx vite preview --port 4173 --strictPort ) >"$SAIDA.preview.log" 2>&1 &
+( cd "$FRONT" && npm run build --silent >/dev/null && exec node node_modules/vite/bin/vite.js preview --port 4173 --strictPort ) >"$SAIDA.preview.log" 2>&1 &
 PIDS+=($!)
 esperar http://localhost:3333/health/db
 esperar http://localhost:4173/login
