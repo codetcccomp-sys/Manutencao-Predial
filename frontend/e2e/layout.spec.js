@@ -35,6 +35,7 @@ const TELAS = [
   { rota: '/chamados/novo', espera: 'form', quem: 'solicitante' },
   { rota: '/relatorios', espera: 'h2:has-text("Por local")', quem: 'gestor' },
   { rota: '/cadastros', espera: 'h2:has-text("Cadastrar local")', quem: 'gestor' },
+  { rota: '/preventiva', espera: 'h2:has-text("Novo plano")', quem: 'gestor' },
   { rota: '/usuarios', espera: 'h1', quem: 'administrador' },
 ];
 

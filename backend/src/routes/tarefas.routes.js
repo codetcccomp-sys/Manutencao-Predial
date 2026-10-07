@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const atrasosService = require('../services/atrasos.service');
+const preventivaService = require('../services/preventiva.service');
 const { autenticarAgendador } = require('../middlewares/cron');
 const { asyncHandler } = require('../utils/asyncHandler');
 
@@ -21,6 +22,17 @@ router.post(
   asyncHandler(async (req, res) => {
     const resultado = await atrasosService.notificarAtrasados();
     res.json(resultado);
+  })
+);
+
+// Manutenção preventiva: gera os chamados dos planos que entraram na janela
+// de antecedência. Uma vez por dia basta (o plano tem granularidade de dia),
+// mas rodar mais vezes é inofensivo: cada execução prevista vira no máximo
+// um chamado, garantido pelo índice único de plano + data.
+router.post(
+  '/gerar-preventivas',
+  asyncHandler(async (req, res) => {
+    res.json(await preventivaService.gerarVencidos());
   })
 );
 

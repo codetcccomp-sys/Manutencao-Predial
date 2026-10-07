@@ -1,6 +1,7 @@
 const pool = require('../src/config/db');
 const {
   limparChamadosDeTeste,
+  limparPlanosDeTeste,
   limparUsuariosDeTeste,
   contasSemeadas,
   recusarSeNaoForBancoDeTeste,
@@ -107,6 +108,40 @@ describe('Limpeza dos chamados de teste', () => {
 
   it('o padrão de produção é o domínio que as suítes usam', () => {
     expect(PADRAO_DE_TESTE).toBe('%@exemplo.com');
+  });
+});
+
+describe('Limpeza dos planos preventivos de teste', () => {
+  async function inserirPlano(criadoPor) {
+    const categoria = (await pool.query('SELECT id FROM categoria LIMIT 1')).rows[0].id;
+    const local = (await pool.query('SELECT id FROM local LIMIT 1')).rows[0].id;
+    const { rows } = await pool.query(
+      `INSERT INTO plano_preventivo
+         (titulo, descricao, local_id, categoria_id, repetir_a_cada, unidade_repeticao,
+          data_inicio, proxima_execucao, criado_por)
+       VALUES ('Plano de teste', 'Roteiro de teste.', $1, $2, 1, 'mes', '2031-01-01', '2031-01-01', $3)
+       RETURNING id`,
+      [local, categoria, criadoPor]
+    );
+    return rows[0].id;
+  }
+
+  it('apaga o plano da conta de teste e preserva o de quem não é', async () => {
+    const doTesteId = await inserirPlano(doTeste);
+    const deForaId = await inserirPlano(deFora);
+
+    const client = await pool.connect();
+    try {
+      expect(await limparPlanosDeTeste(client, { padrao: PADRAO })).toBe(1);
+    } finally {
+      client.release();
+    }
+
+    const restantes = (
+      await pool.query('SELECT id FROM plano_preventivo WHERE id = ANY($1::int[])', [[doTesteId, deForaId]])
+    ).rows.map((r) => r.id);
+    expect(restantes).toEqual([deForaId]);
+    await pool.query('DELETE FROM plano_preventivo WHERE id = $1', [deForaId]);
   });
 });
 

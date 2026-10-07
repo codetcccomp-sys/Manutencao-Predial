@@ -121,6 +121,8 @@ app.use('/auth', require('./routes/auth.routes'));
 app.use('/chamados', require('./routes/chamados.routes'));
 app.use('/usuarios', require('./routes/usuarios.routes'));
 app.use('/locais', require('./routes/locais.routes'));
+app.use('/equipamentos', require('./routes/equipamentos.routes'));
+app.use('/planos-preventivos', require('./routes/planos.routes'));
 app.use('/categorias', require('./routes/categorias.routes'));
 app.use('/equipes', require('./routes/equipes.routes'));
 app.use('/materiais', require('./routes/materiais.routes'));

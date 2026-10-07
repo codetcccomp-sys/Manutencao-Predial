@@ -12,6 +12,8 @@ import ChamadoDetalhe from './pages/ChamadoDetalhe';
 import Relatorios from './pages/Relatorios';
 import Usuarios from './pages/Usuarios';
 import Cadastros from './pages/Cadastros';
+import Preventiva from './pages/Preventiva';
+import Equipamento from './pages/Equipamento';
 
 function App() {
   return (
@@ -36,6 +38,8 @@ function App() {
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/cadastros" element={<Cadastros />} />
+            <Route path="/preventiva" element={<Preventiva />} />
+            <Route path="/equipamentos/:id" element={<Equipamento />} />
           </Route>
         </Routes>
       </AuthProvider>

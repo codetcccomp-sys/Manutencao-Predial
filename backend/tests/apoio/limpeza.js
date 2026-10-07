@@ -104,6 +104,27 @@ async function limparChamadosDeTeste(client, { padrao = PADRAO_DE_TESTE, ambient
   );
 }
 
+/**
+ * Apaga os planos preventivos criados por contas de teste.
+ *
+ * Roda depois dos chamados: os chamados que um plano gerou apontam para ele, e
+ * saem antes (o solicitante de um chamado preventivo é quem criou o plano, que
+ * tem e-mail de teste). Sem isto, cada rodada deixaria planos para trás — e
+ * plano ativo é pior que lixo parado: a próxima varredura gera chamado dele.
+ */
+async function limparPlanosDeTeste(client, { padrao = PADRAO_DE_TESTE, ambiente = process.env } = {}) {
+  recusarSeNaoForBancoDeTeste(ambiente);
+
+  const { rowCount } = await client.query(
+    `DELETE FROM plano_preventivo p
+      USING usuario u
+      WHERE u.id = p.criado_por AND u.email LIKE $1
+        AND NOT EXISTS (SELECT 1 FROM chamado c WHERE c.plano_id = p.id)`,
+    [padrao]
+  );
+  return rowCount;
+}
+
 // O que aponta para a conta e some junto com ela: ruído que a própria conta
 // gerou (avisos, pedidos de recuperação de senha, vínculo com equipe). Tudo o
 // mais que aponte para `usuario` — chamado, comentário, anexo, histórico, e o
@@ -178,6 +199,7 @@ async function limparUsuariosDeTeste(
 
 module.exports = {
   limparChamadosDeTeste,
+  limparPlanosDeTeste,
   limparUsuariosDeTeste,
   contasSemeadas,
   apagarChamados,

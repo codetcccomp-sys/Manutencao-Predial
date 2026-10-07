@@ -108,6 +108,19 @@ const COLUNAS = [
   { rotulo: 'Título', valor: (c) => c.titulo },
   { rotulo: 'Categoria', valor: (c) => c.categoria },
   { rotulo: 'Local', valor: (c) => c.local },
+  // O código e o nome vêm do cadastro, que a gestão preenche: passam pela
+  // mesma neutralização de fórmula que os demais textos livres.
+  {
+    rotulo: 'Equipamento',
+    valor: (c) => (c.equipamento_codigo ? `${c.equipamento_codigo} — ${c.equipamento_nome}` : ''),
+  },
+  { rotulo: 'Origem', valor: (c) => (c.origem === 'preventiva' ? 'Preventiva' : 'Corretiva'), confiavel: true },
+  {
+    rotulo: 'Data prevista',
+    // Data de calendário, sem hora: só muda a ordem para o formato daqui.
+    valor: (c) => (c.data_prevista ? c.data_prevista.split('-').reverse().join('/') : ''),
+    confiavel: true,
+  },
   { rotulo: 'Estado', valor: (c) => ESTADO_ROTULO[c.estado] ?? c.estado, confiavel: true },
   {
     rotulo: 'Prioridade',

@@ -6,6 +6,7 @@ const notificacoesService = require('./notificacoes.service');
 const slaService = require('./sla.service');
 const priorizacaoService = require('./priorizacao.service');
 const { rotuloSql } = require('./locais.service');
+const equipamentosService = require('./equipamentos.service');
 
 // "Em atraso" não é um estado da máquina, é uma leitura do relógio sobre o
 // estado atual: vira e desvira sozinho quando o prazo passa ou quando o
@@ -63,20 +64,61 @@ const TRANSICOES = {
   cancelado: [],
 };
 
-async function criar({ titulo, descricao, categoria_id, local_id, prioridade }, solicitanteId) {
+/**
+ * Local, categoria e equipamento efetivos de um chamado novo.
+ *
+ * Com equipamento, local e categoria podem vir dele — é o que permite abrir o
+ * chamado pelo QR Code colado no equipamento sem perguntar onde ele fica. Se
+ * vierem também, o local precisa ser o do equipamento: um chamado que diz
+ * "split da 204" no equipamento e "sala 310" no local manda o técnico ao
+ * lugar errado.
+ */
+async function resolverAlvo(client, { categoria_id, local_id, equipamento_id }) {
+  if (equipamento_id) {
+    const equipamento = await equipamentosService.conferirNoLocal(client, equipamento_id, local_id);
+    return {
+      local_id: equipamento.local_id,
+      categoria_id: categoria_id ?? equipamento.categoria_id,
+      equipamento_id,
+    };
+  }
+
+  const faltando = [];
+  if (!categoria_id) faltando.push('Campo "categoria_id" é obrigatório.');
+  if (!local_id) faltando.push('Campo "local_id" é obrigatório.');
+  if (faltando.length) {
+    throw new AppError(faltando.join(' '), 422, 'VALIDACAO');
+  }
+  return { local_id, categoria_id, equipamento_id: null };
+}
+
+async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id, prioridade }, solicitanteId) {
   const protocolo = gerarProtocolo();
 
   return transacao(async (client) => {
+    const alvo = await resolverAlvo(client, { categoria_id, local_id, equipamento_id });
+
     // O prazo nasce junto do chamado, na mesma transação: um chamado sem
     // prazo ficaria invisível para toda a apuração de atraso.
     const prazoHoras = await slaService.calcularPrazo(client, prioridade);
 
     const { rows } = await client.query(
-      `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, solicitante_id, prioridade, prazo_estimado)
-       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::prioridade_chamado, 'baixa'),
-               CASE WHEN $8::int IS NULL THEN NULL ELSE now() + ($8::int * interval '1 hour') END)
+      `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, equipamento_id,
+                            solicitante_id, prioridade, prazo_estimado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::prioridade_chamado, 'baixa'),
+               CASE WHEN $9::int IS NULL THEN NULL ELSE now() + ($9::int * interval '1 hour') END)
        RETURNING *, ${EM_ATRASO} AS em_atraso`,
-      [protocolo, titulo, descricao, categoria_id, local_id, solicitanteId, prioridade, prazoHoras]
+      [
+        protocolo,
+        titulo,
+        descricao,
+        alvo.categoria_id,
+        alvo.local_id,
+        alvo.equipamento_id,
+        solicitanteId,
+        prioridade,
+        prazoHoras,
+      ]
     );
 
     const chamado = rows[0];
@@ -123,6 +165,15 @@ async function listar(usuario, filtros = {}) {
   if (filtros.categoria_id) {
     params.push(filtros.categoria_id);
     condicoes.push(`categoria_id = $${params.length}`);
+  }
+  if (filtros.equipamento_id) {
+    params.push(filtros.equipamento_id);
+    condicoes.push(`equipamento_id = $${params.length}`);
+  }
+  // Mapa fechado, como as situações: só os dois valores do enum viram SQL.
+  if (['corretiva', 'preventiva'].includes(filtros.origem)) {
+    params.push(filtros.origem);
+    condicoes.push(`origem = $${params.length}::origem_chamado`);
   }
   if (filtros.atrasados === 'true') {
     condicoes.push(EM_ATRASO);
@@ -257,10 +308,14 @@ async function buscarPorId(id, usuario) {
   // justamente onde ele precisa ir. A planilha e o relatório já traziam o
   // local; a tela, que é por onde se trabalha, não trazia.
   const contexto = await pool.query(
-    `SELECT ${rotuloSql('l')} AS local_rotulo, cat.nome AS categoria_nome
+    `SELECT ${rotuloSql('l')} AS local_rotulo, cat.nome AS categoria_nome,
+            e.codigo AS equipamento_codigo, e.nome AS equipamento_nome,
+            p.titulo AS plano_titulo
        FROM chamado c
        JOIN local l ON l.id = c.local_id
        JOIN categoria cat ON cat.id = c.categoria_id
+       LEFT JOIN equipamento e ON e.id = c.equipamento_id
+       LEFT JOIN plano_preventivo p ON p.id = c.plano_id
       WHERE c.id = $1`,
     [id]
   );
@@ -498,7 +553,10 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
          regra_priorizacao_id = $7,
          priorizado_em = now(),
          priorizado_por = $8,
+         -- A preventiva tem data marcada pelo plano, não prazo de SLA: mudar
+         -- a prioridade dela muda a ordem na fila, não o dia combinado.
          prazo_estimado = CASE
+           WHEN origem = 'preventiva' THEN prazo_estimado
            WHEN $9::int IS NULL THEN prazo_estimado
            ELSE data_abertura + ($9::int * interval '1 hour') + tempo_suspenso_total
          END
@@ -536,7 +594,7 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
 // em que a RN03 deixa o solicitante corrigir o que escreveu.
 const ESTADOS_SEM_RESPONSAVEL = ['aberto', 'em_triagem'];
 
-const CAMPOS_EDITAVEIS = ['titulo', 'descricao', 'categoria_id', 'local_id'];
+const CAMPOS_EDITAVEIS = ['titulo', 'descricao', 'categoria_id', 'local_id', 'equipamento_id'];
 
 /**
  * Corrige os dados do chamado (RN03).
@@ -578,6 +636,24 @@ async function editar(id, dados, usuario) {
     const campos = [];
     const params = [];
     const alteracoes = [];
+    dados = { ...dados };
+
+    // Equipamento e local andam juntos. Escolher um equipamento leva o local
+    // dele; mudar só o local de um chamado que apontava para um equipamento de
+    // lá solta o equipamento — ele ficou no lugar antigo, e mantê-lo diria ao
+    // técnico para consertar algo que não está onde ele vai.
+    if (dados.equipamento_id) {
+      const localEfetivo = dados.local_id ?? (dados.equipamento_id === chamado.equipamento_id ? chamado.local_id : undefined);
+      const equipamento = await equipamentosService.conferirNoLocal(client, dados.equipamento_id, localEfetivo);
+      dados.local_id = equipamento.local_id;
+    } else if (
+      dados.local_id !== undefined &&
+      dados.local_id !== chamado.local_id &&
+      chamado.equipamento_id &&
+      dados.equipamento_id === undefined
+    ) {
+      dados.equipamento_id = null;
+    }
 
     for (const campo of CAMPOS_EDITAVEIS) {
       if (dados[campo] === undefined) continue;

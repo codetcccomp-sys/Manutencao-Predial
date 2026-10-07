@@ -409,8 +409,8 @@ todas exigem `Authorization: Bearer <token>`.
 | `POST` | `/auth/registrar` | público (cria `solicitante`) |
 | `POST` | `/auth/login` | público (limitado por tentativa) |
 | `POST` | `/auth/recuperar-senha`, `/auth/redefinir-senha` | público (token de uso único, 60 min; pedidos limitados por IP) |
-| `GET` | `/chamados?pagina=&limite=&estado=&situacao=&categoria_id=&atrasados=&sem_tecnico=&busca=&ordenar=` | autenticado, escopo conforme o perfil. `situacao` = `abertos` ou `encerrados`; `ordenar` = `recentes` ou `prazo`; `busca` casa protocolo ou título |
-| `POST` | `/chamados` | solicitante, gestor, administrador |
+| `GET` | `/chamados?pagina=&limite=&estado=&situacao=&categoria_id=&equipamento_id=&origem=&atrasados=&sem_tecnico=&busca=&ordenar=` | autenticado, escopo conforme o perfil. `situacao` = `abertos` ou `encerrados`; `origem` = `corretiva` ou `preventiva`; `ordenar` = `recentes` ou `prazo`; `busca` casa protocolo ou título |
+| `POST` | `/chamados` | solicitante, gestor, administrador. Com `equipamento_id`, local e categoria podem ser omitidos (vêm do equipamento) |
 | `GET` | `/chamados/:id` | quem tem acesso ao chamado |
 | `PATCH` | `/chamados/:id` | solicitante do chamado, até a atribuição (RN03); gestão, até o chamado encerrar |
 | `PATCH` | `/chamados/:id/atribuir` | gestor, administrador |
@@ -436,8 +436,15 @@ todas exigem `Authorization: Bearer <token>`.
 | `GET POST` | `/regras-priorizacao`, `/regras-priorizacao/simular` | gestor, administrador (o `POST /regras-priorizacao`, que publica versão nova, só o administrador) |
 | `GET` | `/relatorios/resumo`, `/desempenho`, `/tecnicos` | gestor, administrador |
 | `GET` | `/relatorios/serie?de=&ate=` | gestor, administrador. Abertos e concluídos por dia, no fuso da instituição; um ponto por dia (zero nos dias vazios), no máximo 366, com `truncado: true` quando corta |
+| `GET` | `/relatorios/preventiva?de=&ate=` | gestor, administrador. Cumprimento do plano preventivo, recortado pela data prevista |
 | `GET` | `/relatorios/exportar/chamados.csv`, `/relatorios/exportar/resumo.pdf` | gestor, administrador |
+| `GET` | `/equipamentos?local_id=&busca=`, `/equipamentos/codigo/:codigo` | autenticado (desativados só para a gestão, com `incluir_inativos=true`) |
+| `GET` | `/equipamentos/:id` | autenticado; gestão e técnico recebem a ficha com histórico e planos, o solicitante só o cadastro |
+| `POST PATCH` | `/equipamentos`, `/equipamentos/:id` | gestor, administrador |
+| `GET POST PATCH` | `/planos-preventivos`, `/planos-preventivos/:id` | gestor, administrador |
+| `POST` | `/planos-preventivos/:id/gerar` | gestor, administrador (antecipa a próxima execução) |
 | `POST GET` | `/tarefas/notificar-atrasos`, `/tarefas/atrasos-pendentes` | só o agendador, com `Authorization: Bearer <CRON_SECRET>` (ver Notificações) |
+| `POST` | `/tarefas/gerar-preventivas` | só o agendador, com o mesmo segredo (ver Manutenção preventiva) |
 
 `GET /health/db` executa uma consulta e devolve 503 quando o banco está
 inacessível — `/health` sozinho responde `ok` mesmo com o banco fora, o que
@@ -482,6 +489,47 @@ baixar.
 No navegador, um arquivo que não for UTF-8 válido é lido como Windows-1252,
 que é o que o Excel no Windows grava: sem isso "Térreo" entraria no banco
 corrompido e ninguém notaria até o primeiro relatório.
+
+## Equipamentos e manutenção preventiva
+
+O chamado sempre teve local; agora pode ter também **equipamento** (o split da
+sala 204, a bomba de recalque, o quadro elétrico do bloco B). O equipamento é
+opcional no chamado — nem todo problema é de um — e, quando informado, o local
+precisa ser o dele. O código da etiqueta é guardado em maiúsculas, sem espaços
+(`bomba-01` e `BOMBA-01 ` são a mesma etiqueta), e é por ele que o endereço
+`/chamados/novo?equipamento=CODIGO` abre um chamado já com equipamento, local
+e categoria escolhidos. A ficha do equipamento (`/equipamentos/:id`) mostra o
+histórico de chamados dele e quantos corretivos teve nos últimos 12 meses.
+
+A **manutenção preventiva** é o que a ABNT NBR 5674 põe no centro da gestão de
+manutenção: o que verificar, a cada quanto tempo, onde e por quem. Um plano
+(`plano_preventivo`) tem o roteiro do serviço, o equipamento ou o local, a
+periodicidade (`3` + `mes`, e não 90 dias), a próxima data, a antecedência
+com que o chamado deve ser gerado e, opcionalmente, o técnico responsável.
+
+- O agendador chama `POST /tarefas/gerar-preventivas`, que gera um chamado por
+  execução que entrou na janela de antecedência. O chamado é comum — mesma
+  máquina de estados, conclusão exige o serviço descrito (RN07) — com
+  `origem = 'preventiva'`, o plano de onde veio e a data prevista.
+- O prazo da preventiva é o fim do dia previsto (no fuso da instituição), e não
+  o SLA por prioridade, que foi pensado para o imprevisto. Repriorizar não
+  muda o dia combinado.
+- Com responsável, o chamado nasce atribuído a ele, passando pelos estados do
+  fluxo (aberto → em triagem → atribuído) no histórico; sem responsável, ou com
+  o responsável desativado, entra na triagem.
+- As datas do plano são sempre `data_inicio + n períodos`: um mensal que começa
+  num dia 31 cai no último dia de fevereiro e volta ao dia 31 em março.
+- Uma execução, um chamado: o índice único (plano, data prevista) garante isso
+  mesmo com duas passagens do agendador ao mesmo tempo. Se o agendador ficar
+  parado, a passagem seguinte gera só a execução mais recente, e o histórico
+  do chamado diz quantas venceram sem chamado.
+
+O relatório `/relatorios/preventiva` mede o **cumprimento do plano**: das
+execuções que já podem ser julgadas (concluídas ou vencidas), quantas foram
+feitas até o prazo. As que ainda estão no prazo não entram, para o indicador
+do mês não oscilar a cada dia. O mesmo relatório lista os planos com execução
+vencida e os equipamentos com mais corretivos — o sinal de que falta (ou falha)
+a preventiva deles.
 
 ## Anexos
 

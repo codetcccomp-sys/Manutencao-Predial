@@ -76,6 +76,7 @@ function Layout() {
               className="flex flex-wrap items-center gap-1 min-w-0"
             >
               {podeVerRelatorios && <ItemDeMenu para="/relatorios">Relatórios</ItemDeMenu>}
+              {podeVerRelatorios && <ItemDeMenu para="/preventiva">Preventiva</ItemDeMenu>}
               {podeVerRelatorios && <ItemDeMenu para="/cadastros">Cadastros</ItemDeMenu>}
               {ehAdministrador && <ItemDeMenu para="/usuarios">Usuários</ItemDeMenu>}
             </nav>

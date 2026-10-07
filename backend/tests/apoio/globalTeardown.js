@@ -10,7 +10,12 @@
 require('dotenv').config();
 
 module.exports = async function limparDepoisDosTestes() {
-  const { limparChamadosDeTeste, limparUsuariosDeTeste, recusarSeNaoForBancoDeTeste } = require('./limpeza');
+  const {
+    limparChamadosDeTeste,
+    limparPlanosDeTeste,
+    limparUsuariosDeTeste,
+    recusarSeNaoForBancoDeTeste,
+  } = require('./limpeza');
 
   // Recusa fora do try: apontar a suíte para o banco real é erro de quem
   // rodou, e merece parar o processo, não virar um aviso no meio do relatório.
@@ -24,9 +29,13 @@ module.exports = async function limparDepoisDosTestes() {
     // Jest por cima do relatório.
     client = await pool.connect();
     const removidos = await limparChamadosDeTeste(client);
-    // Depois dos chamados: só então as contas que os abriram ficam livres.
+    // Os planos depois dos chamados que geraram; as contas por último, quando
+    // nada mais aponta para elas.
+    const planos = await limparPlanosDeTeste(client);
     const contas = await limparUsuariosDeTeste(client);
-    console.log(`\n[limpeza] ${removidos} chamados e ${contas} contas de teste removidos.`);
+    console.log(
+      `\n[limpeza] ${removidos} chamados, ${planos} planos e ${contas} contas de teste removidos.`
+    );
   } catch (err) {
     console.warn(`\n[limpeza] FALHOU, o banco de teste não foi limpo: ${err.message}`);
   } finally {

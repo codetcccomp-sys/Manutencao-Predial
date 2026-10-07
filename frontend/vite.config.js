@@ -47,5 +47,10 @@ export default defineConfig({
     // banco; o Vitest cuida só do que roda sem nada em pé.
     include: ['testes/**/*.test.jsx', 'testes/**/*.test.js'],
     css: false,
+    // O fuso de quem usa o sistema, e não o do servidor de CI (UTC). Datas de
+    // calendário convertidas por `new Date` voltam um dia em Brasília e não em
+    // UTC: rodando em UTC, o teste que existe para pegar esse erro passaria
+    // com o erro presente.
+    env: { TZ: 'America/Sao_Paulo' },
   },
 });

@@ -125,6 +125,23 @@ aviso mede o processo errado.
 > fail-closed: sem `CRON_SECRET` configurado ela recusa (503) em vez de ficar
 > aberta.
 
+### 2.1.1 Manutenção preventiva (mesmo segredo, outro job)
+
+Os planos preventivos só geram chamados se alguém chamar a tarefa. Crie um
+**segundo job** no mesmo agendador, com o mesmo cabeçalho:
+
+```
+POST https://manutencao-predial-backend-delta.vercel.app/tarefas/gerar-preventivas
+Authorization: Bearer <o segredo>
+uma vez por dia, de madrugada (03:00 de Brasília, por exemplo)
+```
+
+Uma vez por dia basta: o plano tem granularidade de dia. Rodar mais vezes é
+inofensivo — cada execução prevista vira no máximo um chamado. A resposta diz
+`chamados_gerados` e `falhas`; ligue a notificação de falha como no job do
+atraso. Antes, aplique no Supabase a migração `018_equipamentos_e_preventiva`
+(`node database/migrate.js` com a `DATABASE_URL` de produção, ou pelo painel).
+
 ### 2.2 E-mail (decisão, não obrigação)
 
 > **Se configurar SMTP, configure `URL_APP` junto.** Ela guarda o endereço do

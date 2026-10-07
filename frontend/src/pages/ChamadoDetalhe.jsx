@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../components/ui/Badge';
@@ -11,6 +11,7 @@ import {
   rotuloPrioridade,
 } from '../dominio/rotulos';
 import { LIMITE_BYTES, formatarTamanho, prepararAnexo } from '../dominio/prepararAnexo';
+import { formatarDia } from '../dominio/preventiva';
 
 // Escalas e perguntas orientadoras conforme o §2.5 do Termo de Abertura. As
 // perguntas ficam visíveis de propósito: são elas que tornam a nota menos
@@ -574,6 +575,11 @@ function ChamadoDetalhe() {
           <BadgeEstado estado={chamado.estado} />
           <BadgePrioridade prioridade={chamado.prioridade} />
           {chamado.em_atraso && <BadgeAtraso />}
+          {chamado.origem === 'preventiva' && (
+            <span className="inline-flex items-center rounded bg-sucesso-tenue px-2 py-0.5 text-xs font-medium text-sucesso">
+              Preventiva
+            </span>
+          )}
         </div>
 
         <div className="text-sm grid grid-cols-2 gap-2 text-tinta-2">
@@ -588,6 +594,28 @@ function ChamadoDetalhe() {
           {chamado.categoria_nome && (
             <span className="col-span-2">
               Categoria: <strong>{chamado.categoria_nome}</strong>
+            </span>
+          )}
+          {chamado.equipamento_codigo && (
+            <span className="col-span-2 min-w-0">
+              Equipamento:{' '}
+              {/* A ficha (com o histórico dele) é da gestão e do técnico; o
+                  solicitante vê o nome, que é o que ele precisa reconhecer. */}
+              {usuario.perfil === 'solicitante' ? (
+                <strong>
+                  {chamado.equipamento_codigo} — {chamado.equipamento_nome}
+                </strong>
+              ) : (
+                <Link to={`/equipamentos/${chamado.equipamento_id}`} className="font-semibold text-navy hover:underline">
+                  {chamado.equipamento_codigo} — {chamado.equipamento_nome}
+                </Link>
+              )}
+            </span>
+          )}
+          {chamado.origem === 'preventiva' && (
+            <span className="col-span-2">
+              Manutenção preventiva prevista para <strong>{formatarDia(chamado.data_prevista)}</strong>
+              {chamado.plano_titulo && <> pelo plano “{chamado.plano_titulo}”</>}.
             </span>
           )}
           {chamado.total_reaberturas > 0 && (
