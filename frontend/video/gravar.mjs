@@ -171,7 +171,8 @@ async function entrar(email, senha = SENHA) {
 }
 
 async function sair() {
-  await clicar(page.getByRole('button', { name: 'Sair' }), 900);
+  // Nome exato: em Minha conta também há "Sair de todos os aparelhos".
+  await clicar(page.getByRole('button', { name: 'Sair', exact: true }), 900);
 }
 
 // O código de 6 dígitos que o aplicativo autenticador mostraria (RFC 6238), para a cena
@@ -398,6 +399,7 @@ try {
   await legenda('Os códigos de recuperação aparecem uma única vez', 3000);
   await rolar(300);
   await legenda('E "sair de todos os aparelhos" derruba qualquer sessão esquecida', 3200);
+  await rolar(-600);
   await sair();
 
   // ───────────────────────────── 8. administração ─────────────────────────────
