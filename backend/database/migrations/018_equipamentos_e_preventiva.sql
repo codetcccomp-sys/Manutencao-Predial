@@ -139,7 +139,8 @@ COMMENT ON TABLE plano_preventivo IS
 
 -- Em produção o backend conecta como smp_backend, que não é dono do schema.
 -- Os privilégios padrão do projeto dão a ele tabelas e sequências novas, mas
--- NÃO funções novas (a migração 005 tirou o EXECUTE público). Sem este GRANT,
+-- não funções: o EXECUTE de função nova vem só do PUBLIC, que a migração 023
+-- retira (anon e authenticated o herdavam). Sem este GRANT, depois dela,
 -- a primeira chamada dá "permission denied for function" — e só em produção,
 -- porque em desenvolvimento e no CI o papel nem existe. O teste
 -- tests/migracoes.test.js cobra este bloco em toda migração que cria função.

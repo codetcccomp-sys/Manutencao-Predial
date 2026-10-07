@@ -103,6 +103,14 @@ const MUTACOES = [
     migrar: true,
   },
   {
+    descricao: 'funções voltam a ser executáveis por PUBLIC (e pela chave anon)',
+    arquivo: 'database/migrations/023_funcoes_so_para_o_backend.sql',
+    de: 'REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;',
+    para: '',
+    spec: 'tests/migracoes.test.js',
+    migrar: true,
+  },
+  {
     descricao: 'preventiva volta a ser gerada duas vezes para a mesma data',
     arquivo: 'src/services/preventiva.service.js',
     de: 'ON CONFLICT (plano_id, data_prevista) WHERE plano_id IS NOT NULL DO NOTHING',

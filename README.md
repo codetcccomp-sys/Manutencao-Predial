@@ -216,6 +216,13 @@ O que o código faz, e onde procurar:
   — o primeiro valida os hashes gravados pelo 5 (formato igual), e o segundo é
   coberto por `tests/emailSmtp.test.js`, que envia por SMTP de verdade a um
   servidor de mentira.
+- **Banco fechado para a API automática do Supabase.** O Supabase publica o
+  schema `public` em `/rest/v1/`, com a chave `anon`, que é pública. Tabelas e
+  sequências foram fechadas para `anon` e `authenticated` na migração 005; as
+  funções, na 023 — o PostgreSQL concede `EXECUTE` de toda função nova a
+  `PUBLIC`, e os dois papéis herdam dele. Só o `smp_backend`, com que a API em
+  Express conecta, lê tabela e executa função; `tests/migracoes.test.js`
+  confere no banco migrado que nenhuma função ficou para `PUBLIC`.
 - **Conexão com o banco por TLS verificado.** Em produção a aplicação não sobe
   sem o certificado da autoridade do Supabase, que já está em
   `backend/database/supabase-ca.crt` (`DB_CA_CERT` o substitui sem novo
@@ -432,7 +439,7 @@ npm run mutacao            # todas
 npm run mutacao vitest     # só as rápidas
 
 cd backend
-node tests/mutacao.js          # as travas de sessão, 2FA, preventiva, horas úteis e anexos
+node tests/mutacao.js          # as travas de sessão, 2FA, privilégios, preventiva, horas úteis e anexos
 node tests/mutacao.js sessão   # só as que têm "sessão" na descrição
 ```
 

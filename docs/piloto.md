@@ -166,8 +166,10 @@ variáveis, nada muda.
 
 ### 2.1.3 Sessão em cookie e verificação em duas etapas
 
-A migração `022_sessao_e_2fa` vai junto com as anteriores (mesmo
-`node database/migrate.js`). Duas coisas a saber no dia do deploy:
+As migrações `022_sessao_e_2fa` e `023_funcoes_so_para_o_backend` vão junto
+com as anteriores (mesmo `node database/migrate.js`, **antes** do merge: o
+código novo já conta com as colunas e funções delas, e as migrações não
+atrapalham o código antigo). Duas coisas a saber no dia do deploy:
 
 - **Todo mundo entra de novo uma vez.** A sessão passou do `localStorage` para
   um cookie `HttpOnly`; quem estava logado aparece na tela de login com o aviso
