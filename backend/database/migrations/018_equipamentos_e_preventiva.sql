@@ -136,3 +136,16 @@ CREATE UNIQUE INDEX idx_chamado_plano_data ON chamado (plano_id, data_prevista)
 -- avisa o técnico como qualquer atribuição.
 COMMENT ON TABLE plano_preventivo IS
   'Manutenção preventiva (NBR 5674): o que fazer, a cada quanto, onde e por quem. Gera chamados pela tarefa /tarefas/gerar-preventivas.';
+
+-- Em produção o backend conecta como smp_backend, que não é dono do schema.
+-- Os privilégios padrão do projeto dão a ele tabelas e sequências novas, mas
+-- NÃO funções novas (a migração 005 tirou o EXECUTE público). Sem este GRANT,
+-- a primeira chamada dá "permission denied for function" — e só em produção,
+-- porque em desenvolvimento e no CI o papel nem existe. O teste
+-- tests/migracoes.test.js cobra este bloco em toda migração que cria função.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'smp_backend') THEN
+    GRANT EXECUTE ON FUNCTION passo_preventivo(INTEGER, unidade_repeticao) TO smp_backend;
+  END IF;
+END $$;
