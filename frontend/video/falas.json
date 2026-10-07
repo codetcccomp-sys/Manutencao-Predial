@@ -1,5 +1,5 @@
 {
-  "abertura": "Conserva Predial. Um sistema de chamados de manutenção predial, do pedido à avaliação, com prioridade, prazo e histórico.",
+  "abertura": "Conserva Predial. Um sistema de chamados de manutenção predial, do pedido à avaliação, com prioridade, prazo e histórico, além de manutenção preventiva, etiquetas com Q R Code e verificação em duas etapas.",
   "1 · Solicitante: o Jorge acompanha o que já pediu": "Primeiro, o solicitante. O Jorge acompanha os pedidos que já fez.",
   "Cada pedido mostra estado, prioridade e prazo": "Cada pedido mostra o estado, a prioridade e o prazo.",
   "Ele percebeu um vazamento e vai abrir um chamado": "Ele percebeu um vazamento no laboratório e vai abrir um chamado.",
@@ -31,7 +31,21 @@
   "Por estado, categoria, prioridade e local, com prazo (SLA) e desempenho": "Há recortes por estado, categoria, prioridade e local, além do cumprimento do prazo e do desempenho.",
   "Carga por técnico, e exportação em PDF e planilha": "A carga de cada técnico, e a exportação em P D F e em planilha.",
   "Cadastros: locais e categorias, inclusive em massa por planilha": "Nos cadastros, locais e categorias, inclusive em massa, por planilha.",
-  "6 · Administração: quem entra e com qual perfil": "Por fim, a administração: quem entra no sistema, e com qual perfil.",
+  "6 · Preventiva (NBR 5674): planos que abrem o próprio chamado": "Agora, a manutenção preventiva, como pede a norma N B R cinquenta e seis setenta e quatro: planos que abrem o próprio chamado.",
+  "Cada plano diz o que fazer, a cada quanto tempo, onde e por quem": "Cada plano diz o que fazer, a cada quanto tempo, onde e por quem.",
+  "Na data, o agendador gera o chamado sozinho; aqui, pelo botão Gerar agora": "Na data prevista, o agendador gera o chamado sozinho, de madrugada. Aqui, para mostrar, pelo botão Gerar agora.",
+  "O chamado nasce com o roteiro do serviço e segue o fluxo normal": "O chamado nasce com o roteiro do serviço, e segue o mesmo fluxo de qualquer outro.",
+  "Cada equipamento tem ficha própria: etiqueta, planos e histórico": "Cada equipamento tem uma ficha própria, com a etiqueta, os planos e o histórico de chamados.",
+  "A etiqueta com QR Code vai colada no equipamento": "A etiqueta com Q R Code vai colada no próprio equipamento.",
+  "Lido pela câmera do celular, o QR abre o chamado já preenchido": "Lido pela câmera do celular, o Q R Code abre o chamado já preenchido, com o equipamento e o local.",
+  "O app também se instala no celular e consulta a fila sem conexão": "O sistema também se instala no celular como aplicativo, e consulta a fila mesmo sem conexão.",
+  "7 · Minha conta: verificação em duas etapas": "Na tela Minha conta, a verificação em duas etapas.",
+  "Recomendada para a gestão: a senha sozinha deixa de abrir a conta": "Ela é recomendada para a gestão: com ela ligada, a senha sozinha não abre mais a conta.",
+  "O QR Code cadastra a conta no aplicativo autenticador do celular": "O Q R Code cadastra a conta no aplicativo autenticador do celular.",
+  "Para ligar, o código do aplicativo e a senha": "Para ligar, ela digita o código do aplicativo e a própria senha.",
+  "Os códigos de recuperação aparecem uma única vez": "Os códigos de recuperação, para quando o celular não estiver à mão, aparecem uma única vez.",
+  "E \"sair de todos os aparelhos\" derruba qualquer sessão esquecida": "E o botão sair de todos os aparelhos encerra na hora qualquer sessão esquecida aberta.",
+  "8 · Administração: quem entra e com qual perfil": "Por fim, a administração: quem entra no sistema, e com qual perfil.",
   "Desativar, trocar perfil ou anonimizar (LGPD), sem deixar chamados órfãos": "É possível desativar, trocar o perfil ou anonimizar uma conta, conforme a L G P D, sem deixar chamados órfãos.",
-  "encerramento": "O sistema confere as permissões no servidor, define prazos por prioridade e protege os dados pessoais. Cada regra tem um teste que a cobra, e o código é verificado a cada envio."
+  "encerramento": "O sistema confere as permissões no servidor, conta os prazos em horas corridas ou úteis, gera a manutenção preventiva e protege os dados pessoais. Cada regra tem um teste que a cobra, e o código é verificado a cada envio."
 }

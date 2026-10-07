@@ -16,7 +16,9 @@ SELECT c.id,
          ELSE                                               interval '1 hour' * (1 + random() * 20)
        END AS abertura,
        6 + random() * 54 AS horas_ate_concluir
-  FROM chamado c;
+  FROM chamado c
+ -- A preventiva já nasce com a data e o prazo do plano (fim do dia previsto).
+ WHERE c.origem = 'corretiva';
 
 UPDATE chamado c SET
   data_abertura   = a.abertura,
@@ -30,7 +32,7 @@ UPDATE chamado c SET
 UPDATE chamado c SET
   prazo_estimado = c.data_abertura + s.prazo_horas * interval '1 hour' + c.tempo_suspenso_total,
   atualizado_em  = COALESCE(c.data_conclusao, c.inicio_execucao, c.priorizado_em, c.data_abertura)
-  FROM sla s WHERE s.prioridade = c.prioridade;
+  FROM sla s WHERE s.prioridade = c.prioridade AND c.origem = 'corretiva';
 
 UPDATE historico_chamado h SET data = CASE h.estado_novo
     WHEN 'aberto'       THEN c.data_abertura

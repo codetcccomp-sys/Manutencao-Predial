@@ -23,7 +23,9 @@ import numpy as np
 import soundfile as sf
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-SAIDA = os.path.join(AQUI, "saida")
+# O vídeo técnico (tecnico/) usa o mesmo narrador com outro roteiro e outra pasta.
+FALAS = os.environ.get("FALAS", os.path.join(AQUI, "falas.json"))
+SAIDA = os.environ.get("SAIDA", os.path.join(AQUI, "saida"))
 AUDIO = os.path.join(SAIDA, "audio")
 MODELO = os.environ.get("KOKORO_MODELO", os.path.join(AQUI, "modelo"))
 VOZ = os.environ.get("VOZ", "pm_alex")  # masculina, pt-BR; a outra masculina é pm_santa
@@ -34,7 +36,7 @@ TAXA = 24000
 def sintetizar():
     from kokoro_onnx import Kokoro
 
-    falas = json.load(open(os.path.join(AQUI, "falas.json"), encoding="utf-8"))
+    falas = json.load(open(FALAS, encoding="utf-8"))
     os.makedirs(AUDIO, exist_ok=True)
     motor = Kokoro(os.path.join(MODELO, "kokoro-v1.0.int8.onnx"), os.path.join(MODELO, "voices-v1.0.bin"))
 
