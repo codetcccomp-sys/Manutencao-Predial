@@ -417,6 +417,10 @@ try {
     '543 testes de API · 285 de tela · 123 de ponta a ponta · CI a cada envio',
     '<small>Node/Express + PostgreSQL · React/Vite/Tailwind · Vercel + Supabase</small>',
   ], 7000, 'encerramento');
+} catch (erro) {
+  // A tela no instante da falha: quase sempre diz mais que a mensagem do Playwright.
+  await page.screenshot({ path: path.join(SAIDA, 'erro.png') }).catch(() => {});
+  throw erro;
 } finally {
   await contexto.close();
   await navegador.close();
