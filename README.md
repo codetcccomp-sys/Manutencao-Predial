@@ -516,7 +516,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `GET POST PATCH` | `/planos-preventivos`, `/planos-preventivos/:id` | gestor, administrador |
 | `POST` | `/planos-preventivos/:id/gerar` | gestor, administrador (antecipa a próxima execução) |
 | `POST GET` | `/tarefas/notificar-atrasos`, `/tarefas/atrasos-pendentes` | só o agendador, com `Authorization: Bearer <CRON_SECRET>` (ver Notificações) |
-| `POST` | `/tarefas/gerar-preventivas` | só o agendador, com o mesmo segredo (ver Manutenção preventiva) |
+| `POST GET` | `/tarefas/gerar-preventivas` | só o agendador, com o mesmo segredo; o GET é o do Vercel Cron (ver Manutenção preventiva) |
 
 `GET /health/db` executa uma consulta e devolve 503 quando o banco está
 inacessível — `/health` sozinho responde `ok` mesmo com o banco fora, o que
@@ -579,7 +579,8 @@ manutenção: o que verificar, a cada quanto tempo, onde e por quem. Um plano
 periodicidade (`3` + `mes`, e não 90 dias), a próxima data, a antecedência
 com que o chamado deve ser gerado e, opcionalmente, o técnico responsável.
 
-- O agendador chama `POST /tarefas/gerar-preventivas`, que gera um chamado por
+- O Vercel Cron (`backend/vercel.json`, uma vez por dia) chama
+  `GET /tarefas/gerar-preventivas` com o `CRON_SECRET`, que gera um chamado por
   execução que entrou na janela de antecedência. O chamado é comum — mesma
   máquina de estados, conclusão exige o serviço descrito (RN07) — com
   `origem = 'preventiva'`, o plano de onde veio e a data prevista.

@@ -533,6 +533,24 @@ describe('POST /tarefas/gerar-preventivas', () => {
   });
 });
 
+describe('Vercel Cron: GET /tarefas/gerar-preventivas', () => {
+  // O Vercel Cron só faz GET, mandando o CRON_SECRET no Authorization.
+  it('o job do vercel.json aponta para esta rota, uma vez por dia', () => {
+    const { crons } = require('../vercel.json');
+    expect(crons).toContainEqual({ path: '/tarefas/gerar-preventivas', schedule: expect.stringMatching(/^\d+ \d+ \* \* \*$/) });
+  });
+
+  it('sem o segredo, recusa como o POST', async () => {
+    expect((await request(app).get('/tarefas/gerar-preventivas')).status).toBe(401);
+  });
+
+  it('com o segredo, roda e registra a passagem', async () => {
+    const resp = await request(app).get('/tarefas/gerar-preventivas').set('Authorization', `Bearer ${SEGREDO}`);
+    expect(resp.status).toBe(200);
+    expect(resp.body).toHaveProperty('chamados_gerados');
+  });
+});
+
 describe('GET /relatorios/preventiva', () => {
   it('mede o cumprimento pelo que já pode ser julgado, recortado pela data prevista', async () => {
     // Um período só desta suíte (2040), para outras preventivas no banco não
