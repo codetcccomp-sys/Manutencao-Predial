@@ -7,7 +7,7 @@ const { AppError } = require('../middlewares/errorHandler');
  * ignoradas: um relatório que devolve o período errado sem avisar é pior
  * que um erro.
  */
-function recorte({ de, ate }) {
+function recorte({ de, ate }, coluna = 'c.data_abertura') {
   const condicoes = [];
   const params = [];
 
@@ -26,8 +26,8 @@ function recorte({ de, ate }) {
     // e não parar à meia-noite dele.
     condicoes.push(
       operador === '<'
-        ? `c.data_abertura < ($${params.length}::date + interval '1 day')`
-        : `c.data_abertura >= $${params.length}::date`
+        ? `${coluna} < ($${params.length}::date + interval '1 day')`
+        : `${coluna} >= $${params.length}::date`
     );
   }
 
@@ -74,7 +74,7 @@ async function resumo(filtros = {}) {
   // conexão, que as executa em fila de qualquer jeito. Disparar todas juntas
   // não ganhava paralelismo nenhum — só enfileirava no driver, que avisa que
   // vai deixar de aceitar `client.query()` concorrente no pg 9.
-  const { porEstado, porCategoria, porPrioridade, porLocal, totais } = await emSnapshot(
+  const { porEstado, porCategoria, porPrioridade, porLocal, porOrigem, totais } = await emSnapshot(
     async (client) => ({
       porEstado: await client.query(
         `SELECT c.estado, count(*)::int AS total FROM chamado c ${where} GROUP BY c.estado ORDER BY total DESC`,
@@ -110,6 +110,10 @@ async function resumo(filtros = {}) {
           LIMIT 20`,
         params
       ),
+      porOrigem: await client.query(
+        `SELECT c.origem, count(*)::int AS total FROM chamado c ${where} GROUP BY c.origem ORDER BY c.origem`,
+        params
+      ),
       totais: await client.query(
         `SELECT
            count(*)::int AS total,
@@ -130,7 +134,92 @@ async function resumo(filtros = {}) {
     // Limitado aos 20 locais com mais chamados: uma instituição tem centenas
     // de ambientes, e a lista completa aqui seria ruído, não informação.
     por_local: porLocal.rows,
+    // Quanto do trabalho foi planejado e quanto foi apagar incêndio. Numa
+    // manutenção que funciona, a fatia preventiva cresce e a corretiva cai.
+    por_origem: porOrigem.rows,
   };
+}
+
+/**
+ * Cumprimento do plano de manutenção preventiva (NBR 5674).
+ *
+ * O recorte aqui é pela DATA PREVISTA, e não pela abertura: a pergunta é
+ * "do que estava marcado para março, quanto foi feito em dia?", e uma
+ * preventiva de março gerada com antecedência em fevereiro é de março.
+ *
+ * "Feito em dia" é concluído até o prazo do chamado — o fim do dia previsto,
+ * estendido pelo tempo em que esperou material, como em todo o sistema.
+ *
+ * O percentual de cumprimento só conta o que já pode ser julgado: concluídas
+ * (em dia ou não) e vencidas sem conclusão. As que ainda estão dentro do
+ * prazo não entram nem a favor nem contra, e as canceladas também não — senão
+ * o indicador de março oscilaria a cada dia de março.
+ */
+async function preventiva(filtros = {}) {
+  const { where, params } = recorte(filtros, 'c.data_prevista');
+  const base = where ? `${where} AND c.origem = 'preventiva'` : "WHERE c.origem = 'preventiva'";
+
+  return emSnapshot(async (client) => {
+    const totais = await client.query(
+      `SELECT
+         count(*)::int AS previstas,
+         count(*) FILTER (WHERE c.estado = 'concluido' AND c.data_conclusao <= c.prazo_estimado)::int
+           AS concluidas_no_prazo,
+         count(*) FILTER (WHERE c.estado = 'concluido' AND c.data_conclusao > c.prazo_estimado)::int
+           AS concluidas_com_atraso,
+         count(*) FILTER (WHERE c.estado NOT IN ('concluido', 'cancelado') AND now() > c.prazo_estimado)::int
+           AS vencidas_pendentes,
+         count(*) FILTER (WHERE c.estado NOT IN ('concluido', 'cancelado') AND now() <= c.prazo_estimado)::int
+           AS no_prazo_pendentes,
+         count(*) FILTER (WHERE c.estado = 'cancelado')::int AS canceladas
+       FROM chamado c ${base}`,
+      params
+    );
+
+    // Onde o plano mais falha: planos com execuções vencidas sem conclusão.
+    const planosAtrasados = await client.query(
+      `SELECT p.id, p.titulo,
+              count(*)::int AS vencidas_pendentes,
+              min(c.data_prevista)::text AS mais_antiga
+         FROM chamado c JOIN plano_preventivo p ON p.id = c.plano_id
+         ${base} AND c.estado NOT IN ('concluido', 'cancelado') AND now() > c.prazo_estimado
+        GROUP BY p.id, p.titulo
+        ORDER BY vencidas_pendentes DESC, mais_antiga
+        LIMIT 10`,
+      params
+    );
+
+    // O outro lado da moeda: equipamentos que mais quebram. Corretivo
+    // repetido no mesmo equipamento é o sinal de que falta (ou falha) a
+    // preventiva dele. Aqui o recorte volta a ser pela abertura, porque
+    // corretivo não tem data prevista.
+    const recorteAbertura = recorte(filtros);
+    const ondeCorretivo = recorteAbertura.where
+      ? `${recorteAbertura.where} AND c.origem = 'corretiva' AND c.equipamento_id IS NOT NULL`
+      : "WHERE c.origem = 'corretiva' AND c.equipamento_id IS NOT NULL";
+    const equipamentos = await client.query(
+      `SELECT e.id, e.codigo, e.nome,
+              count(*)::int AS corretivos,
+              EXISTS (SELECT 1 FROM plano_preventivo p WHERE p.equipamento_id = e.id AND p.ativo) AS tem_plano
+         FROM chamado c JOIN equipamento e ON e.id = c.equipamento_id
+         ${ondeCorretivo}
+        GROUP BY e.id
+        ORDER BY corretivos DESC, e.codigo
+        LIMIT 10`,
+      recorteAbertura.params
+    );
+
+    const t = totais.rows[0];
+    const julgaveis = t.concluidas_no_prazo + t.concluidas_com_atraso + t.vencidas_pendentes;
+
+    return {
+      totais: t,
+      // Sem nada julgável não há percentual: 0% sugeriria que tudo falhou.
+      percentual_cumprimento: julgaveis > 0 ? Math.round((t.concluidas_no_prazo / julgaveis) * 100) : null,
+      planos_com_atraso: planosAtrasados.rows,
+      equipamentos_com_mais_corretivos: equipamentos.rows,
+    };
+  });
 }
 
 // O dia de um chamado é o dia NO FUSO DA INSTITUIÇÃO, não o do servidor (UTC). Um
@@ -396,6 +485,10 @@ async function percorrerChamados(filtros, aoReceberLote) {
                 c.titulo,
                 cat.nome AS categoria,
                 ${ROTULO_LOCAL} AS local,
+                eq.codigo AS equipamento_codigo,
+                eq.nome AS equipamento_nome,
+                c.origem,
+                c.data_prevista,
                 c.estado,
                 c.prioridade,
                 c.prioridade_sugerida,
@@ -421,6 +514,7 @@ async function percorrerChamados(filtros, aoReceberLote) {
            FROM chamado c
            JOIN categoria cat ON cat.id = c.categoria_id
            JOIN local l ON l.id = c.local_id
+           LEFT JOIN equipamento eq ON eq.id = c.equipamento_id
            JOIN usuario sol ON sol.id = c.solicitante_id
            LEFT JOIN usuario tec ON tec.id = c.tecnico_id
            LEFT JOIN avaliacao a ON a.chamado_id = c.id
@@ -439,6 +533,7 @@ async function percorrerChamados(filtros, aoReceberLote) {
 }
 
 module.exports = {
+  preventiva,
   resumo,
   desempenho,
   porTecnico,

@@ -125,6 +125,30 @@ Alterar um prazo vale para chamados abertos daí em diante; os já existentes
 mantêm o prazo com que nasceram, para que uma mudança de política não
 reescreva retroativamente o histórico de cumprimento.
 
+### Horas corridas ou horas úteis
+
+Cada prioridade escolhe a régua (`sla.contagem`): **corridas** (o padrão, e o
+que existia) ou **úteis**, contadas só dentro do expediente da instituição
+(tabela `expediente`, por dia da semana; seg a sex, 8h às 18h, de partida) e
+fora dos feriados cadastrados (`feriado`). Um chamado médio de 72h aberto na
+sexta às 17h, em horas corridas, vence na segunda às 17h, depois de um fim de
+semana em que ninguém trabalha; em horas úteis, vence sete dias de expediente
+depois. Para o imprevisto grave (crítica, alta) a régua corrida costuma ser a
+certa; para o resto, a útil é a honesta.
+
+A conta é do banco, numa função só (`prazo_sla`, sobre `somar_horas_uteis` e
+`horas_uteis_entre`, migração 021), usada na abertura, na repriorização e na
+reabertura. A espera por material devolve ao prazo o **expediente** que
+consumiu (dois dias de espera num fim de semana não valem dois dias de prazo),
+e fica guardada em `tempo_suspenso_util` para a repriorização refazer a conta
+desde a abertura. Sem nenhum dia de expediente cadastrado, não há hora útil
+para contar e vale a régua corrida. Preventivas não usam SLA: o prazo delas é o
+fim do dia previsto.
+
+Rotas: `PATCH /sla/:prioridade` (`prazo_horas` e/ou `contagem`),
+`GET PUT /sla/expediente` (a semana inteira de uma vez),
+`GET POST /sla/feriados`, `DELETE /sla/feriados/:data`.
+
 ## Segurança
 
 O que o código faz, e onde procurar:
@@ -135,6 +159,37 @@ O que o código faz, e onde procurar:
   esperar o token vencer — antes disso a pessoa desligada continuava entrando
   por até 8 horas. Erro do banco nessa checagem é 500, não 401: um 401 mandaria
   todo mundo de volta ao login por uma falha que não é deles.
+- **A sessão fica num cookie que script nenhum lê.** O token ia para o
+  `localStorage`, onde qualquer script da página o alcança: um XSS levaria a
+  sessão embora para ser usada de outro lugar. Agora ele viaja num cookie
+  `conserva_sessao` `HttpOnly`, `SameSite=Strict` e `Secure` (atrás da Vercel),
+  e a tela guarda só nome e perfil, para se desenhar. O que sobrou de token no
+  aparelho de quem já usava o sistema é apagado na primeira carga. Contra CSRF,
+  além do `SameSite`, toda escrita autenticada pelo cookie exige o cabeçalho
+  `X-Conserva: 1`, que a tela manda e um formulário de outro site não consegue
+  mandar (`403 CSRF` sem ele). `Authorization: Bearer` continua aceito: é como
+  os testes e qualquer cliente que não seja o navegador falam com a API.
+- **Sessão revogável.** Cada conta tem uma versão de sessão, e todo token
+  carrega a versão em que foi emitido. Redefinir a senha, pedir "sair de todos
+  os aparelhos" (tela **Minha conta**), ligar ou desligar a verificação em duas
+  etapas e a redefinição dela pelo administrador sobem a versão: todas as
+  sessões abertas daquela pessoa caem na hora. Antes, quem tivesse roubado a
+  sessão continuava dentro por até 8 horas depois de a vítima trocar a senha.
+- **Verificação em duas etapas (TOTP).** Opcional por pessoa, recomendada para
+  gestão e administração, ligada na tela **Minha conta**: QR Code para o
+  aplicativo autenticador (Google/Microsoft Authenticator, Aegis, o do
+  gerenciador de senhas), confirmação com um código e a senha antes de valer
+  (só a sessão aberta não cadastra outro aplicativo), e 8 códigos de
+  recuperação de uso único, mostrados uma vez e guardados só como hash. Com
+  ela ligada, a senha certa devolve um desafio de 5 minutos, e só o código abre
+  a sessão; o código usado não vale de novo, e errar senha ou código — no login
+  ou na própria conta — conta no mesmo limite do login. A sessão reemitida ao
+  ligar ou desligar volta só no cookie: no corpo da resposta, um script
+  injetado na página a levaria embora. Quem perdeu o celular e os códigos pede ao
+  administrador, que redefine pela tela de **Usuários** ("Redefinir duas
+  etapas"); a pessoa entra só com a senha e liga de novo. Implementação própria
+  do RFC 6238 em `backend/src/utils/totp.js`, conferida contra os vetores do
+  RFC em `tests/totp.test.js`.
 - **Autorização no servidor.** Perfil e relação com o chamado são conferidos
   na API; a tela esconder um botão é só cortesia (o cancelamento do técnico,
   por exemplo, também é recusado se alguém chamar a rota à mão).
@@ -161,6 +216,13 @@ O que o código faz, e onde procurar:
   — o primeiro valida os hashes gravados pelo 5 (formato igual), e o segundo é
   coberto por `tests/emailSmtp.test.js`, que envia por SMTP de verdade a um
   servidor de mentira.
+- **Banco fechado para a API automática do Supabase.** O Supabase publica o
+  schema `public` em `/rest/v1/`, com a chave `anon`, que é pública. Tabelas e
+  sequências foram fechadas para `anon` e `authenticated` na migração 005; as
+  funções, na 023 — o PostgreSQL concede `EXECUTE` de toda função nova a
+  `PUBLIC`, e os dois papéis herdam dele. Só o `smp_backend`, com que a API em
+  Express conecta, lê tabela e executa função; `tests/migracoes.test.js`
+  confere no banco migrado que nenhuma função ficou para `PUBLIC`.
 - **Conexão com o banco por TLS verificado.** Em produção a aplicação não sobe
   sem o certificado da autoridade do Supabase, que já está em
   `backend/database/supabase-ca.crt` (`DB_CA_CERT` o substitui sem novo
@@ -375,6 +437,10 @@ solicitante (RN01); esse script recusa rodar com `NODE_ENV=production`.
 cd frontend
 npm run mutacao            # todas
 npm run mutacao vitest     # só as rápidas
+
+cd backend
+node tests/mutacao.js          # as travas de sessão, 2FA, privilégios, preventiva, horas úteis e anexos
+node tests/mutacao.js sessão   # só as que têm "sessão" na descrição
 ```
 
 Um teste que passa não prova nada sozinho: ele pode estar passando pelo motivo
@@ -402,15 +468,20 @@ vermelha qualquer PR sem relação com a falha.
 ## Rotas
 
 Exceto as indicadas como públicas, `/health`, `/health/db` e as de agendador,
-todas exigem `Authorization: Bearer <token>`.
+todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
+`X-Conserva: 1` nas escritas) ou `Authorization: Bearer <token>`.
 
 | Método | Rota | Quem |
 | --- | --- | --- |
 | `POST` | `/auth/registrar` | público (cria `solicitante`) |
-| `POST` | `/auth/login` | público (limitado por tentativa) |
+| `POST` | `/auth/login` | público (limitado por tentativa). Com duas etapas ligadas, responde `{ requer_2fa, desafio }` em vez da sessão |
+| `POST` | `/auth/login/2fa` | público: `{ desafio, codigo }` — código do aplicativo ou de recuperação; mesmo limite do login |
+| `POST` | `/auth/sair` | público (apaga o cookie) |
+| `POST` | `/auth/sair-de-todos` | autenticado: derruba todas as sessões da própria conta |
+| `GET POST` | `/auth/2fa`, `/auth/2fa/iniciar`, `/auth/2fa/ativar` e `/auth/2fa/desativar` (senha + código), `/auth/2fa/codigos` | autenticado, na própria conta; senha e código errados contam no limite do login |
 | `POST` | `/auth/recuperar-senha`, `/auth/redefinir-senha` | público (token de uso único, 60 min; pedidos limitados por IP) |
-| `GET` | `/chamados?pagina=&limite=&estado=&situacao=&categoria_id=&atrasados=&sem_tecnico=&busca=&ordenar=` | autenticado, escopo conforme o perfil. `situacao` = `abertos` ou `encerrados`; `ordenar` = `recentes` ou `prazo`; `busca` casa protocolo ou título |
-| `POST` | `/chamados` | solicitante, gestor, administrador |
+| `GET` | `/chamados?pagina=&limite=&estado=&situacao=&categoria_id=&equipamento_id=&origem=&atrasados=&sem_tecnico=&busca=&ordenar=` | autenticado, escopo conforme o perfil. `situacao` = `abertos` ou `encerrados`; `origem` = `corretiva` ou `preventiva`; `ordenar` = `recentes` ou `prazo`; `busca` casa protocolo ou título |
+| `POST` | `/chamados` | solicitante, gestor, administrador. Com `equipamento_id`, local e categoria podem ser omitidos (vêm do equipamento) |
 | `GET` | `/chamados/:id` | quem tem acesso ao chamado |
 | `PATCH` | `/chamados/:id` | solicitante do chamado, até a atribuição (RN03); gestão, até o chamado encerrar |
 | `PATCH` | `/chamados/:id/atribuir` | gestor, administrador |
@@ -426,6 +497,7 @@ todas exigem `Authorization: Bearer <token>`.
 | `GET` | `/usuarios` | gestor, administrador |
 | `POST PATCH` | `/usuarios`, `/usuarios/:id` | administrador |
 | `POST` | `/usuarios/:id/anonimizar` | administrador (ver [docs/lgpd.md](docs/lgpd.md)) |
+| `POST` | `/usuarios/:id/2fa/redefinir` | administrador (quem perdeu o celular e os códigos) |
 | `GET PATCH` | `/notificacoes`, `/notificacoes/:id/lida` | o próprio usuário |
 | `GET POST PATCH` | `/locais`, `/categorias` | leitura autenticada, escrita para gestão |
 | `POST` | `/locais/importar` | gestor, administrador |
@@ -436,12 +508,21 @@ todas exigem `Authorization: Bearer <token>`.
 | `GET POST` | `/regras-priorizacao`, `/regras-priorizacao/simular` | gestor, administrador (o `POST /regras-priorizacao`, que publica versão nova, só o administrador) |
 | `GET` | `/relatorios/resumo`, `/desempenho`, `/tecnicos` | gestor, administrador |
 | `GET` | `/relatorios/serie?de=&ate=` | gestor, administrador. Abertos e concluídos por dia, no fuso da instituição; um ponto por dia (zero nos dias vazios), no máximo 366, com `truncado: true` quando corta |
+| `GET` | `/relatorios/preventiva?de=&ate=` | gestor, administrador. Cumprimento do plano preventivo, recortado pela data prevista |
 | `GET` | `/relatorios/exportar/chamados.csv`, `/relatorios/exportar/resumo.pdf` | gestor, administrador |
+| `GET` | `/equipamentos?local_id=&busca=`, `/equipamentos/codigo/:codigo` | autenticado (desativados só para a gestão, com `incluir_inativos=true`) |
+| `GET` | `/equipamentos/:id` | autenticado; gestão e técnico recebem a ficha com histórico e planos, o solicitante só o cadastro |
+| `POST PATCH` | `/equipamentos`, `/equipamentos/:id` | gestor, administrador |
+| `GET POST PATCH` | `/planos-preventivos`, `/planos-preventivos/:id` | gestor, administrador |
+| `POST` | `/planos-preventivos/:id/gerar` | gestor, administrador (antecipa a próxima execução) |
 | `POST GET` | `/tarefas/notificar-atrasos`, `/tarefas/atrasos-pendentes` | só o agendador, com `Authorization: Bearer <CRON_SECRET>` (ver Notificações) |
+| `POST` | `/tarefas/gerar-preventivas` | só o agendador, com o mesmo segredo (ver Manutenção preventiva) |
 
 `GET /health/db` executa uma consulta e devolve 503 quando o banco está
 inacessível — `/health` sozinho responde `ok` mesmo com o banco fora, o que
-já escondeu falha de conexão em produção.
+já escondeu falha de conexão em produção. O 503 diz só que o banco está fora;
+o motivo (que traz host, usuário e tipo de falha) vai para o log, porque a rota
+é pública.
 
 ## Locais
 
@@ -481,14 +562,99 @@ No navegador, um arquivo que não for UTF-8 válido é lido como Windows-1252,
 que é o que o Excel no Windows grava: sem isso "Térreo" entraria no banco
 corrompido e ninguém notaria até o primeiro relatório.
 
+## Equipamentos e manutenção preventiva
+
+O chamado sempre teve local; agora pode ter também **equipamento** (o split da
+sala 204, a bomba de recalque, o quadro elétrico do bloco B). O equipamento é
+opcional no chamado — nem todo problema é de um — e, quando informado, o local
+precisa ser o dele. O código da etiqueta é guardado em maiúsculas, sem espaços
+(`bomba-01` e `BOMBA-01 ` são a mesma etiqueta), e é por ele que o endereço
+`/chamados/novo?equipamento=CODIGO` abre um chamado já com equipamento, local
+e categoria escolhidos. A ficha do equipamento (`/equipamentos/:id`) mostra o
+histórico de chamados dele e quantos corretivos teve nos últimos 12 meses.
+
+A **manutenção preventiva** é o que a ABNT NBR 5674 põe no centro da gestão de
+manutenção: o que verificar, a cada quanto tempo, onde e por quem. Um plano
+(`plano_preventivo`) tem o roteiro do serviço, o equipamento ou o local, a
+periodicidade (`3` + `mes`, e não 90 dias), a próxima data, a antecedência
+com que o chamado deve ser gerado e, opcionalmente, o técnico responsável.
+
+- O agendador chama `POST /tarefas/gerar-preventivas`, que gera um chamado por
+  execução que entrou na janela de antecedência. O chamado é comum — mesma
+  máquina de estados, conclusão exige o serviço descrito (RN07) — com
+  `origem = 'preventiva'`, o plano de onde veio e a data prevista.
+- O prazo da preventiva é o fim do dia previsto (no fuso da instituição), e não
+  o SLA por prioridade, que foi pensado para o imprevisto. Repriorizar não
+  muda o dia combinado.
+- Com responsável, o chamado nasce atribuído a ele, passando pelos estados do
+  fluxo (aberto → em triagem → atribuído) no histórico; sem responsável, ou com
+  o responsável desativado, entra na triagem.
+- As datas do plano são sempre `data_inicio + n períodos`: um mensal que começa
+  num dia 31 cai no último dia de fevereiro e volta ao dia 31 em março.
+- Uma execução, um chamado: o índice único (plano, data prevista) garante isso
+  mesmo com duas passagens do agendador ao mesmo tempo. Se o agendador ficar
+  parado, a passagem seguinte gera só a execução mais recente, e o histórico
+  do chamado diz quantas venceram sem chamado.
+
+O relatório `/relatorios/preventiva` mede o **cumprimento do plano**: das
+execuções que já podem ser julgadas (concluídas ou vencidas), quantas foram
+feitas até o prazo. As que ainda estão no prazo não entram, para o indicador
+do mês não oscilar a cada dia. O mesmo relatório lista os planos com execução
+vencida e os equipamentos com mais corretivos — o sinal de que falta (ou falha)
+a preventiva deles.
+
+## Celular: instalação, uso sem conexão e etiquetas com QR Code
+
+**Instalável.** O frontend tem manifesto (`public/manifest.webmanifest`) e
+service worker (`public/sw.js`): no celular, "Adicionar à tela inicial" abre o
+sistema como aplicativo, sem a barra do navegador, com o ícone da marca.
+
+**Sem conexão, para consultar.** O técnico na casa de máquinas, no subsolo,
+continua vendo a fila e o chamado que abriu por último: as leituras da fila,
+do chamado, dos comentários e da ficha do equipamento são "rede primeiro", com
+a última resposta guardada como reserva. A reserva volta marcada, e a tela
+mostra a faixa **"Sem conexão"** dizendo que aquilo é a última versão salva,
+não o estado de agora. Escrever sem conexão **não** fica guardado para depois:
+sincronizar mais tarde exigiria resolver conflito (outra pessoa pode ter
+reatribuído ou cancelado enquanto isso), e conflito resolvido errado é registro
+de manutenção falso. A ação falha na hora com "nada foi registrado". Os dados
+guardados são apagados no login e no logout, para um aparelho compartilhado não
+mostrar a fila de uma pessoa a outra. O service worker só é registrado na build
+de produção.
+
+**Etiquetas com QR Code** (`/etiquetas`, gestão): imprima e cole no equipamento
+ou na porta da sala. O QR leva a `/chamados/novo?equipamento=CODIGO` (ou
+`?local=ID`), que abre o formulário já com equipamento, local e categoria. Quem
+lê sem estar logado passa pelo login e volta ao formulário: o login devolve ao
+endereço pedido, aceitando só caminho interno (`destinoSeguro`, em
+`Login.jsx`). O QR é desenhado em SVG pelo próprio React (sem `innerHTML`, a
+CSP estrita não tem o que bloquear), e um teste o lê com um decodificador de
+verdade para garantir que a etiqueta impressa abre o endereço certo.
+
 ## Anexos
 
-Aceita JPEG, PNG, WebP e PDF, até 4 MB. O tipo declarado pelo cliente não é
-suficiente: o conteúdo é conferido pelos primeiros bytes do arquivo. O
+Aceita JPEG, PNG, WebP e PDF, até 4 MB — o teto vem do limite de corpo das
+funções da Vercel (4,5 MB). Foto de celular passa disso com facilidade, então
+a tela reduz a foto antes de enviar (`src/dominio/prepararAnexo.js`): 1600 px
+no lado maior, em JPEG, respeitando a orientação da câmera. Um PDF acima do
+limite é recusado na hora, sem esperar o envio. O tipo declarado pelo cliente
+não é suficiente: o conteúdo é conferido pelos primeiros bytes do arquivo, e
+um envio malformado (corpo cortado, cabeçalho de parte quebrado) volta 400
+`ENVIO_MALFORMADO`, não 500. O
 conteúdo fica em `bytea` no próprio banco, porque o sistema de arquivos das
 funções serverless é efêmero — um caminho gravado em disco apontaria para um
-arquivo que já não existe na requisição seguinte. Se o volume crescer, o
-passo seguinte é migrar para armazenamento de objetos.
+arquivo que já não existe na requisição seguinte.
+
+Com `ANEXOS_ARMAZENAMENTO=supabase` (mais `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY` e, opcional, `ANEXOS_BUCKET`, padrão `anexos`), os
+anexos **novos** vão para um bucket **privado** do Supabase Storage e o banco
+guarda só a chave do objeto. A API continua sendo o único caminho até o
+arquivo: confere a permissão do chamado e só então lê o objeto com a chave de
+serviço — não sai URL pública nem assinada para o navegador. Os anexos antigos
+continuam no banco e continuam abrindo: cada linha diz onde está o seu arquivo
+(`anexo.armazenamento`). Storage fora do ar vira 502 `ARMAZENAMENTO_INDISPONIVEL`,
+sem linha órfã. A chave de serviço ignora as políticas de acesso do banco: fica
+só nas variáveis do backend, nunca no frontend.
 
 ## Priorização
 
@@ -603,3 +769,14 @@ Cada execução tem teto: o alcance é chamados × destinatários, não a soma, 
 uma varredura sem limite poderia gerar milhares de avisos numa transação só,
 dentro de uma função com limite de tempo. O que passar do teto fica para a
 passagem seguinte — a marcação é persistente, nada se perde.
+
+### O agendador parou?
+
+Cada passagem por `/tarefas/*` fica registrada em `execucao_tarefa` (início,
+fim, sucesso, o que respondeu, o erro). `GET /operacao/agendador` (gestão)
+diz, para cada tarefa, se está `ok`, `parada` (sem sucesso há mais que a
+tolerância: 1 h para o aviso de atraso, 26 h para a preventiva), `falhando`
+(a última passagem falhou, ou começou e não terminou) ou `nunca` (nenhuma
+passagem: o job não foi criado). A tela inicial da gestão mostra um aviso
+quando alguma não está `ok`. Antes disso, um agendador parado era silêncio —
+e silêncio parece saúde.

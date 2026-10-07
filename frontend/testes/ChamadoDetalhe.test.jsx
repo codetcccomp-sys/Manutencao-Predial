@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 
-vi.mock('react-router-dom', async () => {
-  const real = await vi.importActual('react-router-dom');
+vi.mock('react-router', async () => {
+  const real = await vi.importActual('react-router');
   return { ...real, useParams: () => ({ id: '7' }) };
 });
 

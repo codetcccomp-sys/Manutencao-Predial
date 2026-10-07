@@ -17,8 +17,11 @@ router.post(
   validate({
     titulo: { obrigatorio: true, tipo: 'string', minLength: 3 },
     descricao: { obrigatorio: true, tipo: 'string', minLength: 5 },
-    categoria_id: { obrigatorio: true, tipo: 'number' },
-    local_id: { obrigatorio: true, tipo: 'number' },
+    // Local e categoria são obrigatórios, a menos que venha o equipamento:
+    // aí os dois são os dele (o caminho do QR Code). Quem confere é o serviço.
+    categoria_id: { tipo: 'number' },
+    local_id: { tipo: 'number' },
+    equipamento_id: { tipo: 'number' },
     prioridade: { enum: ['baixa', 'media', 'alta', 'critica'] },
   }),
   chamadosController.criar
@@ -37,6 +40,7 @@ router.patch(
     descricao: { tipo: 'string', minLength: 5 },
     categoria_id: { tipo: 'number' },
     local_id: { tipo: 'number' },
+    equipamento_id: { tipo: 'number' },
   }),
   chamadosController.editar
 );

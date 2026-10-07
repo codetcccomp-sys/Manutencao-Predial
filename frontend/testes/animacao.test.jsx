@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { StrictMode, useRef } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import NumeroAnimado from '../src/animacao/NumeroAnimado';
@@ -66,6 +66,31 @@ describe('NumeroAnimado', () => {
     // Logo depois da troca o número ainda é o antigo (ou já o novo), nunca 0.
     expect(['24', '25']).toContain(container.textContent);
     await waitFor(() => expect(container.textContent).toBe('25'), { timeout: 2000 });
+  });
+
+  // O StrictMode (o `npm run dev`, com que se desenvolve) monta, desmonta e
+  // remonta cada efeito. A limpeza pulava para o valor final e marcava esse
+  // valor como já exibido; a remontagem via "nada a animar" e o número
+  // aparecia pronto. Uma tela que só anima na build de produção é uma tela
+  // que ninguém viu animar enquanto a escrevia.
+  it('no StrictMode a contagem acontece, em vez de pular para o final', async () => {
+    preferenciaDoSistema(false);
+    const { container } = render(
+      <StrictMode>
+        <NumeroAnimado valor={500} duracao={0.4} />
+      </StrictMode>
+    );
+
+    expect(container.textContent).toBe('0');
+    await waitFor(
+      () => {
+        const n = Number(container.textContent.replace(/\./g, ''));
+        expect(n).toBeGreaterThan(0);
+        expect(n).toBeLessThan(500);
+      },
+      { timeout: 2000, interval: 5 }
+    );
+    await waitFor(() => expect(container.textContent).toBe('500'), { timeout: 2000 });
   });
 
   it('formata no padrão brasileiro', () => {

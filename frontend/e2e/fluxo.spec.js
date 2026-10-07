@@ -178,9 +178,11 @@ test('a gestão vê relatórios e cadastros; usuários é só do administrador',
 test('sessão expirada devolve ao login em vez de deixar a tela quebrada', async ({ page }) => {
   await entrar(page, cenario.pessoas.solicitante);
 
-  // Um token inválido é o que sobra quando o anterior vence: a tela precisa
-  // perceber e voltar ao login, não encher de erro.
-  await page.evaluate(() => localStorage.setItem('smp_token', 'token.invalido.demais'));
+  // Um cookie com token inválido é o que sobra quando o anterior vence: a
+  // tela precisa perceber e voltar ao login, não encher de erro.
+  await page.context().addCookies([
+    { name: 'conserva_sessao', value: 'token.invalido.demais', url: new URL(page.url()).origin },
+  ]);
   await page.goto('/');
 
   await page.waitForURL('**/login', { timeout: 15_000 });

@@ -191,10 +191,13 @@ async function redefinir(token, senhaNova) {
       throw new AppError('Token de redefinição inválido ou expirado.', 400, 'TOKEN_INVALIDO');
     }
 
-    await client.query('UPDATE usuario SET senha_hash = $1 WHERE id = $2', [
-      senhaHash,
-      pedido.usuario_id,
-    ]);
+    // Senha nova derruba toda sessão aberta. Sem isto, quem tinha roubado a
+    // sessão seguia dentro por até 8 horas depois da troca — justamente
+    // quando a vítima achava que tinha resolvido.
+    await client.query(
+      'UPDATE usuario SET senha_hash = $1, sessao_versao = sessao_versao + 1 WHERE id = $2',
+      [senhaHash, pedido.usuario_id]
+    );
 
     await client.query('UPDATE recuperacao_senha SET usado_em = now() WHERE id = $1', [pedido.id]);
 

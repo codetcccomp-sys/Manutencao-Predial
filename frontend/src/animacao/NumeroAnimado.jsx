@@ -53,10 +53,14 @@ function NumeroAnimado({ valor, className = '', duracao = 0.9 }) {
 
     return () => {
       animacao.kill();
-      // Interrompida no meio (a tela mudou, ou chegou outro valor): o texto
-      // nunca fica parado num valor intermediário.
-      elemento.textContent = formatar(final);
-      exibido.current = final;
+      // Interrompida no meio, o que vale é onde a contagem PAROU, não onde
+      // ela ia chegar. Se chegou outro valor, o próximo efeito parte daqui e
+      // dá o passo que falta; o texto não fica parado num intermediário porque
+      // esse efeito começa na mesma hora. E é isso que deixa a contagem
+      // sobreviver ao StrictMode, que desmonta e remonta o efeito: a versão
+      // anterior pulava para o final aqui, a remontagem via "nada a animar" e
+      // o número aparecia pronto.
+      exibido.current = contador.v;
     };
   }, [valor, duracao]);
 

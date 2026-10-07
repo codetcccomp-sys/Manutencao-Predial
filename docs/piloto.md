@@ -125,6 +125,66 @@ aviso mede o processo errado.
 > fail-closed: sem `CRON_SECRET` configurado ela recusa (503) em vez de ficar
 > aberta.
 
+### 2.1.1 Manutenção preventiva (mesmo segredo, outro job)
+
+Os planos preventivos só geram chamados se alguém chamar a tarefa. Crie um
+**segundo job** no mesmo agendador, com o mesmo cabeçalho:
+
+```
+POST https://manutencao-predial-backend-delta.vercel.app/tarefas/gerar-preventivas
+Authorization: Bearer <o segredo>
+uma vez por dia, de madrugada (03:00 de Brasília, por exemplo)
+```
+
+Uma vez por dia basta: o plano tem granularidade de dia. Rodar mais vezes é
+inofensivo — cada execução prevista vira no máximo um chamado. A resposta diz
+`chamados_gerados` e `falhas`; ligue a notificação de falha como no job do
+atraso. Antes, aplique no Supabase as migrações pendentes (de
+`017_indices_de_data` em diante: `node database/migrate.js` com a
+`DATABASE_URL` de produção, que roda como `postgres`). As que criam função SQL
+já concedem `EXECUTE` ao `smp_backend` — o papel com que a API conecta não
+recebe função nova sozinho.
+
+A tela inicial da gestão passa a avisar quando um dos dois jobs parou
+("Tarefas automáticas paradas"). Logo depois de criar os jobs, o aviso diz
+"nenhuma passagem registrada" até a primeira execução — é esperado.
+
+### 2.1.2 Anexos fora do banco (opcional)
+
+O plano gratuito do Supabase tem 500 MB de banco para tudo, e foto é o que
+mais cresce. Para mandar os anexos novos para o Storage:
+
+1. No painel do Supabase, Storage → crie o bucket `anexos`, **privado**.
+2. Nas variáveis do projeto `manutencao-predial-backend` na Vercel:
+   `ANEXOS_ARMAZENAMENTO=supabase`, `SUPABASE_URL=https://<projeto>.supabase.co`
+   e `SUPABASE_SERVICE_ROLE_KEY` (Settings → API → service_role). Redeploy.
+3. A chave de serviço ignora as políticas de acesso: fica só no backend, nunca
+   no frontend, e não passa por conversa nem commit.
+
+Os anexos já enviados continuam no banco e continuam abrindo. Sem as
+variáveis, nada muda.
+
+### 2.1.3 Sessão em cookie e verificação em duas etapas
+
+As migrações `022_sessao_e_2fa` e `023_funcoes_so_para_o_backend` vão junto
+com as anteriores (mesmo `node database/migrate.js`, **antes** do merge: o
+código novo já conta com as colunas e funções delas, e as migrações não
+atrapalham o código antigo). Duas coisas a saber no dia do deploy:
+
+- **Todo mundo entra de novo uma vez.** A sessão passou do `localStorage` para
+  um cookie `HttpOnly`; quem estava logado aparece na tela de login com o aviso
+  de sessão expirada. É uma vez só, e é o que tira o token do alcance de
+  scripts da página.
+- **Ligue as duas etapas nas contas de gestão e administração antes de abrir
+  para as pessoas**: "Minha conta" (clique no próprio nome, no cabeçalho) →
+  "Ligar a verificação em duas etapas". Guarde os 8 códigos de recuperação fora
+  do celular. Se alguém perder o celular e os códigos, o administrador redefine
+  pela tela de Usuários; se for o único administrador, os códigos de
+  recuperação são a única saída sem mexer no banco — guarde-os de verdade.
+
+Para quem acha que alguém entrou na conta: "Sair de todos os aparelhos", na
+mesma tela, derruba todas as sessões abertas. Redefinir a senha faz o mesmo.
+
 ### 2.2 E-mail (decisão, não obrigação)
 
 > **Se configurar SMTP, configure `URL_APP` junto.** Ela guarda o endereço do
@@ -495,11 +555,13 @@ Conhecidas, decididas, e melhor ditas no começo:
   perfil de usuário.
 - **Não há log estruturado.** Erros vão para o log da Vercel em texto. Para
   investigar um incidente, dá; para acompanhar tendência, não.
-- **O aviso de atraso depende de serviço externo.** Se o agendador parar, o
-  sistema não reclama — ninguém é avisado e nada indica isso na tela. A
-  notificação de falha do agendador (item 2.1) cobre o caso em que a chamada
-  acontece e dá erro; não cobre o caso em que ela simplesmente deixa de
-  acontecer, que é por isso que a conferência do item 4 continua na rotina.
+- **O aviso de atraso e a preventiva dependem de serviço externo.** Se o
+  agendador parar, ninguém é avisado por e-mail; o que existe é o aviso na tela
+  inicial da gestão ("Tarefas automáticas paradas"), que aparece quando uma das
+  tarefas passa do prazo sem rodar ou quando a passagem mais recente falhou. A
+  notificação de falha do agendador (item 2.1) cobre a chamada que dá erro; o
+  aviso na tela cobre a que deixou de acontecer — mas só para quem abre o
+  sistema, que é por isso que a conferência do item 4 continua na rotina.
 - **Não há exclusão de nada**, por decisão: locais e equipes são desativados,
   comentários e histórico não somem. Para dado pessoal, a saída é a
   anonimização da conta (item 2.5), que preserva o chamado.

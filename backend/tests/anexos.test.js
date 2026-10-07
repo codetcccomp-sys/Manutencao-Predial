@@ -128,6 +128,32 @@ describe('Envio de anexos', () => {
     expect(resp.body.erro.codigo).toBe('ARQUIVO_GRANDE');
   });
 
+  // Envio malformado é erro de quem enviou, não do servidor: tem de voltar
+  // 400 na forma de erro da API, e não um 500 com stack no log de erros —
+  // era o que acontecia, porque o erro do parser não é um MulterError. A
+  // segunda requisição confere que o servidor segue de pé: o multer 1.x
+  // chegou a cair com corpo malformado (CVE-2025-7338).
+  it.each([
+    ['corpo que termina no meio', '--x\r\nContent-Disposition: form-data; name="arquivo"; filename="a.png"\r\nContent-Type: image/png\r\n\r\nabc'],
+    ['parte sem cabeçalho válido', `--x\r\nContent-Disposition: form-data; name="arquivo"; filename="a"\r\n${'X'.repeat(200)}\r\n\r\n`],
+    ['corpo que não é multipart', 'isso não é multipart'],
+    ['parte sem nome de campo', '--x\r\nContent-Disposition: form-data; filename="a.png"\r\n\r\nabc\r\n--x--\r\n'],
+  ])('recusa envio malformado (%s) com 400, sem derrubar nada', async (_caso, corpo) => {
+    const resp = await request(app)
+      .post(`/chamados/${chamadoId}/anexos`)
+      .set('Authorization', `Bearer ${solicitante.token}`)
+      .set('Content-Type', 'multipart/form-data; boundary=x')
+      .send(corpo);
+
+    expect(resp.status).toBe(400);
+    expect(resp.body.erro.codigo).toBe('ENVIO_MALFORMADO');
+
+    const depois = await request(app)
+      .get(`/chamados/${chamadoId}/anexos`)
+      .set('Authorization', `Bearer ${solicitante.token}`);
+    expect(depois.status).toBe(200);
+  });
+
   it('recusa requisição sem arquivo', async () => {
     const resp = await request(app)
       .post(`/chamados/${chamadoId}/anexos`)

@@ -3,7 +3,9 @@ const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { normalizarNome } = require('./auth.service');
 
-const CAMPOS = 'id, nome, email, perfil, ativo, criado_em, anonimizado_em';
+// `dois_fatores` diz só SE está ligado: o segredo nunca sai daqui.
+const CAMPOS =
+  'id, nome, email, perfil, ativo, criado_em, anonimizado_em, (totp_ativado_em IS NOT NULL) AS dois_fatores';
 
 /**
  * Por padrão lista só quem está ativo.
@@ -221,7 +223,11 @@ async function anonimizar(id, autor) {
               -- pedir para sair.
               senha_hash     = 'conta-anonimizada-sem-acesso',
               ativo          = FALSE,
-              anonimizado_em = now()
+              anonimizado_em = now(),
+              -- O segundo fator também é dado da pessoa, e as sessões dela
+              -- caem junto (a conta já não autenticaria, mas sem resto).
+              totp_segredo = NULL, totp_pendente = NULL, totp_ativado_em = NULL,
+              totp_ultimo_passo = NULL, sessao_versao = sessao_versao + 1
         WHERE id = $1 AND anonimizado_em IS NULL
         RETURNING ${CAMPOS}`,
       [id]
@@ -235,6 +241,7 @@ async function anonimizar(id, autor) {
     // que mais importa aqui: é a tabela que guarda IP.
     await client.query('DELETE FROM notificacao WHERE usuario_id = $1', [id]);
     await client.query('DELETE FROM recuperacao_senha WHERE usuario_id = $1', [id]);
+    await client.query('DELETE FROM codigo_recuperacao_2fa WHERE usuario_id = $1', [id]);
     await client.query('DELETE FROM tentativa_login WHERE email = $1', [alvo.email]);
 
     return rows[0];

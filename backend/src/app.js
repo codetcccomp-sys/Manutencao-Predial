@@ -107,7 +107,13 @@ app.get('/health/db', async (req, res) => {
       categorias: Number(rows[0].categorias),
     });
   } catch (err) {
-    res.status(503).json({ status: 'erro', banco: 'indisponivel', detalhe: err.message });
+    // O motivo vai para o log, não para a resposta. Esta rota é pública, e a
+    // mensagem do driver carrega host, porta, usuário do banco e o tipo de
+    // falha de autenticação — o mapa que alguém de fora usaria para mirar no
+    // banco. Quem opera o servidor lê o log; quem monitora de fora só precisa
+    // saber que está fora.
+    console.error('[health/db] banco indisponível:', err.message);
+    res.status(503).json({ status: 'erro', banco: 'indisponivel' });
   }
 });
 
@@ -115,6 +121,8 @@ app.use('/auth', require('./routes/auth.routes'));
 app.use('/chamados', require('./routes/chamados.routes'));
 app.use('/usuarios', require('./routes/usuarios.routes'));
 app.use('/locais', require('./routes/locais.routes'));
+app.use('/equipamentos', require('./routes/equipamentos.routes'));
+app.use('/planos-preventivos', require('./routes/planos.routes'));
 app.use('/categorias', require('./routes/categorias.routes'));
 app.use('/equipes', require('./routes/equipes.routes'));
 app.use('/materiais', require('./routes/materiais.routes'));
@@ -123,6 +131,7 @@ app.use('/notificacoes', require('./routes/notificacoes.routes'));
 app.use('/sla', require('./routes/sla.routes'));
 app.use('/regras-priorizacao', require('./routes/priorizacao.routes'));
 app.use('/tarefas', require('./routes/tarefas.routes'));
+app.use('/operacao', require('./routes/operacao.routes'));
 
 app.use((req, res) => {
   res.status(404).json({ erro: { mensagem: 'Rota não encontrada.' } });

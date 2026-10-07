@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 const usuariosService = require('../src/services/usuarios.service');
 const { apagarChamados } = require('./apoio/limpeza');
 
@@ -91,7 +92,10 @@ describe('POST /usuarios/:id/anonimizar', () => {
     // O ponto inteiro da anonimização em vez de exclusão.
     const alvo = await novaConta();
 
-    const { rows: local } = await pool.query('SELECT id FROM local LIMIT 1');
+    // O local é da suíte, e não "o primeiro do banco": num banco novo (o do CI)
+    // não há local nenhum até alguma outra suíte criar um, e a ordem das suítes
+    // não é garantida.
+    const local = [{ id: await garantirLocal({ unidade: 'Unidade da suíte de usuários' }) }];
     const { rows: categoria } = await pool.query('SELECT id FROM categoria LIMIT 1');
 
     const chamado = await request(app)
@@ -280,7 +284,10 @@ describe('As travas', () => {
     // A conta anonimizada não entra mais, e o chamado continuaria designado a
     // ela — fora do filtro "sem técnico" e fora da fila de qualquer pessoa.
     const tecnico = await novaConta('tecnico');
-    const { rows: local } = await pool.query('SELECT id FROM local LIMIT 1');
+    // O local é da suíte, e não "o primeiro do banco": num banco novo (o do CI)
+    // não há local nenhum até alguma outra suíte criar um, e a ordem das suítes
+    // não é garantida.
+    const local = [{ id: await garantirLocal({ unidade: 'Unidade da suíte de usuários' }) }];
     const { rows: categoria } = await pool.query('SELECT id FROM categoria LIMIT 1');
     const { body } = await request(app)
       .post('/chamados')

@@ -49,7 +49,17 @@ async function limparAntigas() {
  * uma derivação de chave.
  */
 async function limitarLogin(req, res, next) {
-  const email = String(req.body?.email || '').toLowerCase();
+  return conferirLimite(req, res, next, req.body?.email);
+}
+
+/**
+ * A mesma contagem do login, para quem já tem o e-mail por outro caminho — o
+ * segundo fator, em que o e-mail vem do desafio assinado e não do corpo.
+ * Falha de senha e falha de código somam no mesmo contador: quem descobriu a
+ * senha não ganha cinco tentativas novas para chutar o código.
+ */
+async function conferirLimite(req, res, next, emailInformado) {
+  const email = String(emailInformado || '').toLowerCase();
   const ip = ipDoCliente(req);
 
   try {
@@ -204,6 +214,7 @@ async function registrarTentativa(email, ip, sucesso) {
 
 module.exports = {
   limitarLogin,
+  conferirLimite,
   limitarRecuperacao,
   registrarTentativa,
   ipDoCliente,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router';
 import api, { baixarArquivo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useEntrada } from '../animacao/useEntrada';
@@ -10,6 +10,7 @@ import { rotuloEstado, rotuloPrioridade } from '../dominio/rotulos';
 import Tabela from '../components/ui/Tabela';
 import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
+import { formatarDia } from '../dominio/preventiva';
 
 // O backend devolve segundos; quem lê o relatório pensa em horas e dias.
 function formatarDuracao(segundos) {
@@ -79,6 +80,9 @@ function Relatorios() {
   // A série tem carga e falha próprias: um erro no gráfico não derruba os relatórios
   // que já chegaram, e um relatório lento não segura o gráfico.
   const [serie, setSerie] = useState(null);
+  // Separado do resto, como a série: um relatório de preventiva que falha não
+  // derruba os números de chamados, que são o que a tela existe para mostrar.
+  const [preventiva, setPreventiva] = useState(null);
   const [erroSerie, setErroSerie] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const refPagina = useRef(null);
@@ -99,6 +103,11 @@ function Relatorios() {
         setSerie(null);
         setErroSerie(true);
       });
+
+    api
+      .get('/relatorios/preventiva', { params })
+      .then(({ data }) => setPreventiva(data))
+      .catch(() => setPreventiva(null));
 
     Promise.all([
       api.get('/relatorios/resumo', { params }),
@@ -129,10 +138,13 @@ function Relatorios() {
   async function salvarPrazo(prioridade, valor, anterior) {
     const horas = Number(valor);
     if (!Number.isInteger(horas) || horas === anterior) return;
+    await alterarSla(prioridade, { prazo_horas: horas });
+  }
 
+  async function alterarSla(prioridade, campos) {
     setErro('');
     try {
-      await api.patch(`/sla/${prioridade}`, { prazo_horas: horas });
+      await api.patch(`/sla/${prioridade}`, campos);
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível alterar o prazo.');
@@ -449,17 +461,104 @@ function Relatorios() {
                         onBlur={(e) => salvarPrazo(s.prioridade, e.target.value, s.prazo_horas)}
                         className="border rounded px-2 py-1 w-24"
                       />
-                      <span className="text-tinta-2 text-xs">horas</span>
+                      <select
+                        aria-label={`Contagem do prazo ${rotuloPrioridade(s.prioridade)}`}
+                        value={s.contagem ?? 'corridas'}
+                        onChange={(e) => alterarSla(s.prioridade, { contagem: e.target.value })}
+                        className="border rounded px-2 py-1 text-xs"
+                      >
+                        <option value="corridas">horas corridas</option>
+                        <option value="uteis">horas úteis</option>
+                      </select>
                     </span>
                   </label>
                 ))}
               </div>
               <p className="text-xs text-tinta-2 mt-2">
                 Alterar o prazo vale para chamados abertos daqui em diante; os já existentes mantêm o
-                prazo com que nasceram.
+                prazo com que nasceram. Horas úteis contam só o expediente, fora dos feriados —{' '}
+                <Link to="/cadastros?aba=expediente" className="text-navy hover:underline">
+                  ajustar expediente e feriados
+                </Link>
+                .
               </p>
             </div>
           </div>
+
+          {preventiva && preventiva.totais.previstas > 0 && (
+            <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4 min-w-0">
+              <div>
+                <h2 className="font-medium text-navy">Manutenção preventiva</h2>
+                <p className="text-xs text-tinta-2">
+                  O período aqui é o da data prevista pelo plano. O cumprimento conta só o que já pode
+                  ser julgado: concluídas e vencidas; as que ainda estão no prazo ficam de fora.
+                </p>
+              </div>
+              <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                <Cartao
+                  rotulo="Cumprimento do plano"
+                  valor={
+                    preventiva.percentual_cumprimento === null
+                      ? '—'
+                      : `${preventiva.percentual_cumprimento}%`
+                  }
+                  destaque={
+                    preventiva.percentual_cumprimento === null
+                      ? undefined
+                      : preventiva.percentual_cumprimento >= 80
+                        ? 'text-sucesso'
+                        : 'text-erro'
+                  }
+                />
+                <Cartao rotulo="Previstas" valor={preventiva.totais.previstas} />
+                <Cartao
+                  rotulo="Feitas em dia"
+                  valor={preventiva.totais.concluidas_no_prazo}
+                  destaque="text-sucesso"
+                />
+                <Cartao
+                  rotulo="Vencidas sem fazer"
+                  valor={preventiva.totais.vencidas_pendentes}
+                  destaque={preventiva.totais.vencidas_pendentes > 0 ? 'text-erro' : 'text-sucesso'}
+                />
+              </div>
+              {preventiva.planos_com_atraso.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-navy mb-2">Planos com execução vencida</h3>
+                  <ul className="grid gap-1 text-sm">
+                    {preventiva.planos_com_atraso.map((p) => (
+                      <li key={p.id} className="flex flex-wrap justify-between gap-2">
+                        <span>{p.titulo}</span>
+                        <span className="text-erro text-xs">
+                          {p.vencidas_pendentes} vencida(s), desde {formatarDia(p.mais_antiga)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {preventiva.equipamentos_com_mais_corretivos.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-navy mb-2">
+                    Equipamentos com mais corretivos no período
+                  </h3>
+                  <ul className="grid gap-1 text-sm">
+                    {preventiva.equipamentos_com_mais_corretivos.map((e) => (
+                      <li key={e.id} className="flex flex-wrap justify-between gap-2">
+                        <Link to={`/equipamentos/${e.id}`} className="text-navy hover:underline">
+                          {e.codigo} — {e.nome}
+                        </Link>
+                        <span className="text-xs text-tinta-2">
+                          {e.corretivos} corretivo(s)
+                          {!e.tem_plano && ' · sem plano preventivo'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* min-w-0: o cartão é item de grid, e sem isso a tabela larga
               vazava para fora em vez de rolar dentro do overflow-x-auto,

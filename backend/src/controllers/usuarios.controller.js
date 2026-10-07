@@ -30,4 +30,9 @@ const anonimizar = asyncHandler(async (req, res) => {
   res.json({ usuario });
 });
 
-module.exports = { listar, criar, atualizar, me, anonimizar };
+const redefinir2fa = asyncHandler(async (req, res) => {
+  await authService.redefinir2fa(req.params.id);
+  res.status(204).send();
+});
+
+module.exports = { listar, criar, atualizar, me, anonimizar, redefinir2fa };

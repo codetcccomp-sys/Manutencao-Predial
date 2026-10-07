@@ -14,6 +14,10 @@ const serie = asyncHandler(async (req, res) => {
   res.json(await relatoriosService.serieDiaria(req.query));
 });
 
+const preventiva = asyncHandler(async (req, res) => {
+  res.json(await relatoriosService.preventiva(req.query));
+});
+
 const porTecnico = asyncHandler(async (req, res) => {
   res.json({ tecnicos: await relatoriosService.porTecnico(req.query) });
 });
@@ -44,4 +48,12 @@ const exportarResumoPdf = asyncHandler(async (req, res) => {
   doc.pipe(res);
 });
 
-module.exports = { resumo, desempenho, serie, porTecnico, exportarChamadosCsv, exportarResumoPdf };
+module.exports = {
+  resumo,
+  desempenho,
+  serie,
+  preventiva,
+  porTecnico,
+  exportarChamadosCsv,
+  exportarResumoPdf,
+};

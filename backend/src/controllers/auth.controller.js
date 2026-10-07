@@ -2,6 +2,7 @@ const authService = require('../services/auth.service');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { registrarTentativa, ipDoCliente } = require('../middlewares/rateLimit');
 const recuperacaoService = require('../services/recuperacao.service');
+const sessao = require('../services/sessao.service');
 
 /**
  * O endereço do APP, que é para onde o link de redefinição leva.
@@ -60,8 +61,17 @@ const login = asyncHandler(async (req, res) => {
 
   try {
     const resultado = await authService.login(req.body);
+
+    // Senha certa com segundo fator ligado ainda não é login: não zera o
+    // contador de falhas. Zerar aqui deixaria quem tem a senha roubada
+    // recomeçar as tentativas de código a cada nova digitação da senha.
+    if (resultado.requer2fa) {
+      return res.json({ requer_2fa: true, desafio: resultado.desafio });
+    }
+
     await registrarTentativa(req.body.email, ip, true);
-    res.json(resultado);
+    const token = sessao.emitir(res, req, resultado.conta);
+    res.json({ token, usuario: resultado.usuario });
   } catch (err) {
     // Só conta como tentativa falha o que foi de fato credencial recusada.
     // Um erro de infraestrutura não é sinal de ataque e não deve empurrar
@@ -117,4 +127,89 @@ const redefinirSenha = asyncHandler(async (req, res) => {
   res.json({ mensagem: 'Senha redefinida. Entre com a nova senha.' });
 });
 
-module.exports = { registrar, login, solicitarRecuperacao, redefinirSenha };
+const segundoFator = asyncHandler(async (req, res) => {
+  const ip = ipDoCliente(req);
+  const email = await authService.emailDoDesafio(req.body.desafio);
+
+  try {
+    const resultado = await authService.segundoFator(req.body);
+    await registrarTentativa(email, ip, true);
+    const token = sessao.emitir(res, req, resultado.conta);
+    res.json({ token, usuario: resultado.usuario });
+  } catch (err) {
+    if (err.code === 'CODIGO_INVALIDO') await registrarTentativa(email, ip, false);
+    throw err;
+  }
+});
+
+// Sair não exige sessão válida: o cookie de uma sessão já expirada também
+// precisa ser apagado.
+const sair = asyncHandler(async (req, res) => {
+  sessao.encerrar(res, req);
+  res.status(204).send();
+});
+
+const sairDeTodos = asyncHandler(async (req, res) => {
+  await sessao.revogarTodas(req.usuario.id);
+  sessao.encerrar(res, req);
+  res.status(204).send();
+});
+
+const situacao2fa = asyncHandler(async (req, res) => {
+  res.json(await authService.situacao2fa(req.usuario.id));
+});
+
+const iniciar2fa = asyncHandler(async (req, res) => {
+  res.json(await authService.iniciar2fa(req.usuario));
+});
+
+/**
+ * Senha ou código errados nas telas da própria conta contam no limite do
+ * login, pelo e-mail da conta. Sem isso, quem tivesse uma sessão alheia
+ * chutaria o código de 6 dígitos sem freio para gerar códigos de recuperação
+ * próprios — e a próxima entrada já não dependeria do celular da vítima.
+ */
+async function contandoFalhas(req, acao) {
+  try {
+    return await acao();
+  } catch (err) {
+    if (err.code === 'CODIGO_INVALIDO' || err.code === 'SENHA_INCORRETA') {
+      await registrarTentativa(req.usuario.email, ipDoCliente(req), false);
+    }
+    throw err;
+  }
+}
+
+// Ligar e desligar sobem a versão da sessão (as outras caem); esta, de quem
+// fez a mudança, é reemitida para a pessoa não ser deslogada pelo próprio ato.
+const ativar2fa = asyncHandler(async (req, res) => {
+  const { conta, codigos } = await contandoFalhas(req, () => authService.ativar2fa(req.usuario.id, req.body));
+  const token = sessao.emitir(res, req, conta);
+  res.json({ codigos_recuperacao: codigos, ...sessao.tokenNoCorpo(req, token) });
+});
+
+const desativar2fa = asyncHandler(async (req, res) => {
+  const conta = await contandoFalhas(req, () => authService.desativar2fa(req.usuario.id, req.body));
+  const token = sessao.emitir(res, req, conta);
+  res.json(sessao.tokenNoCorpo(req, token));
+});
+
+const novosCodigos = asyncHandler(async (req, res) => {
+  const codigos = await contandoFalhas(req, () => authService.novosCodigos(req.usuario.id, req.body.codigo));
+  res.json({ codigos_recuperacao: codigos });
+});
+
+module.exports = {
+  registrar,
+  login,
+  segundoFator,
+  sair,
+  sairDeTodos,
+  situacao2fa,
+  iniciar2fa,
+  ativar2fa,
+  desativar2fa,
+  novosCodigos,
+  solicitarRecuperacao,
+  redefinirSenha,
+};

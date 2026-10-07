@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import Tabela from '../components/ui/Tabela';
@@ -37,6 +37,8 @@ function Usuarios() {
   const [aviso, setAviso] = useState('');
   // Quem está para ser anonimizado. `null` é o diálogo fechado.
   const [aAnonimizar, setAAnonimizar] = useState(null);
+  const [aRedefinir2fa, setARedefinir2fa] = useState(null);
+  const [redefinindo, setRedefinindo] = useState(false);
   const [anonimizando, setAnonimizando] = useState(false);
 
   const carregar = useCallback(() => {
@@ -79,6 +81,26 @@ function Usuarios() {
    * na mão. E a tela ainda oferecia "Reativar" para a conta anonimizada — um
    * botão que falhava sempre, porque conta anonimizada não volta.
    */
+  // Para quem perdeu o celular e os códigos de recuperação.
+  async function redefinir2fa() {
+    setErro('');
+    setAviso('');
+    setRedefinindo(true);
+    try {
+      await api.post(`/usuarios/${aRedefinir2fa.id}/2fa/redefinir`);
+      setAviso(
+        `A verificação em duas etapas de ${aRedefinir2fa.nome} foi desligada, e as sessões dela encerradas. Ela entra só com a senha e pode ligar de novo em Minha conta.`
+      );
+      setARedefinir2fa(null);
+      carregar();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível redefinir.');
+      setARedefinir2fa(null);
+    } finally {
+      setRedefinindo(false);
+    }
+  }
+
   async function anonimizar() {
     setErro('');
     setAviso('');
@@ -259,7 +281,9 @@ function Usuarios() {
                 u.anonimizado_em ? (
                   <span className="text-tinta-2">Anonimizado</span>
                 ) : u.ativo ? (
-                  <span className="text-sucesso">Ativo</span>
+                  <span className="text-sucesso">
+                    Ativo{u.dois_fatores && <span className="text-tinta-2"> · duas etapas</span>}
+                  </span>
                 ) : (
                   <span className="text-tinta-2">Desligado</span>
                 ),
@@ -284,6 +308,11 @@ function Usuarios() {
                     >
                       {u.ativo ? 'Desligar' : 'Reativar'}
                     </Botao>
+                    {u.id !== usuario.id && u.dois_fatores && (
+                      <Botao variante="discreta" tamanho="sm" onClick={() => setARedefinir2fa(u)}>
+                        Redefinir duas etapas
+                      </Botao>
+                    )}
                     {u.id !== usuario.id && (
                       <Botao variante="discreta" tamanho="sm" onClick={() => setAAnonimizar(u)}>
                         Anonimizar
@@ -297,6 +326,24 @@ function Usuarios() {
         )}
         </Regiao>
       </div>
+
+      <Confirmacao
+        aberto={Boolean(aRedefinir2fa)}
+        titulo={aRedefinir2fa ? `Redefinir as duas etapas de ${aRedefinir2fa.nome}?` : ''}
+        rotuloConfirmar="Redefinir"
+        carregando={redefinindo}
+        onConfirmar={redefinir2fa}
+        onCancelar={() => setARedefinir2fa(null)}
+      >
+        <p>
+          Para quem perdeu o celular e os códigos de recuperação. A conta volta a entrar só com a senha,
+          e todas as sessões abertas dela são encerradas.
+        </p>
+        <p className="mt-2 font-medium">
+          Confirme por outro canal que o pedido veio mesmo da pessoa: quem tem a senha dela e pede
+          isso está pedindo para tirar a última proteção da conta.
+        </p>
+      </Confirmacao>
 
       <Confirmacao
         aberto={Boolean(aAnonimizar)}

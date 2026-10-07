@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router';
 import { AuthProvider } from './context/AuthContext';
 import RotaProtegida from './components/RotaProtegida';
 import Layout from './components/Layout';
@@ -12,6 +12,10 @@ import ChamadoDetalhe from './pages/ChamadoDetalhe';
 import Relatorios from './pages/Relatorios';
 import Usuarios from './pages/Usuarios';
 import Cadastros from './pages/Cadastros';
+import Preventiva from './pages/Preventiva';
+import Equipamento from './pages/Equipamento';
+import Etiquetas from './pages/Etiquetas';
+import MinhaConta from './pages/MinhaConta';
 
 function App() {
   return (
@@ -36,6 +40,10 @@ function App() {
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/cadastros" element={<Cadastros />} />
+            <Route path="/preventiva" element={<Preventiva />} />
+            <Route path="/equipamentos/:id" element={<Equipamento />} />
+            <Route path="/etiquetas" element={<Etiquetas />} />
+            <Route path="/conta" element={<MinhaConta />} />
           </Route>
         </Routes>
       </AuthProvider>

@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -57,7 +58,7 @@ beforeAll(async () => {
   admin = await conta('administrador');
   tecnico = await conta('tecnico');
   categoriaId = (await pool.query('SELECT id FROM categoria LIMIT 1')).rows[0].id;
-  localId = (await pool.query('SELECT id FROM local LIMIT 1')).rows[0].id;
+  localId = await garantirLocal({ unidade: 'Unidade da suíte de fila' });
 });
 
 afterAll(async () => {

@@ -60,7 +60,7 @@ test('com a CSP em vigor, as telas funcionam e o navegador não relata violaçã
   await entrar(page, cenario.pessoas.gestor);
   await expect(page.locator('h1')).toBeVisible();
 
-  for (const rota of ['/', `/chamados/${chamado.id}`, '/relatorios', '/cadastros']) {
+  for (const rota of ['/', `/chamados/${chamado.id}`, '/relatorios', '/cadastros', '/preventiva', '/etiquetas?tipo=locais']) {
     await page.goto(rota);
     await page.waitForLoadState('networkidle');
     await expect(page.locator('h1, h2').first()).toBeVisible();

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import api from '../../api/client';
 import Aviso from '../ui/Aviso';
 import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../ui/Badge';

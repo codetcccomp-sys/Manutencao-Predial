@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../components/ui/Badge';
@@ -10,6 +10,8 @@ import {
   rotuloEstado,
   rotuloPrioridade,
 } from '../dominio/rotulos';
+import { LIMITE_BYTES, formatarTamanho, prepararAnexo } from '../dominio/prepararAnexo';
+import { formatarDia } from '../dominio/preventiva';
 
 // Escalas e perguntas orientadoras conforme o §2.5 do Termo de Abertura. As
 // perguntas ficam visíveis de propósito: são elas que tornam a nota menos
@@ -58,7 +60,8 @@ function ChamadoDetalhe() {
   const [tecnicos, setTecnicos] = useState([]);
   const [nota, setNota] = useState(5);
   const [anexos, setAnexos] = useState([]);
-  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  // null, 'preparando' (reduzindo a foto) ou 'enviando'.
+  const [enviandoAnexo, setEnviandoAnexo] = useState(null);
   const [fatores, setFatores] = useState({ urgencia: '', impacto: '', risco: '' });
   const [sugestao, setSugestao] = useState(null);
   const [prioridadeEscolhida, setPrioridadeEscolhida] = useState('');
@@ -354,29 +357,41 @@ function ChamadoDetalhe() {
   }
 
   async function enviarAnexo(e) {
-    const arquivo = e.target.files?.[0];
-    if (!arquivo) return;
+    const escolhido = e.target.files?.[0];
+    if (!escolhido) return;
 
     setErro('');
-    setEnviandoAnexo(true);
-    const dados = new FormData();
-    dados.append('arquivo', arquivo);
+    setEnviandoAnexo('preparando');
 
     try {
+      const arquivo = await prepararAnexo(escolhido);
+      // Só chega aqui acima do limite o que não é foto (um PDF grande) ou uma
+      // foto que o navegador não conseguiu reduzir. Avisar antes de mandar
+      // poupa a espera de um envio que o servidor recusaria de qualquer jeito.
+      if (arquivo.size > LIMITE_BYTES) {
+        setErro(
+          `"${arquivo.name}" tem ${formatarTamanho(arquivo.size)}; o limite é ${formatarTamanho(LIMITE_BYTES)}.`
+        );
+        return;
+      }
+
+      setEnviandoAnexo('enviando');
+      const dados = new FormData();
+      dados.append('arquivo', arquivo);
       await api.post(`/chamados/${id}/anexos`, dados);
       carregarAnexos();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível enviar o anexo.');
     } finally {
-      setEnviandoAnexo(false);
+      setEnviandoAnexo(null);
       // Limpa o input para que escolher o mesmo arquivo de novo dispare
       // outro onChange.
       e.target.value = '';
     }
   }
 
-  // O download precisa do cabeçalho de autorização, então não dá para usar um
-  // link direto: busca pelo axios e entrega o blob ao navegador.
+  // Busca pelo axios e entrega o blob ao navegador: um erro de permissão vira
+  // mensagem na tela, não uma aba com JSON cru.
   async function baixarAnexo(anexo) {
     setErro('');
     try {
@@ -402,12 +417,6 @@ function ChamadoDetalhe() {
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível remover o anexo.');
     }
-  }
-
-  function formatarTamanho(bytes) {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
 
   if (!chamado) {
@@ -566,6 +575,11 @@ function ChamadoDetalhe() {
           <BadgeEstado estado={chamado.estado} />
           <BadgePrioridade prioridade={chamado.prioridade} />
           {chamado.em_atraso && <BadgeAtraso />}
+          {chamado.origem === 'preventiva' && (
+            <span className="inline-flex items-center rounded bg-sucesso-tenue px-2 py-0.5 text-xs font-medium text-sucesso">
+              Preventiva
+            </span>
+          )}
         </div>
 
         <div className="text-sm grid grid-cols-2 gap-2 text-tinta-2">
@@ -580,6 +594,28 @@ function ChamadoDetalhe() {
           {chamado.categoria_nome && (
             <span className="col-span-2">
               Categoria: <strong>{chamado.categoria_nome}</strong>
+            </span>
+          )}
+          {chamado.equipamento_codigo && (
+            <span className="col-span-2 min-w-0">
+              Equipamento:{' '}
+              {/* A ficha (com o histórico dele) é da gestão e do técnico; o
+                  solicitante vê o nome, que é o que ele precisa reconhecer. */}
+              {usuario.perfil === 'solicitante' ? (
+                <strong>
+                  {chamado.equipamento_codigo} — {chamado.equipamento_nome}
+                </strong>
+              ) : (
+                <Link to={`/equipamentos/${chamado.equipamento_id}`} className="font-semibold text-navy hover:underline">
+                  {chamado.equipamento_codigo} — {chamado.equipamento_nome}
+                </Link>
+              )}
+            </span>
+          )}
+          {chamado.origem === 'preventiva' && (
+            <span className="col-span-2">
+              Manutenção preventiva prevista para <strong>{formatarDia(chamado.data_prevista)}</strong>
+              {chamado.plano_titulo && <> pelo plano “{chamado.plano_titulo}”</>}.
             </span>
           )}
           {chamado.total_reaberturas > 0 && (
@@ -954,12 +990,16 @@ function ChamadoDetalhe() {
 
         <label className="text-sm">
           <span className="text-tinta-2">
-            {enviandoAnexo ? 'Enviando...' : 'Adicionar anexo (JPEG, PNG, WebP ou PDF, até 4 MB)'}
+            {enviandoAnexo === 'preparando'
+              ? 'Preparando a foto...'
+              : enviandoAnexo === 'enviando'
+                ? 'Enviando...'
+                : 'Adicionar anexo (foto ou PDF). Fotos grandes são reduzidas antes do envio; PDF até 4 MB.'}
           </span>
           <input
             type="file"
             onChange={enviarAnexo}
-            disabled={enviandoAnexo}
+            disabled={Boolean(enviandoAnexo)}
             accept="image/jpeg,image/png,image/webp,application/pdf"
             className="mt-1 block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-navy file:px-3 file:py-2 file:text-white hover:file:bg-navy-2 disabled:opacity-50"
           />

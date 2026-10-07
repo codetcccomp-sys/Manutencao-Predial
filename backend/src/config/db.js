@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const { configuracaoTls } = require('./tls');
 require('dotenv').config();
 
@@ -20,6 +20,13 @@ const pool = process.env.DATABASE_URL
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
     });
+
+// Coluna DATE volta como texto 'AAAA-MM-DD', e não como Date. O driver
+// converteria para meia-noite no fuso do PROCESSO, e o JSON levaria isso em
+// UTC: a data prevista de uma preventiva, 10/03, chegava à tela como
+// "2026-03-10T03:00:00.000Z" — e qualquer conversão de volta no fuso errado
+// mostrava 09/03. Data de calendário não tem hora nem fuso.
+types.setTypeParser(1082, (valor) => valor);
 
 pool.on('error', (err) => {
   console.error('Erro inesperado no pool do PostgreSQL:', err);

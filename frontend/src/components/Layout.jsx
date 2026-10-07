@@ -1,4 +1,5 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import AvisoDeConexao from './AvisoDeConexao';
 import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
 import Marca from './ui/Marca';
@@ -58,7 +59,8 @@ function Layout() {
       {/* Em telas estreitas o título e a identificação do usuário disputavam a
           mesma linha: o título quebrava em três linhas e espremia o botão Sair.
           Abaixo de sm eles viram duas linhas; a partir de sm voltam lado a lado. */}
-      <header className="bg-navy text-white">
+      {/* Fora do papel: a tela de etiquetas imprime só as etiquetas. */}
+      <header className="bg-navy text-white print:hidden">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           {/* flex-wrap nos dois níveis: os itens de menu ganharam preenchimento
               próprio para virar alvo tocável, e três deles mais o título não
@@ -76,15 +78,16 @@ function Layout() {
               className="flex flex-wrap items-center gap-1 min-w-0"
             >
               {podeVerRelatorios && <ItemDeMenu para="/relatorios">Relatórios</ItemDeMenu>}
+              {podeVerRelatorios && <ItemDeMenu para="/preventiva">Preventiva</ItemDeMenu>}
               {podeVerRelatorios && <ItemDeMenu para="/cadastros">Cadastros</ItemDeMenu>}
               {ehAdministrador && <ItemDeMenu para="/usuarios">Usuários</ItemDeMenu>}
             </nav>
           </div>
 
           <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
-            <span className="truncate">
+            <Link to="/conta" className="truncate rounded hover:underline" title="Minha conta">
               {usuario?.nome} <span className="text-tinta-clara">({rotuloPerfil(usuario?.perfil)})</span>
-            </span>
+            </Link>
             <Avisos />
             <button
               onClick={logout}
@@ -95,6 +98,8 @@ function Layout() {
           </div>
         </div>
       </header>
+
+      <AvisoDeConexao />
 
       {/*
         A largura saiu de 896px para 1280px.
