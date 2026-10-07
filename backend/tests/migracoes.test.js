@@ -54,4 +54,18 @@ describe('Privilégios no banco migrado', () => {
     );
     expect(rows.map((r) => r.proname)).toEqual([]);
   });
+
+  // Sem search_path próprio, a função resolve nomes pelo de quem chama, e um
+  // objeto homônimo num schema anterior a desviaria (lint
+  // function_search_path_mutable do Supabase).
+  it('toda função do schema public fixa o próprio search_path', async () => {
+    const { rows } = await pool.query(
+      `SELECT p.proname
+         FROM pg_proc p
+        WHERE p.pronamespace = 'public'::regnamespace
+          AND p.proowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+          AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig, '{}')) c WHERE c LIKE 'search_path=%')`
+    );
+    expect(rows.map((r) => r.proname)).toEqual([]);
+  });
 });
