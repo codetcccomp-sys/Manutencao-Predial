@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import api, { EVENTO_SESSAO_EXPIRADA, baixarArquivo } from '../src/api/client';
+import api, { EVENTO_SESSAO_EXPIRADA, MENSAGEM_SEM_CONEXAO, baixarArquivo } from '../src/api/client';
+import { EVENTO_DADOS_GUARDADOS } from '../src/api/eventos';
 
 /**
  * O interceptor e o download são o encanamento que toda tela usa. Não têm
@@ -113,5 +114,45 @@ describe('Download de arquivo', () => {
     await expect(baixarArquivo('/relatorios/exportar/resumo.pdf', {})).rejects.toThrow(
       'Não foi possível gerar o arquivo.'
     );
+  });
+});
+
+describe('Sem conexão', () => {
+  const interceptor = () => api.interceptors.response.handlers.filter(Boolean)[0];
+
+  it('falha de rede vira mensagem que diz que nada foi registrado, sem deslogar', async () => {
+    localStorage.setItem('smp_token', 'token-valido');
+    let deslogou = false;
+    window.addEventListener(EVENTO_SESSAO_EXPIRADA, () => {
+      deslogou = true;
+    });
+
+    const erro = { message: 'Network Error', code: 'ERR_NETWORK', config: { url: '/chamados/1/estado' } };
+    await interceptor().rejected(erro).catch(() => {});
+
+    expect(erro.response.status).toBe(0);
+    expect(erro.response.data.erro.codigo).toBe('SEM_CONEXAO');
+    expect(erro.response.data.erro.mensagem).toBe(MENSAGEM_SEM_CONEXAO);
+    expect(deslogou).toBe(false);
+    expect(localStorage.getItem('smp_token')).toBe('token-valido');
+  });
+
+  it('requisição cancelada não vira "sem conexão"', async () => {
+    const erro = { message: 'canceled', code: 'ERR_CANCELED', config: { url: '/chamados' } };
+    await interceptor().rejected(erro).catch(() => {});
+    expect(erro.response).toBeUndefined();
+  });
+
+  it('resposta guardada pelo service worker avisa a tela; resposta da rede desavisa', () => {
+    const recebidos = [];
+    const ouvir = (e) => recebidos.push(e.detail);
+    window.addEventListener(EVENTO_DADOS_GUARDADOS, ouvir);
+    try {
+      interceptor().fulfilled({ headers: { 'x-servido-do-cache': '1' }, data: {} });
+      interceptor().fulfilled({ headers: {}, data: {} });
+    } finally {
+      window.removeEventListener(EVENTO_DADOS_GUARDADOS, ouvir);
+    }
+    expect(recebidos).toEqual([true, false]);
   });
 });

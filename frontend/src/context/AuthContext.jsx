@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import api, { EVENTO_SESSAO_EXPIRADA } from '../api/client';
+import { limparDadosOffline } from '../pwa';
 
 const AuthContext = createContext(null);
 
@@ -15,6 +16,7 @@ export function AuthProvider({ children }) {
   // falhava com 401 até alguém recarregar a página na mão.
   useEffect(() => {
     function aoExpirar() {
+      limparDadosOffline();
       setUsuario(null);
       setSessaoExpirada(true);
     }
@@ -25,6 +27,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, senha) => {
     const { data } = await api.post('/auth/login', { email, senha });
+    limparDadosOffline();
     localStorage.setItem('smp_token', data.token);
     localStorage.setItem('smp_usuario', JSON.stringify(data.usuario));
     setUsuario(data.usuario);
@@ -37,6 +40,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    limparDadosOffline();
     localStorage.removeItem('smp_token');
     localStorage.removeItem('smp_usuario');
     setUsuario(null);

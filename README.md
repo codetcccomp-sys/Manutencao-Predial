@@ -531,6 +531,34 @@ do mês não oscilar a cada dia. O mesmo relatório lista os planos com execuç�
 vencida e os equipamentos com mais corretivos — o sinal de que falta (ou falha)
 a preventiva deles.
 
+## Celular: instalação, uso sem conexão e etiquetas com QR Code
+
+**Instalável.** O frontend tem manifesto (`public/manifest.webmanifest`) e
+service worker (`public/sw.js`): no celular, "Adicionar à tela inicial" abre o
+sistema como aplicativo, sem a barra do navegador, com o ícone da marca.
+
+**Sem conexão, para consultar.** O técnico na casa de máquinas, no subsolo,
+continua vendo a fila e o chamado que abriu por último: as leituras da fila,
+do chamado, dos comentários e da ficha do equipamento são "rede primeiro", com
+a última resposta guardada como reserva. A reserva volta marcada, e a tela
+mostra a faixa **"Sem conexão"** dizendo que aquilo é a última versão salva,
+não o estado de agora. Escrever sem conexão **não** fica guardado para depois:
+sincronizar mais tarde exigiria resolver conflito (outra pessoa pode ter
+reatribuído ou cancelado enquanto isso), e conflito resolvido errado é registro
+de manutenção falso. A ação falha na hora com "nada foi registrado". Os dados
+guardados são apagados no login e no logout, para um aparelho compartilhado não
+mostrar a fila de uma pessoa a outra. O service worker só é registrado na build
+de produção.
+
+**Etiquetas com QR Code** (`/etiquetas`, gestão): imprima e cole no equipamento
+ou na porta da sala. O QR leva a `/chamados/novo?equipamento=CODIGO` (ou
+`?local=ID`), que abre o formulário já com equipamento, local e categoria. Quem
+lê sem estar logado passa pelo login e volta ao formulário: o login devolve ao
+endereço pedido, aceitando só caminho interno (`destinoSeguro`, em
+`Login.jsx`). O QR é desenhado em SVG pelo próprio React (sem `innerHTML`, a
+CSP estrita não tem o que bloquear), e um teste o lê com um decodificador de
+verdade para garantir que a etiqueta impressa abre o endereço certo.
+
 ## Anexos
 
 Aceita JPEG, PNG, WebP e PDF, até 4 MB — o teto vem do limite de corpo das

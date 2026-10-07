@@ -13,13 +13,16 @@ import { rotuloEquipamento, rotuloLocal } from '../dominio/preventiva';
  *
  * Pode chegar com `?equipamento=CODIGO` — é o endereço que o QR Code colado no
  * equipamento leva. Aí o equipamento já vem escolhido, com o local e a
- * categoria dele, e a pessoa só escreve o que viu. Quem está na frente da
+ * categoria dele, e a pessoa só escreve o que viu. Ou com `?local=ID`, o da
+ * etiqueta na porta de uma sala: aí vem só o local. Quem está na frente da
  * bomba vazando não deveria ter de descobrir em que "unidade / bloco /
  * pavimento" ela fica para pedir o conserto.
  */
 function NovoChamado() {
   const [parametros] = useSearchParams();
   const codigoDoQr = parametros.get('equipamento');
+  // A etiqueta da porta de uma sala leva o local, não um equipamento.
+  const localDoQr = codigoDoQr ? null : parametros.get('local');
 
   const [categorias, setCategorias] = useState([]);
   const [locais, setLocais] = useState([]);
@@ -39,8 +42,16 @@ function NovoChamado() {
 
   useEffect(() => {
     api.get('/categorias').then(({ data }) => setCategorias(data.categorias));
-    api.get('/locais').then(({ data }) => setLocais(data.locais));
-  }, []);
+    api.get('/locais').then(({ data }) => {
+      setLocais(data.locais);
+      if (!localDoQr) return;
+      if (data.locais.some((l) => String(l.id) === localDoQr)) {
+        setForm((atual) => ({ ...atual, local_id: localDoQr }));
+      } else {
+        setErro('O local desta etiqueta não está mais ativo. Escolha o local abaixo.');
+      }
+    });
+  }, [localDoQr]);
 
   useEffect(() => {
     if (!codigoDoQr) return;

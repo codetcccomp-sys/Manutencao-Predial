@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { EVENTO_DADOS_GUARDADOS } from './eventos';
 
 // A API é sempre chamada pelo mesmo domínio do front: em produção um rewrite
 // da Vercel (vercel.json) encaminha /api/* para o backend, e em dev o proxy do
@@ -14,6 +15,10 @@ const api = axios.create({
 // enchia de erro sem nunca voltar para o login.
 export const EVENTO_SESSAO_EXPIRADA = 'smp:sessao-expirada';
 
+
+export const MENSAGEM_SEM_CONEXAO =
+  'Sem conexão com o servidor: nada foi registrado. Tente de novo quando a conexão voltar.';
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('smp_token');
   if (token) {
@@ -23,8 +28,28 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    window.dispatchEvent(
+      new CustomEvent(EVENTO_DADOS_GUARDADOS, {
+        detail: response.headers?.['x-servido-do-cache'] === '1',
+      })
+    );
+    return response;
+  },
   (error) => {
+    // Sem resposta nenhuma é rede, não servidor. Cada tela mostra
+    // `erro.response.data.erro.mensagem` quando existe, e um genérico ("não
+    // foi possível concluir") quando não — e o genérico, sem conexão, deixava
+    // a pessoa sem saber se a ação tinha ido ou não. Status 0 de propósito:
+    // não é 401, e não desloga ninguém.
+    if (!error.response && error.code !== 'ERR_CANCELED') {
+      error.response = {
+        status: 0,
+        data: { erro: { mensagem: MENSAGEM_SEM_CONEXAO, codigo: 'SEM_CONEXAO' } },
+      };
+      return Promise.reject(error);
+    }
+
     // 401 no próprio login é credencial recusada, não sessão expirada — quem
     // está tentando entrar não tem sessão para perder, e tratar os dois casos
     // igual faria a tela de login anunciar que a sessão expirou a cada senha

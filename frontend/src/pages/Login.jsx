@@ -1,10 +1,26 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Campo } from '../components/ui/Campo';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
 import Marca from '../components/ui/Marca';
+
+/**
+ * Para onde voltar depois de entrar.
+ *
+ * Só caminho interno: começa com uma barra, e não com duas (`//outro.site` é
+ * endereço de outro domínio para o navegador) nem com barra invertida, que
+ * alguns navegadores tratam como barra. O valor vem do estado da navegação,
+ * não da URL, mas a regra é barata e fecha a porta de vez para um redirect
+ * aberto se um dia alguém passar a lê-lo de um parâmetro.
+ */
+export function destinoSeguro(destino) {
+  if (typeof destino !== 'string') return '/';
+  if (!destino.startsWith('/') || destino.startsWith('//') || destino.includes('\\')) return '/';
+  if (destino.startsWith('/login')) return '/';
+  return destino;
+}
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -13,6 +29,7 @@ function Login() {
   const [carregando, setCarregando] = useState(false);
   const { login, sessaoExpirada } = useAuth();
   const navigate = useNavigate();
+  const local = useLocation();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -20,7 +37,7 @@ function Login() {
     setCarregando(true);
     try {
       await login(email, senha);
-      navigate('/');
+      navigate(destinoSeguro(local.state?.de), { replace: true });
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível entrar.');
     } finally {

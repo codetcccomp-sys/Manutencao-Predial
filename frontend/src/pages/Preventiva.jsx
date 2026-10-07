@@ -501,6 +501,7 @@ function Preventiva() {
 
           <Cartao
             titulo="Equipamentos"
+            descricao={<Link to="/etiquetas" className="text-navy hover:underline">Imprimir etiquetas com QR Code</Link>}
             acao={
               <input
                 type="search"

@@ -46,3 +46,15 @@ export function rotuloEquipamento(equipamento) {
   if (!equipamento) return '';
   return `${equipamento.codigo} — ${equipamento.nome}`;
 }
+
+/**
+ * O endereço que o QR Code colado no equipamento (ou na porta da sala) leva.
+ *
+ * Absoluto, com a origem de quem imprimiu: a etiqueta sai da impressora e é
+ * lida pela câmera de um celular qualquer, fora do sistema. Quem lê sem estar
+ * logado passa pelo login e volta para cá (ver RotaProtegida).
+ */
+export function enderecoDeAbertura({ equipamento, local }, origem = window.location.origin) {
+  if (equipamento) return `${origem}/chamados/novo?equipamento=${encodeURIComponent(equipamento.codigo)}`;
+  return `${origem}/chamados/novo?local=${local.id}`;
+}

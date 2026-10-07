@@ -7,7 +7,8 @@ import Cartao from '../components/ui/Cartao';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import { BadgeEstado } from '../components/ui/Badge';
 import { Esqueleto } from '../components/ui/Estados';
-import { descreverPeriodicidade, formatarDia } from '../dominio/preventiva';
+import CodigoQR from '../components/ui/CodigoQR';
+import { descreverPeriodicidade, enderecoDeAbertura, formatarDia } from '../dominio/preventiva';
 
 /**
  * A ficha de um equipamento: o cadastro e o que já aconteceu com ele.
@@ -84,8 +85,32 @@ function Equipamento() {
           </dl>
         </Cartao>
 
+        {equipamento.ativo && (
+          <Cartao
+            titulo="Etiqueta"
+            descricao="Cole no equipamento: a câmera do celular abre o chamado para ele."
+            acao={
+              ehGestao && (
+                <Link
+                  to={`/etiquetas?equipamento=${equipamento.id}`}
+                  className="text-sm text-navy hover:underline"
+                >
+                  Imprimir
+                </Link>
+              )
+            }
+            className="lg:col-span-1"
+          >
+            <CodigoQR
+              texto={enderecoDeAbertura({ equipamento })}
+              tamanho={144}
+              rotulo={`QR Code para abrir chamado do equipamento ${equipamento.codigo}`}
+            />
+          </Cartao>
+        )}
+
         {totais && (
-          <Cartao titulo="Em números" className="lg:col-span-2">
+          <Cartao titulo="Em números" className="lg:col-span-1">
             <dl className="grid gap-3 sm:grid-cols-3 text-sm">
               <div>
                 <dt className="text-xs text-tinta-2">Corretivos nos últimos 12 meses</dt>
