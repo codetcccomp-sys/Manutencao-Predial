@@ -39,6 +39,9 @@ function validate(schema) {
       if (regras.tipo === 'number' && typeof valor !== 'number') {
         erros.push(`Campo "${campo}" deve ser numérico.`);
       }
+      if (regras.tipo === 'boolean' && typeof valor !== 'boolean') {
+        erros.push(`Campo "${campo}" deve ser verdadeiro ou falso.`);
+      }
       if (regras.enum && !regras.enum.includes(valor)) {
         erros.push(`Campo "${campo}" deve ser um de: ${regras.enum.join(', ')}.`);
       }

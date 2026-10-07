@@ -439,7 +439,7 @@ npm run mutacao            # todas
 npm run mutacao vitest     # só as rápidas
 
 cd backend
-node tests/mutacao.js          # as travas de sessão, 2FA, privilégios, preventiva, horas úteis e anexos
+node tests/mutacao.js          # as travas de sessão, 2FA, privilégios, preventiva, horas úteis, anexos e distribuição
 node tests/mutacao.js sessão   # só as que têm "sessão" na descrição
 ```
 
@@ -506,6 +506,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `GET PATCH` | `/sla`, `/sla/:prioridade` | leitura autenticada, escrita para gestão |
 | `GET` | `/regras-priorizacao/vigente` | qualquer autenticado: quem abre um chamado pode saber por qual critério ele será classificado |
 | `GET POST` | `/regras-priorizacao`, `/regras-priorizacao/simular` | gestor, administrador (o `POST /regras-priorizacao`, que publica versão nova, só o administrador) |
+| `GET POST PATCH` | `/regras-distribuicao`, `/regras-distribuicao/:id` | gestor, administrador |
 | `GET` | `/relatorios/resumo`, `/desempenho`, `/tecnicos` | gestor, administrador |
 | `GET` | `/relatorios/serie?de=&ate=` | gestor, administrador. Abertos e concluídos por dia, no fuso da instituição; um ponto por dia (zero nos dias vazios), no máximo 366, com `truncado: true` quando corta |
 | `GET` | `/relatorios/preventiva?de=&ate=` | gestor, administrador. Cumprimento do plano preventivo, recortado pela data prevista |
@@ -671,6 +672,32 @@ a vigência da anterior, que continua existindo para explicar decisões antigas.
 
 Os pesos e limiares iniciais são um ponto de partida com pesos neutros,
 pendente de validação institucional — não uma calibração pronta.
+
+## Distribuição automática
+
+A triagem do gestor continua sendo o caminho padrão. Para as rotinas que não
+precisam dela (lâmpada, tomada, torneira pingando), a gestão cadastra uma
+regra em **Cadastros › Distribuição**: a categoria, onde vale (a instituição
+toda, uma unidade ou um bloco), a equipe e a prioridade. Nenhuma regra vem
+cadastrada: sem regra, nada muda.
+
+- O chamado aberto naquela categoria e naquele lugar nasce atribuído, com a
+  prioridade da regra (a menos que quem abriu tenha dito outra) e o prazo da
+  tabela de SLA. O histórico mostra os mesmos estados de uma triagem manual
+  (aberto → em triagem → atribuído) e diz qual regra distribuiu.
+- A regra mais específica vence: bloco, depois unidade, depois a instituição.
+  Regra de equipe desativada cede à mais geral.
+- Dentro da equipe, vai para o técnico de plantão da regra, se houver e
+  estiver ativo; senão, para quem tem menos chamados em aberto (no empate,
+  quem recebeu há mais tempo). Uma trava por equipe impede que duas aberturas
+  simultâneas leiam a mesma carga e caiam no mesmo técnico.
+- Sem técnico ativo na equipe, o chamado segue para a triagem, como sem regra.
+- Distribuído, o chamado já está atribuído: pela RN03, o solicitante deixa de
+  editar o texto e acrescenta o que faltou por comentário, como em qualquer
+  chamado com técnico.
+- Categoria e alcance não se editam: os chamados guardam a regra que os
+  distribuiu (`regra_distribuicao_id`). Para mudar o alcance, desliga-se uma
+  regra e cria-se outra.
 
 ## Ciclos de atendimento
 

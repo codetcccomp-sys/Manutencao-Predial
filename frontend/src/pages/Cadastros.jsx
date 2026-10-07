@@ -5,11 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import ExpedienteEFeriados from '../components/ExpedienteEFeriados';
+import RegrasDeDistribuicao from '../components/RegrasDeDistribuicao';
 
 const ABAS = [
   { id: 'locais', rotulo: 'Locais' },
   { id: 'categorias', rotulo: 'Categorias' },
   { id: 'equipes', rotulo: 'Equipes' },
+  { id: 'distribuicao', rotulo: 'Distribuição' },
   { id: 'expediente', rotulo: 'Expediente' },
 ];
 
@@ -182,8 +184,8 @@ function Cadastros() {
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {aviso && <Aviso tipo="sucesso">{aviso}</Aviso>}
 
-      {/* Rola por dentro no celular: com a quarta aba, a fileira passou dos
-          393px e levava a página inteira junto para o lado. */}
+      {/* Rola por dentro no celular: desde a quarta aba, a fileira passa dos
+          393px e levaria a página inteira junto para o lado. */}
       <div className="flex gap-2 border-b overflow-x-auto">
         {ABAS.map((a) => (
           <button
@@ -367,6 +369,10 @@ function Cadastros() {
       )}
 
       {!carregando && aba === 'expediente' && <ExpedienteEFeriados />}
+
+      {!carregando && aba === 'distribuicao' && (
+        <RegrasDeDistribuicao categorias={categorias} equipes={equipes} locais={locais} />
+      )}
 
       {!carregando && aba === 'categorias' && (
         <>

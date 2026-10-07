@@ -13,6 +13,7 @@ module.exports = async function limparDepoisDosTestes() {
   const {
     limparChamadosDeTeste,
     limparPlanosDeTeste,
+    limparRegrasDeTeste,
     limparUsuariosDeTeste,
     recusarSeNaoForBancoDeTeste,
   } = require('./limpeza');
@@ -32,9 +33,10 @@ module.exports = async function limparDepoisDosTestes() {
     // Os planos depois dos chamados que geraram; as contas por último, quando
     // nada mais aponta para elas.
     const planos = await limparPlanosDeTeste(client);
+    const regras = await limparRegrasDeTeste(client);
     const contas = await limparUsuariosDeTeste(client);
     console.log(
-      `\n[limpeza] ${removidos} chamados, ${planos} planos e ${contas} contas de teste removidos.`
+      `\n[limpeza] ${removidos} chamados, ${planos} planos, ${regras} regras e ${contas} contas de teste removidos.`
     );
   } catch (err) {
     console.warn(`\n[limpeza] FALHOU, o banco de teste não foi limpo: ${err.message}`);

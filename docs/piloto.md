@@ -186,6 +186,28 @@ atrapalham o código antigo). Duas coisas a saber no dia do deploy:
 Para quem acha que alguém entrou na conta: "Sair de todos os aparelhos", na
 mesma tela, derruba todas as sessões abertas. Redefinir a senha faz o mesmo.
 
+### 2.1.4 Distribuição automática (depois da folha de validação)
+
+A migração `025_distribuicao_automatica` vai antes do merge, como as outras. Ela
+só cria a tabela de regras e uma coluna no chamado: **sem regra cadastrada, o
+sistema se comporta exatamente como antes**, e todo chamado passa pela triagem.
+
+As regras entram depois que o gestor da instituição aprovar a folha de
+validação (prioridade, prazos e distribuição), em **Cadastros › Distribuição**:
+
+1. Confira em **Cadastros › Equipes** que cada equipe tem os técnicos certos.
+   Equipe sem técnico ativo não recebe nada: a tela avisa, e o chamado segue
+   para a triagem.
+2. Cadastre uma regra por categoria aprovada, com a prioridade da folha. Comece
+   pelas rotinas óbvias (elétrica, climatização) e deixe estrutura e "outra" na
+   triagem.
+3. Abra um chamado de teste numa dessas categorias e confira o histórico: ele
+   deve dizer "Triagem automática pela regra de distribuição nº …".
+
+Para medir o efeito no piloto: o tempo entre a abertura e a atribuição dos
+chamados distribuídos (`regra_distribuicao_id` preenchido) contra os da
+triagem manual.
+
 ### 2.2 E-mail (decisão, não obrigação)
 
 > **Se configurar SMTP, configure `URL_APP` junto.** Ela guarda o endereço do

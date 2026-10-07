@@ -6,6 +6,7 @@ const notificacoesService = require('./notificacoes.service');
 const priorizacaoService = require('./priorizacao.service');
 const { rotuloSql } = require('./locais.service');
 const equipamentosService = require('./equipamentos.service');
+const distribuicaoService = require('./distribuicao.service');
 const { FUSO } = require('../config/fuso');
 
 // "Em atraso" não é um estado da máquina, é uma leitura do relógio sobre o
@@ -95,8 +96,13 @@ async function resolverAlvo(client, { categoria_id, local_id, equipamento_id }) 
 async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id, prioridade }, solicitanteId) {
   const protocolo = gerarProtocolo();
 
-  return transacao(async (client) => {
+  const { chamado, notificacaoId } = await transacao(async (client) => {
     const alvo = await resolverAlvo(client, { categoria_id, local_id, equipamento_id });
+
+    // Com regra de distribuição, a prioridade é a que a gestão definiu para
+    // aquela rotina — a menos que quem abre tenha dito outra.
+    const regra = await distribuicaoService.regraPara(client, alvo);
+    const prioridadeInicial = prioridade ?? regra?.prioridade ?? null;
 
     // O prazo nasce junto do chamado, na mesma transação: um chamado sem
     // prazo ficaria invisível para toda a apuração de atraso. A conta (horas
@@ -116,17 +122,73 @@ async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id
         alvo.local_id,
         alvo.equipamento_id,
         solicitanteId,
-        prioridade,
+        prioridadeInicial,
         FUSO,
       ]
     );
 
-    const chamado = rows[0];
+    const criado = rows[0];
 
-    await registrarHistorico(client, chamado.id, solicitanteId, null, 'aberto', 'Chamado aberto.');
+    await registrarHistorico(client, criado.id, solicitanteId, null, 'aberto', 'Chamado aberto.');
 
-    return chamado;
+    if (!regra) return { chamado: criado };
+    return distribuir(client, criado, regra);
   });
+
+  // Fora da transação, como na atribuição manual: avisar o técnico de um
+  // chamado que um rollback desfez seria pior que não avisar.
+  if (notificacaoId) await notificacoesService.despacharVarios([notificacaoId]);
+
+  return chamado;
+}
+
+/**
+ * Entrega o chamado recém-aberto ao técnico que a regra indica.
+ *
+ * Passa pelos mesmos estados de uma triagem manual (aberto → em triagem →
+ * atribuído), como a preventiva: o histórico e os relatórios não veem um
+ * atalho que o fluxo não permite, e o autor das duas linhas é quem criou a
+ * regra — a decisão foi dele, tomada de antemão. Sem técnico ativo na equipe,
+ * o chamado fica aberto para a triagem, como se não houvesse regra.
+ */
+async function distribuir(client, chamado, regra) {
+  const tecnico = await distribuicaoService.escolherTecnico(client, regra);
+  if (!tecnico) return { chamado };
+
+  const { rows } = await client.query(
+    `UPDATE chamado
+        SET estado = 'atribuido', tecnico_id = $1, equipe_id = $2, regra_distribuicao_id = $3
+      WHERE id = $4
+      RETURNING *, ${EM_ATRASO} AS em_atraso`,
+    [tecnico.id, regra.equipe_id, regra.id, chamado.id]
+  );
+
+  await registrarHistorico(
+    client,
+    chamado.id,
+    regra.criado_por,
+    'aberto',
+    'em_triagem',
+    `Triagem automática pela regra de distribuição nº ${regra.id} ` +
+      `(${distribuicaoService.descreverAlcance(regra)}): prioridade ` +
+      `${distribuicaoService.ROTULO_PRIORIDADE[chamado.prioridade]}.`
+  );
+  await registrarHistorico(
+    client,
+    chamado.id,
+    regra.criado_por,
+    'em_triagem',
+    'atribuido',
+    `Distribuído automaticamente para ${tecnico.nome}, da equipe ${regra.equipe_nome}: ${tecnico.motivo}.`
+  );
+
+  const aviso = await client.query(
+    `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
+     VALUES ($1, $2, 'atribuicao', $3) RETURNING id`,
+    [tecnico.id, chamado.id, `Você recebeu o chamado ${chamado.protocolo} pela distribuição automática.`]
+  );
+
+  return { chamado: rows[0], notificacaoId: aviso.rows[0].id };
 }
 
 const LIMITE_PADRAO = 20;

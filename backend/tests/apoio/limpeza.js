@@ -125,6 +125,28 @@ async function limparPlanosDeTeste(client, { padrao = PADRAO_DE_TESTE, ambiente 
   return rowCount;
 }
 
+/**
+ * Apaga as regras de distribuição criadas por contas de teste.
+ *
+ * Mesmo motivo dos planos, e mais forte: uma regra ligada que sobra numa
+ * categoria compartilhada distribui os chamados que as outras suítes abrem na
+ * rodada seguinte, e elas falham esperando um chamado "aberto" que nasceu
+ * atribuído. A suíte de distribuição apaga o que cria; esta é a rede para
+ * quando ela cair no meio.
+ */
+async function limparRegrasDeTeste(client, { padrao = PADRAO_DE_TESTE, ambiente = process.env } = {}) {
+  recusarSeNaoForBancoDeTeste(ambiente);
+
+  const { rowCount } = await client.query(
+    `DELETE FROM regra_distribuicao r
+      USING usuario u
+      WHERE u.id = r.criado_por AND u.email LIKE $1
+        AND NOT EXISTS (SELECT 1 FROM chamado c WHERE c.regra_distribuicao_id = r.id)`,
+    [padrao]
+  );
+  return rowCount;
+}
+
 // O que aponta para a conta e some junto com ela: ruído que a própria conta
 // gerou (avisos, pedidos de recuperação de senha, vínculo com equipe). Tudo o
 // mais que aponte para `usuario` — chamado, comentário, anexo, histórico, e o
@@ -200,6 +222,7 @@ async function limparUsuariosDeTeste(
 module.exports = {
   limparChamadosDeTeste,
   limparPlanosDeTeste,
+  limparRegrasDeTeste,
   limparUsuariosDeTeste,
   contasSemeadas,
   apagarChamados,

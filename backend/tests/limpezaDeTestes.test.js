@@ -3,6 +3,7 @@ const { garantirLocal } = require('./apoio/local');
 const {
   limparChamadosDeTeste,
   limparPlanosDeTeste,
+  limparRegrasDeTeste,
   limparUsuariosDeTeste,
   contasSemeadas,
   recusarSeNaoForBancoDeTeste,
@@ -143,6 +144,44 @@ describe('Limpeza dos planos preventivos de teste', () => {
     ).rows.map((r) => r.id);
     expect(restantes).toEqual([deForaId]);
     await pool.query('DELETE FROM plano_preventivo WHERE id = $1', [deForaId]);
+  });
+});
+
+describe('Limpeza das regras de distribuição de teste', () => {
+  // Desligadas: uma regra ligada numa categoria compartilhada distribuiria os
+  // chamados das outras suítes durante este teste.
+  async function inserirRegra(criadoPor) {
+    const categoria = (await pool.query('SELECT id FROM categoria LIMIT 1')).rows[0].id;
+    const equipe = (await pool.query("INSERT INTO equipe (nome) VALUES ('Equipe da limpeza') RETURNING id")).rows[0].id;
+    const { rows } = await pool.query(
+      `INSERT INTO regra_distribuicao (categoria_id, equipe_id, ativo, criado_por)
+       VALUES ($1, $2, FALSE, $3) RETURNING id, equipe_id`,
+      [categoria, equipe, criadoPor]
+    );
+    return rows[0];
+  }
+
+  it('apaga a regra da conta de teste e preserva a de quem não é', async () => {
+    const doTesteRegra = await inserirRegra(doTeste);
+    const deForaRegra = await inserirRegra(deFora);
+
+    const client = await pool.connect();
+    try {
+      expect(await limparRegrasDeTeste(client, { padrao: PADRAO })).toBe(1);
+    } finally {
+      client.release();
+    }
+
+    const restantes = (
+      await pool.query('SELECT id FROM regra_distribuicao WHERE id = ANY($1::int[])', [
+        [doTesteRegra.id, deForaRegra.id],
+      ])
+    ).rows.map((r) => r.id);
+    expect(restantes).toEqual([deForaRegra.id]);
+    await pool.query('DELETE FROM regra_distribuicao WHERE id = $1', [deForaRegra.id]);
+    await pool.query('DELETE FROM equipe WHERE id = ANY($1::int[])', [
+      [doTesteRegra.equipe_id, deForaRegra.equipe_id],
+    ]);
   });
 });
 
