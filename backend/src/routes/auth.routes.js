@@ -1,7 +1,9 @@
 const { Router } = require('express');
 const authController = require('../controllers/auth.controller');
 const { validate } = require('../validators/validate');
-const { limitarLogin, limitarRecuperacao } = require('../middlewares/rateLimit');
+const { limitarLogin, limitarRecuperacao, conferirLimite } = require('../middlewares/rateLimit');
+const { authenticate } = require('../middlewares/auth');
+const authService = require('../services/auth.service');
 
 const router = Router();
 
@@ -25,6 +27,66 @@ router.post(
   }),
   limitarLogin,
   authController.login
+);
+
+// Segunda etapa do login, para quem ligou a verificação em duas etapas. O
+// limite de tentativas é o mesmo do login, contado pelo e-mail do desafio:
+// errar o código conta como errar a senha.
+async function limitarSegundoFator(req, res, next) {
+  let email;
+  try {
+    email = await authService.emailDoDesafio(req.body?.desafio);
+  } catch (err) {
+    return next(err);
+  }
+  return conferirLimite(req, res, next, email);
+}
+
+router.post(
+  '/login/2fa',
+  validate({
+    desafio: { obrigatorio: true, tipo: 'string', maxLength: 2000 },
+    codigo: { obrigatorio: true, tipo: 'string', maxLength: 20 },
+  }),
+  limitarSegundoFator,
+  authController.segundoFator
+);
+
+router.post('/sair', authController.sair);
+router.post('/sair-de-todos', authenticate, authController.sairDeTodos);
+
+// As rotas que conferem senha ou código na própria conta usam o mesmo limite
+// do login, pelo e-mail da conta logada.
+const limitarPelaConta = (req, res, next) => conferirLimite(req, res, next, req.usuario.email);
+
+router.get('/2fa', authenticate, authController.situacao2fa);
+router.post('/2fa/iniciar', authenticate, authController.iniciar2fa);
+router.post(
+  '/2fa/ativar',
+  authenticate,
+  validate({
+    senha: { obrigatorio: true, tipo: 'string', maxLength: 200 },
+    codigo: { obrigatorio: true, tipo: 'string', maxLength: 20 },
+  }),
+  limitarPelaConta,
+  authController.ativar2fa
+);
+router.post(
+  '/2fa/desativar',
+  authenticate,
+  validate({
+    senha: { obrigatorio: true, tipo: 'string', maxLength: 200 },
+    codigo: { obrigatorio: true, tipo: 'string', maxLength: 20 },
+  }),
+  limitarPelaConta,
+  authController.desativar2fa
+);
+router.post(
+  '/2fa/codigos',
+  authenticate,
+  validate({ codigo: { obrigatorio: true, tipo: 'string', maxLength: 20 } }),
+  limitarPelaConta,
+  authController.novosCodigos
 );
 
 // RF01: recuperação segura de senha.

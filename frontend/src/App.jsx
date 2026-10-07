@@ -15,6 +15,7 @@ import Cadastros from './pages/Cadastros';
 import Preventiva from './pages/Preventiva';
 import Equipamento from './pages/Equipamento';
 import Etiquetas from './pages/Etiquetas';
+import MinhaConta from './pages/MinhaConta';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path="/preventiva" element={<Preventiva />} />
             <Route path="/equipamentos/:id" element={<Equipamento />} />
             <Route path="/etiquetas" element={<Etiquetas />} />
+            <Route path="/conta" element={<MinhaConta />} />
           </Route>
         </Routes>
       </AuthProvider>

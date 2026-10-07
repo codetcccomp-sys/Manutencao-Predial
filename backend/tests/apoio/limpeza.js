@@ -129,7 +129,7 @@ async function limparPlanosDeTeste(client, { padrao = PADRAO_DE_TESTE, ambiente 
 // gerou (avisos, pedidos de recuperação de senha, vínculo com equipe). Tudo o
 // mais que aponte para `usuario` — chamado, comentário, anexo, histórico, e o
 // que vier a existir — PROTEGE a conta: ela é autora de algo que ficou.
-const DEPENDENTES_DESCARTAVEIS = ['notificacao', 'recuperacao_senha', 'equipe_tecnico'];
+const DEPENDENTES_DESCARTAVEIS = ['notificacao', 'recuperacao_senha', 'equipe_tecnico', 'codigo_recuperacao_2fa'];
 
 // Descobertas no catálogo, como em tabelasDependentes: uma tabela nova que
 // aponte para o usuário passa a proteger a conta sozinha, em vez de fazer a

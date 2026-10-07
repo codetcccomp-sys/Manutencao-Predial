@@ -159,6 +159,37 @@ O que o código faz, e onde procurar:
   esperar o token vencer — antes disso a pessoa desligada continuava entrando
   por até 8 horas. Erro do banco nessa checagem é 500, não 401: um 401 mandaria
   todo mundo de volta ao login por uma falha que não é deles.
+- **A sessão fica num cookie que script nenhum lê.** O token ia para o
+  `localStorage`, onde qualquer script da página o alcança: um XSS levaria a
+  sessão embora para ser usada de outro lugar. Agora ele viaja num cookie
+  `conserva_sessao` `HttpOnly`, `SameSite=Strict` e `Secure` (atrás da Vercel),
+  e a tela guarda só nome e perfil, para se desenhar. O que sobrou de token no
+  aparelho de quem já usava o sistema é apagado na primeira carga. Contra CSRF,
+  além do `SameSite`, toda escrita autenticada pelo cookie exige o cabeçalho
+  `X-Conserva: 1`, que a tela manda e um formulário de outro site não consegue
+  mandar (`403 CSRF` sem ele). `Authorization: Bearer` continua aceito: é como
+  os testes e qualquer cliente que não seja o navegador falam com a API.
+- **Sessão revogável.** Cada conta tem uma versão de sessão, e todo token
+  carrega a versão em que foi emitido. Redefinir a senha, pedir "sair de todos
+  os aparelhos" (tela **Minha conta**), ligar ou desligar a verificação em duas
+  etapas e a redefinição dela pelo administrador sobem a versão: todas as
+  sessões abertas daquela pessoa caem na hora. Antes, quem tivesse roubado a
+  sessão continuava dentro por até 8 horas depois de a vítima trocar a senha.
+- **Verificação em duas etapas (TOTP).** Opcional por pessoa, recomendada para
+  gestão e administração, ligada na tela **Minha conta**: QR Code para o
+  aplicativo autenticador (Google/Microsoft Authenticator, Aegis, o do
+  gerenciador de senhas), confirmação com um código e a senha antes de valer
+  (só a sessão aberta não cadastra outro aplicativo), e 8 códigos de
+  recuperação de uso único, mostrados uma vez e guardados só como hash. Com
+  ela ligada, a senha certa devolve um desafio de 5 minutos, e só o código abre
+  a sessão; o código usado não vale de novo, e errar senha ou código — no login
+  ou na própria conta — conta no mesmo limite do login. A sessão reemitida ao
+  ligar ou desligar volta só no cookie: no corpo da resposta, um script
+  injetado na página a levaria embora. Quem perdeu o celular e os códigos pede ao
+  administrador, que redefine pela tela de **Usuários** ("Redefinir duas
+  etapas"); a pessoa entra só com a senha e liga de novo. Implementação própria
+  do RFC 6238 em `backend/src/utils/totp.js`, conferida contra os vetores do
+  RFC em `tests/totp.test.js`.
 - **Autorização no servidor.** Perfil e relação com o chamado são conferidos
   na API; a tela esconder um botão é só cortesia (o cancelamento do técnico,
   por exemplo, também é recusado se alguém chamar a rota à mão).
@@ -399,6 +430,10 @@ solicitante (RN01); esse script recusa rodar com `NODE_ENV=production`.
 cd frontend
 npm run mutacao            # todas
 npm run mutacao vitest     # só as rápidas
+
+cd backend
+node tests/mutacao.js          # as travas de sessão, 2FA, preventiva, horas úteis e anexos
+node tests/mutacao.js sessão   # só as que têm "sessão" na descrição
 ```
 
 Um teste que passa não prova nada sozinho: ele pode estar passando pelo motivo
@@ -426,12 +461,17 @@ vermelha qualquer PR sem relação com a falha.
 ## Rotas
 
 Exceto as indicadas como públicas, `/health`, `/health/db` e as de agendador,
-todas exigem `Authorization: Bearer <token>`.
+todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
+`X-Conserva: 1` nas escritas) ou `Authorization: Bearer <token>`.
 
 | Método | Rota | Quem |
 | --- | --- | --- |
 | `POST` | `/auth/registrar` | público (cria `solicitante`) |
-| `POST` | `/auth/login` | público (limitado por tentativa) |
+| `POST` | `/auth/login` | público (limitado por tentativa). Com duas etapas ligadas, responde `{ requer_2fa, desafio }` em vez da sessão |
+| `POST` | `/auth/login/2fa` | público: `{ desafio, codigo }` — código do aplicativo ou de recuperação; mesmo limite do login |
+| `POST` | `/auth/sair` | público (apaga o cookie) |
+| `POST` | `/auth/sair-de-todos` | autenticado: derruba todas as sessões da própria conta |
+| `GET POST` | `/auth/2fa`, `/auth/2fa/iniciar`, `/auth/2fa/ativar` e `/auth/2fa/desativar` (senha + código), `/auth/2fa/codigos` | autenticado, na própria conta; senha e código errados contam no limite do login |
 | `POST` | `/auth/recuperar-senha`, `/auth/redefinir-senha` | público (token de uso único, 60 min; pedidos limitados por IP) |
 | `GET` | `/chamados?pagina=&limite=&estado=&situacao=&categoria_id=&equipamento_id=&origem=&atrasados=&sem_tecnico=&busca=&ordenar=` | autenticado, escopo conforme o perfil. `situacao` = `abertos` ou `encerrados`; `origem` = `corretiva` ou `preventiva`; `ordenar` = `recentes` ou `prazo`; `busca` casa protocolo ou título |
 | `POST` | `/chamados` | solicitante, gestor, administrador. Com `equipamento_id`, local e categoria podem ser omitidos (vêm do equipamento) |
@@ -450,6 +490,7 @@ todas exigem `Authorization: Bearer <token>`.
 | `GET` | `/usuarios` | gestor, administrador |
 | `POST PATCH` | `/usuarios`, `/usuarios/:id` | administrador |
 | `POST` | `/usuarios/:id/anonimizar` | administrador (ver [docs/lgpd.md](docs/lgpd.md)) |
+| `POST` | `/usuarios/:id/2fa/redefinir` | administrador (quem perdeu o celular e os códigos) |
 | `GET PATCH` | `/notificacoes`, `/notificacoes/:id/lida` | o próprio usuário |
 | `GET POST PATCH` | `/locais`, `/categorias` | leitura autenticada, escrita para gestão |
 | `POST` | `/locais/importar` | gestor, administrador |

@@ -42,4 +42,8 @@ router.patch(
 // desfazer, então exige um segundo par de olhos.
 router.post('/:id/anonimizar', authorize('administrador'), usuariosController.anonimizar);
 
+// Para quem perdeu o celular e os códigos de recuperação. Só o administrador,
+// e a pessoa tem as sessões derrubadas: quem pediu talvez não tenha sido ela.
+router.post('/:id/2fa/redefinir', authorize('administrador'), usuariosController.redefinir2fa);
+
 module.exports = router;

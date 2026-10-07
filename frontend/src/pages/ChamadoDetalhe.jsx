@@ -390,8 +390,8 @@ function ChamadoDetalhe() {
     }
   }
 
-  // O download precisa do cabeçalho de autorização, então não dá para usar um
-  // link direto: busca pelo axios e entrega o blob ao navegador.
+  // Busca pelo axios e entrega o blob ao navegador: um erro de permissão vira
+  // mensagem na tela, não uma aba com JSON cru.
   async function baixarAnexo(anexo) {
     setErro('');
     try {

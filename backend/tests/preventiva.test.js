@@ -375,6 +375,23 @@ describe('Planos preventivos: geração dos chamados', () => {
     expect(await chamadosDoPlano(plano.id)).toHaveLength(1);
   });
 
+  it('plano editado de volta para uma data que já tem chamado não trava: pula e segue', async () => {
+    const plano = await novoPlano({ proxima_execucao: '2031-12-10' });
+    await preventivaService.gerarVencidos({ hoje: '2031-12-10' });
+    // A gestão "volta" a próxima data para a que já foi gerada.
+    await request(app)
+      .patch(`/planos-preventivos/${plano.id}`)
+      .set(como(gestor))
+      .send({ proxima_execucao: '2031-12-10' });
+
+    const resultado = await preventivaService.gerarVencidos({ hoje: '2031-12-10' });
+
+    expect(resultado.falhas).not.toContain(plano.id);
+    expect(await chamadosDoPlano(plano.id)).toHaveLength(1);
+    // E o plano anda, em vez de tentar a mesma data todo dia para sempre.
+    expect((await planoNoBanco(plano.id)).proxima_execucao).toBe('2032-01-10');
+  });
+
   it('duas passagens simultâneas do agendador geram um chamado só', async () => {
     const plano = await novoPlano({ proxima_execucao: '2031-06-01' });
     await Promise.all([

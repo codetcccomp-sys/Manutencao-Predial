@@ -85,9 +85,9 @@ function Layout() {
           </div>
 
           <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
-            <span className="truncate">
+            <Link to="/conta" className="truncate rounded hover:underline" title="Minha conta">
               {usuario?.nome} <span className="text-tinta-clara">({rotuloPerfil(usuario?.perfil)})</span>
-            </span>
+            </Link>
             <Avisos />
             <button
               onClick={logout}

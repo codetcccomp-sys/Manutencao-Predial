@@ -27,19 +27,41 @@ function Login() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
-  const { login, sessaoExpirada } = useAuth();
+  // Com a verificação em duas etapas, a senha certa devolve um desafio, e a
+  // tela passa a pedir o código. O desafio vale poucos minutos.
+  const [desafio, setDesafio] = useState(null);
+  const [codigo, setCodigo] = useState('');
+  const { login, confirmarCodigo, sessaoExpirada } = useAuth();
   const navigate = useNavigate();
   const local = useLocation();
+
+  const seguir = () => navigate(destinoSeguro(local.state?.de), { replace: true });
 
   async function handleSubmit(e) {
     e.preventDefault();
     setErro('');
     setCarregando(true);
     try {
-      await login(email, senha);
-      navigate(destinoSeguro(local.state?.de), { replace: true });
+      if (desafio) {
+        await confirmarCodigo(desafio, codigo);
+        seguir();
+        return;
+      }
+      const resultado = await login(email, senha);
+      if (resultado?.requer2fa) {
+        setDesafio(resultado.desafio);
+        setSenha('');
+        return;
+      }
+      seguir();
     } catch (err) {
-      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível entrar.');
+      const corpo = err.response?.data?.erro;
+      // Desafio vencido: volta para a primeira etapa, que é o que resolve.
+      if (corpo?.codigo === 'DESAFIO_INVALIDO') {
+        setDesafio(null);
+        setCodigo('');
+      }
+      setErro(corpo?.mensagem || 'Não foi possível entrar.');
     } finally {
       setCarregando(false);
     }
@@ -69,25 +91,58 @@ function Login() {
 
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-        <Campo
-          rotulo="E-mail"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        {desafio ? (
+          <>
+            <p className="text-sm text-tinta">
+              Digite o código de 6 dígitos do aplicativo autenticador. Sem o celular, use um dos
+              códigos de recuperação.
+            </p>
+            <Campo
+              rotulo="Código"
+              inputMode="text"
+              autoComplete="one-time-code"
+              autoFocus
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+            />
+            <Botao type="submit" variante="primaria" carregando={carregando} larguraTotal>
+              {carregando ? 'Conferindo...' : 'Confirmar'}
+            </Botao>
+            <button
+              type="button"
+              onClick={() => {
+                setDesafio(null);
+                setCodigo('');
+                setErro('');
+              }}
+              className="text-sm text-navy hover:underline"
+            >
+              Voltar e entrar com outra conta
+            </button>
+          </>
+        ) : (
+          <>
+            <Campo
+              rotulo="E-mail"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
 
-        <Campo
-          rotulo="Senha"
-          type="password"
-          autoComplete="current-password"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-        />
+            <Campo
+              rotulo="Senha"
+              type="password"
+              autoComplete="current-password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+            />
 
-        <Botao type="submit" variante="primaria" carregando={carregando} larguraTotal>
-          {carregando ? 'Entrando...' : 'Entrar'}
-        </Botao>
+            <Botao type="submit" variante="primaria" carregando={carregando} larguraTotal>
+              {carregando ? 'Entrando...' : 'Entrar'}
+            </Botao>
+          </>
+        )}
 
         <div className="grid gap-1 text-center text-sm text-tinta-2">
           <p>
