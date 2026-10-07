@@ -34,6 +34,12 @@ try {
   const ordem = await page.evaluate(() => window.__falas());
   const semTexto = ordem.filter((c) => !falas[c]);
   const semAudio = manifesto ? ordem.filter((c) => !manifesto[c]) : [];
+  // A ordem do documento é a ordem em que as falas tocam; se ela divergir do roteiro,
+  // a narração sai fora de sequência sem nenhum erro aparente.
+  const roteiro = Object.keys(falas);
+  if (ordem.join() !== roteiro.join()) {
+    throw new Error(`Ordem dos slides difere de falas.json.\nslides:  ${ordem.join(' ')}\nroteiro: ${roteiro.join(' ')}`);
+  }
   if (semTexto.length || semAudio.length) {
     throw new Error(`Falas faltando: ${[...semTexto, ...semAudio].join(', ')}. Confira falas.json e rode narrar.py sintetizar.`);
   }

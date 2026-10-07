@@ -68,7 +68,7 @@
 
   /* dados */
   .er { position: relative; height: 330px; }
-  .ent { position: absolute; width: 196px; text-align: center; padding: 10px 8px; background: #22395f; }
+  .ent { position: absolute; z-index: 1; width: 196px; text-align: center; padding: 10px 8px; background: #22395f; }
   .ent h3 { font-size: 19px; margin: 0; }
   .ent p { font-size: 14px; }
   .ent.centro { left: 470px; top: 120px; width: 220px; border-color: var(--ouro); background: #3a3f4f; }
@@ -147,17 +147,6 @@
 <section class="slide">
   <div class="cab"><span class="n">03</span><h2>Dados</h2></div>
   <div class="er">
-    <svg width="1152" height="330" style="position:absolute;inset:0;overflow:visible" aria-hidden="true">
-      <g data-fala="dados-2" stroke="rgba(169,184,207,.55)" stroke-width="2">
-        <line x1="580" y1="160" x2="218" y2="40"/><line x1="580" y1="160" x2="568" y2="40"/>
-        <line x1="580" y1="160" x2="918" y2="30"/><line x1="580" y1="160" x2="218" y2="270"/>
-        <line x1="580" y1="160" x2="568" y2="280"/>
-      </g>
-      <g data-fala="dados-3" stroke="rgba(111,207,151,.75)" stroke-width="2">
-        <line x1="580" y1="160" x2="918" y2="180"/><line x1="580" y1="160" x2="918" y2="275"/>
-        <line x1="918" y1="200" x2="918" y2="245"/>
-      </g>
-    </svg>
     <div class="caixa ent centro" data-fala="dados-1"><h3>chamado</h3><p>estado · prioridade · prazo_estimado · origem</p></div>
     <div data-fala="dados-2">
       <div class="caixa ent" style="left:120px;top:0"><h3>local</h3><p>unidade › bloco › pavimento › ambiente</p></div>
@@ -170,6 +159,17 @@
       <div class="caixa ent" style="left:820px;top:150px;border-color:var(--verde)"><h3>equipamento</h3><p>código da etiqueta (QR)</p></div>
       <div class="caixa ent" style="left:820px;top:240px;border-color:var(--verde)"><h3>plano_preventivo</h3><p class="mono" style="color:var(--ouro)">UNIQUE (plano_id, data_prevista)</p></div>
     </div>
+    <svg width="1152" height="330" style="position:absolute;inset:0;overflow:visible;z-index:0" aria-hidden="true">
+      <g data-fala="dados-2" stroke="rgba(169,184,207,.55)" stroke-width="2">
+        <line x1="580" y1="160" x2="218" y2="40"/><line x1="580" y1="160" x2="568" y2="40"/>
+        <line x1="580" y1="160" x2="918" y2="30"/><line x1="580" y1="160" x2="218" y2="270"/>
+        <line x1="580" y1="160" x2="568" y2="280"/>
+      </g>
+      <g data-fala="dados-3" stroke="rgba(111,207,151,.75)" stroke-width="2">
+        <line x1="580" y1="160" x2="918" y2="180"/><line x1="580" y1="160" x2="918" y2="275"/>
+        <line x1="918" y1="200" x2="918" y2="245"/>
+      </g>
+    </svg>
   </div>
   <div class="baixo">
     <div class="caixa" data-fala="dados-4"><h3>Migrações 001 → 024</h3><p>uma transação cada, registradas na tabela <code>migracao</code></p>

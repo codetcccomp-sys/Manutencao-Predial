@@ -17,7 +17,7 @@ cd frontend
 npm run video
 ```
 
-O resultado é `frontend/video/saida/conserva-predial-demonstracao.mp4` (cerca de 8
+O resultado é `frontend/video/saida/conserva-predial-demonstracao.mp4` (cerca de 6
 minutos, 1280×720).
 
 Sem `ffmpeg` no sistema, o pacote `imageio-ffmpeg` (no mesmo `.venv` da voz) traz um
