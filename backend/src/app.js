@@ -107,7 +107,13 @@ app.get('/health/db', async (req, res) => {
       categorias: Number(rows[0].categorias),
     });
   } catch (err) {
-    res.status(503).json({ status: 'erro', banco: 'indisponivel', detalhe: err.message });
+    // O motivo vai para o log, não para a resposta. Esta rota é pública, e a
+    // mensagem do driver carrega host, porta, usuário do banco e o tipo de
+    // falha de autenticação — o mapa que alguém de fora usaria para mirar no
+    // banco. Quem opera o servidor lê o log; quem monitora de fora só precisa
+    // saber que está fora.
+    console.error('[health/db] banco indisponível:', err.message);
+    res.status(503).json({ status: 'erro', banco: 'indisponivel' });
   }
 });
 

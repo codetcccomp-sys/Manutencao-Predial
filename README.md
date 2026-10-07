@@ -441,7 +441,9 @@ todas exigem `Authorization: Bearer <token>`.
 
 `GET /health/db` executa uma consulta e devolve 503 quando o banco está
 inacessível — `/health` sozinho responde `ok` mesmo com o banco fora, o que
-já escondeu falha de conexão em produção.
+já escondeu falha de conexão em produção. O 503 diz só que o banco está fora;
+o motivo (que traz host, usuário e tipo de falha) vai para o log, porque a rota
+é pública.
 
 ## Locais
 
@@ -483,8 +485,14 @@ corrompido e ninguém notaria até o primeiro relatório.
 
 ## Anexos
 
-Aceita JPEG, PNG, WebP e PDF, até 4 MB. O tipo declarado pelo cliente não é
-suficiente: o conteúdo é conferido pelos primeiros bytes do arquivo. O
+Aceita JPEG, PNG, WebP e PDF, até 4 MB — o teto vem do limite de corpo das
+funções da Vercel (4,5 MB). Foto de celular passa disso com facilidade, então
+a tela reduz a foto antes de enviar (`src/dominio/prepararAnexo.js`): 1600 px
+no lado maior, em JPEG, respeitando a orientação da câmera. Um PDF acima do
+limite é recusado na hora, sem esperar o envio. O tipo declarado pelo cliente
+não é suficiente: o conteúdo é conferido pelos primeiros bytes do arquivo, e
+um envio malformado (corpo cortado, cabeçalho de parte quebrado) volta 400
+`ENVIO_MALFORMADO`, não 500. O
 conteúdo fica em `bytea` no próprio banco, porque o sistema de arquivos das
 funções serverless é efêmero — um caminho gravado em disco apontaria para um
 arquivo que já não existe na requisição seguinte. Se o volume crescer, o

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import api, { baixarArquivo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useEntrada } from '../animacao/useEntrada';

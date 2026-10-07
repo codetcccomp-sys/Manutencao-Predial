@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import Icone from '../ui/Icone';
 import PainelDeResumo from './PainelDeResumo';
 import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../ui/Badge';

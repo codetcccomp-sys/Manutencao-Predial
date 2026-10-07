@@ -40,9 +40,12 @@ jobs:
 
       # Só o que vai para produção (--omit=dev), e só severidade alta ou crítica:
       # ferramenta de build e achado moderado em código que o sistema não usa
-      # (o react-router acusa um problema de SSR, e isto é uma SPA) transformariam
-      # o aviso em ruído que se aprende a ignorar. O audit lê o package-lock.json;
-      # não precisa instalar nada.
+      # (um problema de SSR do react-router, numa SPA) transformariam o aviso em
+      # ruído que se aprende a ignorar. O preço é que o moderado relevante também
+      # passa: o open redirect do react-router 6 só foi corrigido (subindo para a
+      # 7) porque uma revisão o procurou. O mesmo vale para pacote descontinuado
+      # — o multer 1.x não acusava nada aqui. O audit lê o package-lock.json; não
+      # precisa instalar nada.
       - name: npm audit
         working-directory: ${{ matrix.pacote }}
         run: npm audit --omit=dev --audit-level=high

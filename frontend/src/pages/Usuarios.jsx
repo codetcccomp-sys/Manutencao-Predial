@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import Tabela from '../components/ui/Tabela';
