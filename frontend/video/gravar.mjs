@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHmac } from 'node:crypto';
 import { chromium } from '@playwright/test';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
@@ -170,7 +171,22 @@ async function entrar(email, senha = SENHA) {
 }
 
 async function sair() {
-  await clicar(page.getByRole('button', { name: 'Sair' }), 900);
+  // Nome exato: em Minha conta também há "Sair de todos os aparelhos".
+  await clicar(page.getByRole('button', { name: 'Sair', exact: true }), 900);
+}
+
+// O código de 6 dígitos que o aplicativo autenticador mostraria (RFC 6238), para a cena
+// da verificação em duas etapas: a conta é do banco descartável de vídeo.
+function codigoTotp(segredo) {
+  const alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const c of segredo) bits += alfabeto.indexOf(c).toString(2).padStart(5, '0');
+  const chave = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+  const contador = Buffer.alloc(8);
+  contador.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
+  const hmac = createHmac('sha1', chave).update(contador).digest();
+  const d = hmac[19] & 0x0f;
+  return String((hmac.readUInt32BE(d) & 0x7fffffff) % 1_000_000).padStart(6, '0');
 }
 
 async function opcaoPorTexto(select, texto) {
@@ -183,7 +199,8 @@ try {
   await cartao('Conserva <b>Predial</b>', [
     'Sistema de chamados de manutenção predial',
     'Do pedido à avaliação, com prioridade, prazo e histórico',
-    '<small>Demonstração completa · 3 perfis · projeto interdisciplinar</small>',
+    'Manutenção preventiva, etiquetas com QR Code e verificação em duas etapas',
+    '<small>Demonstração completa · 4 perfis · projeto interdisciplinar</small>',
   ], 5500, 'abertura');
 
   // ───────────────────────────── 1. solicitante ─────────────────────────────
@@ -337,13 +354,59 @@ try {
 
   await legenda('Cadastros: locais e categorias, inclusive em massa por planilha', 1000);
   await clicar(page.getByRole('link', { name: 'Cadastros' }), 3400);
+
+  // ───────────────────────────── 6. preventiva ─────────────────────────────
+  marca('Manutenção preventiva e etiquetas');
+  await legenda('6 · Preventiva (NBR 5674): planos que abrem o próprio chamado', 1000);
+  await clicar(page.getByRole('link', { name: 'Preventiva', exact: true }), 2600);
+  await legenda('Cada plano diz o que fazer, a cada quanto tempo, onde e por quem', 2400);
+  const planoBomba = page.locator('li', { hasText: 'Inspeção da bomba de recalque' });
+  await mover(planoBomba);
+  await pausa(1200);
+  await legenda('Na data, o agendador gera o chamado sozinho; aqui, pelo botão Gerar agora', 800);
+  await clicar(planoBomba.getByRole('button', { name: 'Gerar agora' }), 2400);
+  await legenda('O chamado nasce com o roteiro do serviço e segue o fluxo normal', 3200, true);
+  await legenda('', 0);
+
+  await clicar(page.getByRole('tab', { name: 'Equipamentos' }), 1600);
+  await legenda('Cada equipamento tem ficha própria: etiqueta, planos e histórico', 800);
+  await clicar(page.getByRole('link', { name: /BOMBA-01/ }), 2600);
+  await rolar(420);
+  await pausa(1600);
+  await rolar(-420);
+
+  await legenda('A etiqueta com QR Code vai colada no equipamento', 800);
+  await page.goto(`${APP}/etiquetas`);
+  await pausa(2600);
+  await legenda('Lido pela câmera do celular, o QR abre o chamado já preenchido', 800);
+  await page.goto(`${APP}/chamados/novo?equipamento=BOMBA-01`);
+  await pausa(3400);
+  await legenda('O app também se instala no celular e consulta a fila sem conexão', 3400);
+
+  // ───────────────────────────── 7. segurança da conta ─────────────────────────────
+  await legenda('', 0);
+  marca('Verificação em duas etapas');
+  await legenda('7 · Minha conta: verificação em duas etapas', 800);
+  await clicar(page.getByTitle('Minha conta'), 2200);
+  await legenda('Recomendada para a gestão: a senha sozinha deixa de abrir a conta', 1200);
+  await clicar(page.getByRole('button', { name: 'Ligar a verificação em duas etapas' }), 2400);
+  await legenda('O QR Code cadastra a conta no aplicativo autenticador do celular', 2600);
+  const segredo = (await page.locator('code').first().textContent()).trim();
+  await legenda('Para ligar, o código do aplicativo e a senha', 600);
+  await digitar(page.getByLabel('Código do aplicativo'), codigoTotp(segredo), 90);
+  await digitar(page.getByLabel('Senha'), SENHA, 45);
+  await clicar(page.getByRole('button', { name: 'Ligar', exact: true }), 2400);
+  await legenda('Os códigos de recuperação aparecem uma única vez', 3000);
+  await rolar(300);
+  await legenda('E "sair de todos os aparelhos" derruba qualquer sessão esquecida', 3200);
+  await rolar(-600);
   await sair();
 
-  // ───────────────────────────── 6. administração ─────────────────────────────
+  // ───────────────────────────── 8. administração ─────────────────────────────
   await legenda('', 0);
   await entrar(ADMIN.email, ADMIN.senha);
   marca('Administração de usuários');
-  await legenda('6 · Administração: quem entra e com qual perfil', 1000);
+  await legenda('8 · Administração: quem entra e com qual perfil', 1000);
   await clicar(page.getByRole('link', { name: 'Usuários' }), 2600);
   await rolar(300);
   await legenda('Desativar, trocar perfil ou anonimizar (LGPD), sem deixar chamados órfãos', 4200, true);
@@ -352,10 +415,14 @@ try {
   // ───────────────────────────── encerramento ─────────────────────────────
   marca('Encerramento');
   await cartao('Conserva <b>Predial</b>', [
-    'Perfis com permissão no servidor · SLA por prioridade · LGPD',
-    '382 testes de API · 232 de tela · 93 de ponta a ponta · CI a cada envio',
+    'Permissão no servidor · SLA em horas corridas ou úteis · preventiva · LGPD',
+    '543 testes de API · 285 de tela · 123 de ponta a ponta · CI a cada envio',
     '<small>Node/Express + PostgreSQL · React/Vite/Tailwind · Vercel + Supabase</small>',
   ], 7000, 'encerramento');
+} catch (erro) {
+  // A tela no instante da falha: quase sempre diz mais que a mensagem do Playwright.
+  await page.screenshot({ path: path.join(SAIDA, 'erro.png') }).catch(() => {});
+  throw erro;
 } finally {
   await contexto.close();
   await navegador.close();

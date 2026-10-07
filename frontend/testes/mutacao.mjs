@@ -501,6 +501,13 @@ const MUTACOES = [
     spec: 'e2e/pwa.spec.js',
   },
   {
+    descricao: 'quem sai deixa o próprio endereço para o próximo que entrar no aparelho',
+    arquivo: 'src/components/RotaProtegida.jsx',
+    de: '    if (saiu) return <Navigate to="/login" replace />;\n',
+    para: '',
+    spec: 'testes/RotaProtegida.test.jsx',
+  },
+  {
     descricao: 'login volta a esquecer o endereço pedido (QR Code cai no início)',
     arquivo: 'src/components/RotaProtegida.jsx',
     de: '<Navigate to="/login" replace state={{ de: `${local.pathname}${local.search}` }} />',

@@ -138,4 +138,37 @@ for (const [titulo, descricao, c, l, ate, f] of T) {
   await chamar(t.token, 'PATCH', `/chamados/${chamado.id}/estado`, { estado: 'concluido', servico_realizado: SERV[k % SERV.length] });
   if (k <= NOTAS.length) await chamar(s, 'POST', `/chamados/${chamado.id}/avaliacao`, { nota: NOTAS[k - 1] });
 }
+// ── Manutenção preventiva (NBR 5674): equipamentos com etiqueta e planos ──────────────
+// Datas no fuso da instituição, como o próprio sistema conta.
+const dia = (deslocamento) =>
+  new Date(Date.now() + deslocamento * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+
+const EQUIPAMENTOS = [
+  { codigo: 'BOMBA-01', nome: 'Bomba de recalque principal', categoria_id: cat('hidr'), local_id: locais[4], fabricante: 'Schneider', modelo: 'BC-92 S 1,5 cv' },
+  { codigo: 'SPLIT-204', nome: 'Ar-condicionado split da sala 204', categoria_id: cat('clim'), local_id: locais[2], fabricante: 'Midea', modelo: 'Xtreme 18.000 BTU' },
+  { codigo: 'QDG-01', nome: 'Quadro elétrico geral', categoria_id: cat('el'), local_id: locais[4], fabricante: 'Cemar', modelo: 'Trifásico 225 A' },
+];
+const eq = {};
+for (const e of EQUIPAMENTOS) eq[e.codigo] = (await chamar(ana, 'POST', '/equipamentos', e)).equipamento.id;
+
+const PLANOS = [
+  // Gerado ao vivo no vídeo, pelo botão "Gerar agora".
+  { titulo: 'Inspeção da bomba de recalque', equipamento_id: eq['BOMBA-01'], repetir_a_cada: 1, unidade_repeticao: 'mes', proxima_execucao: dia(6), antecedencia_dias: 3,
+    descricao: '1. Conferir funcionamento e alternância das bombas.\n2. Ouvir ruído e vibração; verificar aquecimento do motor.\n3. Procurar vazamentos em gaxetas e registros.\n4. Testar boias e automático de nível.' },
+  // Já dentro da janela: a tarefa diária gera o chamado na semente.
+  { titulo: 'Limpeza do filtro do split', equipamento_id: eq['SPLIT-204'], repetir_a_cada: 1, unidade_repeticao: 'mes', proxima_execucao: dia(2), antecedencia_dias: 3, tecnico_id: tecnicos[2].id,
+    descricao: '1. Desligar o aparelho e o disjuntor.\n2. Retirar e lavar os filtros.\n3. Conferir dreno e bandeja.\n4. Religar e medir a temperatura na saída.' },
+  { titulo: 'Inspeção e reaperto do quadro elétrico geral', equipamento_id: eq['QDG-01'], repetir_a_cada: 6, unidade_repeticao: 'mes', proxima_execucao: dia(24), antecedencia_dias: 3,
+    descricao: '1. Desenergizar e bloquear.\n2. Reapertar bornes e conexões.\n3. Procurar sinais de aquecimento.\n4. Testar o botão dos DRs.' },
+];
+for (const p of PLANOS) await chamar(ana, 'POST', '/planos-preventivos', p);
+
+// As duas tarefas automáticas passam uma vez, como faria o agendador: a preventiva gera
+// o chamado do split, e o painel da gestão mostra as duas em dia.
+const agendador = { Authorization: 'Bearer video', 'Content-Type': 'application/json' };
+for (const tarefa of ['gerar-preventivas', 'notificar-atrasos']) {
+  const r = await fetch(`${API}/tarefas/${tarefa}`, { method: 'POST', headers: agendador });
+  if (!r.ok) throw new Error(`tarefa ${tarefa} -> ${r.status}`);
+}
+
 console.log(JSON.stringify({ chamados: ids.length, por_estado: ids.reduce((a, x) => ((a[x.ate] = (a[x.ate] ?? 0) + 1), a), {}) }));

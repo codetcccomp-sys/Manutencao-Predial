@@ -1,16 +1,28 @@
-# Vídeo de demonstração
+# Vídeos: demonstração e parte técnica
 
-Grava, do zero, uma demonstração completa do sistema (solicitante → gestão → técnico →
-avaliação → relatórios → administração), com legendas e, se o Kokoro estiver instalado,
-com **narração em voz masculina** (português do Brasil).
+Dois vídeos, gerados do zero por script, com legendas e, se o Kokoro estiver instalado,
+com **narração em voz masculina** (português do Brasil):
+
+- **Demonstração** (`npm run video`): o sistema em uso, solicitante → gestão → técnico →
+  avaliação → relatórios → manutenção preventiva e etiquetas com QR Code → verificação em
+  duas etapas → administração.
+- **Parte técnica** (`npm run video:tecnico`, pasta `tecnico/`): slides narrados sobre
+  arquitetura, esteira do backend, dados e migrações, segurança, frontend, testes e
+  operação. Não precisa de banco nem de servidor; cada trecho de `tecnico/slides.html` com
+  `data-fala` aparece junto com a fala de mesmo nome em `tecnico/falas.json`, e sai também
+  um `.srt` com as legendas. Resultado em `tecnico/saida/conserva-predial-tecnico.mp4`.
 
 ```bash
 cd frontend
 npm run video
 ```
 
-O resultado é `frontend/video/saida/conserva-predial-demonstracao.mp4` (cerca de 5
+O resultado é `frontend/video/saida/conserva-predial-demonstracao.mp4` (cerca de 6
 minutos, 1280×720).
+
+Sem `ffmpeg` no sistema, o pacote `imageio-ffmpeg` (no mesmo `.venv` da voz) traz um
+binário estático: `ln -s "$(.venv/bin/python -c 'import imageio_ffmpeg as f; print(f.get_ffmpeg_exe())')" .venv/bin/ffmpeg`
+e rode com `PATH="$PWD/video/.venv/bin:$PATH"`.
 
 ## O que ele faz, e por que é seguro rodar
 
@@ -68,9 +80,10 @@ duas falas se sobrepuserem, a mistura falha em vez de entregar um áudio atropel
 | `datas.sql` | Espalha os chamados por cerca de duas semanas, com prazos coerentes |
 | `gravar.mjs` | O roteiro (cada legenda, clique e digitação) e a gravação |
 | `falas.json` | O texto falado de cada legenda |
-| `narrar.py` | Sintetiza a voz e monta a trilha de áudio |
+| `narrar.py` | Sintetiza a voz e monta a trilha de áudio (`FALAS` e `SAIDA` apontam para outro roteiro) |
+| `tecnico/` | O vídeo técnico: `slides.html`, `falas.json`, `gravar.mjs`, `rodar.sh` |
 
-`saida/`, `modelo/` e `.venv/` não vão para o git.
+`saida/`, `tecnico/saida/`, `modelo/` e `.venv/` não vão para o git.
 
 ## O que ninguém ouviu antes de você
 

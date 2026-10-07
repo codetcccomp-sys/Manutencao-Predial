@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Conserva Predial — por dentro</title>
+<!--
+  Slides do vídeo técnico. Cada elemento com data-fala aparece junto com a fala de
+  mesmo nome (tecnico/falas.json); gravar.mjs revela um por vez, na ordem do documento,
+  e espera a voz terminar. Feito para 1280×720.
+-->
+<style>
+  :root {
+    --navy: #1f3864; --navy-2: #162a4b; --fundo: #0e1b33; --ouro: #f0b963;
+    --tinta: #e8eef7; --tinta-2: #a9b8cf; --linha: rgba(255,255,255,.14);
+    --verde: #6fcf97; --verm: #f28b82; --azul: #8ab4f8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1280px; height: 720px; overflow: hidden; background: var(--fundo);
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif; color: var(--tinta); }
+  body { background: radial-gradient(circle at 25% 15%, #24406f 0, var(--navy-2) 45%, var(--fundo) 100%); }
+
+  .slide { position: absolute; inset: 0 0 92px 0; padding: 44px 64px 0; opacity: 0; visibility: hidden;
+    transition: opacity .6s ease, visibility .6s; }
+  .slide.atual { opacity: 1; visibility: visible; }
+  .cab { display: flex; align-items: baseline; gap: 18px; margin-bottom: 30px; }
+  .cab .n { font: 700 18px/1 ui-monospace, Menlo, monospace; color: var(--ouro); letter-spacing: 2px; }
+  .cab h2 { margin: 0; font-size: 40px; letter-spacing: -.5px; }
+
+  [data-fala] { opacity: 0; transform: translateY(12px); filter: blur(4px);
+    transition: opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1), filter .55s; }
+  [data-fala].on { opacity: 1; transform: none; filter: none; }
+  .cab[data-fala] { transform: translateX(-10px); }
+  .cab[data-fala].on { transform: none; }
+
+  /* legenda da fala, sempre na faixa de baixo */
+  #legenda { position: absolute; left: 0; right: 0; bottom: 0; height: 92px; display: flex; align-items: center;
+    justify-content: center; padding: 0 90px; background: rgba(8,16,32,.72); border-top: 1px solid var(--linha);
+    font-size: 18px; line-height: 1.3; text-align: center; color: #fff; }
+  #legenda span { transition: opacity .3s; }
+
+  /* peças comuns */
+  .caixa { border: 1px solid var(--linha); background: rgba(255,255,255,.06); border-radius: 14px; padding: 20px 22px; }
+  .caixa h3 { margin: 0 0 8px; font-size: 24px; }
+  .caixa p { margin: 0; font-size: 18px; color: var(--tinta-2); line-height: 1.45; }
+  .etq { display: inline-block; font: 600 13px/1 ui-monospace, Menlo, monospace; color: var(--ouro);
+    border: 1px solid rgba(240,185,99,.45); border-radius: 999px; padding: 5px 10px; margin: 8px 6px 0 0; }
+  code, .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .seta { color: var(--ouro); font-size: 34px; align-self: center; }
+
+  /* capa */
+  .capa { display: flex; flex-direction: column; justify-content: center; height: 100%; padding-bottom: 30px; }
+  .capa h1 { font-size: 86px; margin: 0; letter-spacing: -2px; }
+  .capa h1 b { color: var(--ouro); }
+  .capa p { font-size: 30px; color: var(--tinta-2); margin: 14px 0 26px; }
+
+  /* arquitetura */
+  .fluxo { display: grid; grid-template-columns: 1fr 40px 1fr 40px 1fr 40px 1fr; gap: 6px; align-items: stretch; }
+  .fluxo .caixa { min-height: 196px; }
+  .nota { margin-top: 10px; font-size: 14px; color: var(--ouro); }
+  .tarefas { margin-top: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .tarefas code { font-size: 17px; color: var(--ouro); }
+
+  /* esteira */
+  .esteira { display: grid; gap: 16px; }
+  .passo { display: grid; grid-template-columns: 54px 1fr; gap: 16px; align-items: center; }
+  .passo .num { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--navy); border: 2px solid var(--ouro); font-weight: 700; font-size: 20px; }
+
+  /* dados */
+  .er { position: relative; height: 330px; }
+  .ent { position: absolute; z-index: 1; width: 196px; text-align: center; padding: 10px 8px; background: #22395f; }
+  .ent h3 { font-size: 19px; margin: 0; }
+  .ent p { font-size: 14px; }
+  .ent.centro { left: 470px; top: 120px; width: 220px; border-color: var(--ouro); background: #3a3f4f; }
+  .linha-tempo { display: flex; gap: 4px; margin-top: 6px; }
+  .linha-tempo span { flex: 1; height: 10px; border-radius: 3px; background: var(--azul); opacity: .8; }
+  .linha-tempo span.nova { background: var(--ouro); }
+  .baixo { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 4px; }
+  pre { margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: #d7e3f4; white-space: pre-wrap; }
+  pre .k { color: var(--ouro); } pre .c { color: #7f93b2; }
+
+  /* cartões de lista */
+  .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .grade .caixa { min-height: 168px; }
+  .grade.tres { grid-template-columns: 1fr 1fr 1fr; }
+  .icone { font: 700 13px/1 ui-monospace, Menlo, monospace; color: var(--fundo); background: var(--ouro);
+    border-radius: 6px; padding: 4px 7px; margin-right: 8px; vertical-align: 3px; }
+
+  /* qualidade */
+  .barras { display: grid; gap: 14px; }
+  .barra { display: grid; grid-template-columns: 300px 1fr 90px; align-items: center; gap: 14px; font-size: 19px; }
+  .barra .trilho { height: 30px; border-radius: 6px; background: rgba(255,255,255,.07); overflow: hidden; }
+  .barra .cheio { height: 100%; width: 0; background: linear-gradient(90deg, var(--azul), var(--ouro));
+    transition: width 1.6s cubic-bezier(.22,1,.36,1) .25s; }
+  .on .barra .cheio { width: var(--w); }
+  .barra b { text-align: right; font-size: 24px; }
+  .ci { display: flex; gap: 12px; margin-top: 8px; }
+  .ci .job { flex: 1; padding: 12px 14px; }
+  .ok { color: var(--verde); font-weight: 700; }
+  .grande { font-size: 54px; font-weight: 800; color: var(--ouro); line-height: 1; }
+</style>
+</head>
+<body>
+
+<!-- 0 · capa -->
+<section class="slide">
+  <div class="capa" data-fala="abertura">
+    <h1>Conserva <b>Predial</b></h1>
+    <p>Por dentro: arquitetura, dados, segurança, testes e operação</p>
+    <div>
+      <span class="etq">React · Vite · PWA</span><span class="etq">Node · Express</span>
+      <span class="etq">PostgreSQL · Supabase</span><span class="etq">Vercel</span><span class="etq">GitHub Actions</span>
+    </div>
+  </div>
+</section>
+
+<!-- 1 · arquitetura -->
+<section class="slide">
+  <div class="cab"><span class="n">01</span><h2>Arquitetura</h2></div>
+  <div class="fluxo">
+    <div class="caixa" data-fala="arq-1"><h3>Navegador</h3><p>React (Vite, Tailwind)<br>instalável no celular (PWA)<br>service worker</p></div>
+    <div class="seta" data-fala="arq-2">→</div>
+    <div class="caixa" data-fala="arq-2"><h3>Vercel</h3><p>frontend estático<br>rewrite <code>/api/*</code> → backend</p><div class="nota">mesmo domínio · sem CORS</div></div>
+    <div class="seta" data-fala="arq-3">→</div>
+    <div class="caixa" data-fala="arq-3"><h3>API</h3><p>Node · Express<br>função na Vercel</p><div class="nota">regras de negócio aqui</div></div>
+    <div class="seta" data-fala="arq-4">→</div>
+    <div class="caixa" data-fala="arq-4"><h3>PostgreSQL</h3><p>Supabase<br>TLS com certificado verificado</p><div class="nota">papel smp_backend</div></div>
+  </div>
+  <div class="tarefas" data-fala="arq-5">
+    <div class="caixa"><h3>Agendador externo · a cada 15 min</h3><p><code>POST /tarefas/notificar-atrasos</code><br>aviso de atraso no sino e por e-mail</p></div>
+    <div class="caixa"><h3>Vercel Cron · uma vez por dia</h3><p><code>GET /tarefas/gerar-preventivas</code><br>abre os chamados dos planos preventivos</p></div>
+  </div>
+</section>
+
+<!-- 2 · esteira do backend -->
+<section class="slide">
+  <div class="cab" data-fala="back-1"><span class="n">02</span><h2>A esteira de cada requisição</h2></div>
+  <div class="esteira">
+    <div class="passo" data-fala="back-2"><div class="num">1</div><div class="caixa"><h3>helmet · limite de tentativas</h3><p>cabeçalhos de segurança; login e recuperação de senha com teto, contado no PostgreSQL</p></div></div>
+    <div class="passo" data-fala="back-3"><div class="num">2</div><div class="caixa"><h3>authenticate</h3><p>token assinado + conta conferida no banco a cada requisição (ativa, perfil, versão da sessão)</p></div></div>
+    <div class="passo" data-fala="back-4"><div class="num">3</div><div class="caixa"><h3>validate → controller → service</h3><p>corpo validado na rota; regras de negócio só no serviço (máquina de estados, RN05, RN07)</p></div></div>
+    <div class="passo" data-fala="back-5"><div class="num">4</div><div class="caixa"><h3>transação · <code>SELECT … FOR UPDATE</code></h3><p>estado, histórico e aviso gravados juntos, ou nada; duas mudanças simultâneas não se atropelam</p></div></div>
+  </div>
+</section>
+
+<!-- 3 · dados -->
+<section class="slide">
+  <div class="cab"><span class="n">03</span><h2>Dados</h2></div>
+  <div class="er">
+    <div class="caixa ent centro" data-fala="dados-1"><h3>chamado</h3><p>estado · prioridade · prazo_estimado · origem</p></div>
+    <div data-fala="dados-2">
+      <div class="caixa ent" style="left:120px;top:0"><h3>local</h3><p>unidade › bloco › pavimento › ambiente</p></div>
+      <div class="caixa ent" style="left:470px;top:0"><h3>usuario</h3><p>perfil · sessao_versao · totp</p></div>
+      <div class="caixa ent" style="left:820px;top:0"><h3>categoria · sla</h3><p>prazo por prioridade</p></div>
+      <div class="caixa ent" style="left:120px;top:240px"><h3>historico_chamado</h3><p>quem, quando, de → para</p></div>
+      <div class="caixa ent" style="left:470px;top:240px"><h3>notificacao · anexo</h3><p>sino, e-mail, arquivos</p></div>
+    </div>
+    <div data-fala="dados-3">
+      <div class="caixa ent" style="left:820px;top:150px;border-color:var(--verde)"><h3>equipamento</h3><p>código da etiqueta (QR)</p></div>
+      <div class="caixa ent" style="left:820px;top:240px;border-color:var(--verde)"><h3>plano_preventivo</h3><p class="mono" style="color:var(--ouro)">UNIQUE (plano_id, data_prevista)</p></div>
+    </div>
+    <svg width="1152" height="330" style="position:absolute;inset:0;overflow:visible;z-index:0" aria-hidden="true">
+      <g data-fala="dados-2" stroke="rgba(169,184,207,.55)" stroke-width="2">
+        <line x1="580" y1="160" x2="218" y2="40"/><line x1="580" y1="160" x2="568" y2="40"/>
+        <line x1="580" y1="160" x2="918" y2="30"/><line x1="580" y1="160" x2="218" y2="270"/>
+        <line x1="580" y1="160" x2="568" y2="280"/>
+      </g>
+      <g data-fala="dados-3" stroke="rgba(111,207,151,.75)" stroke-width="2">
+        <line x1="580" y1="160" x2="918" y2="180"/><line x1="580" y1="160" x2="918" y2="275"/>
+        <line x1="918" y1="200" x2="918" y2="245"/>
+      </g>
+    </svg>
+  </div>
+  <div class="baixo">
+    <div class="caixa" data-fala="dados-4"><h3>Migrações 001 → 024</h3><p>uma transação cada, registradas na tabela <code>migracao</code></p>
+      <div class="linha-tempo"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="nova"></span><span class="nova"></span><span class="nova"></span><span class="nova"></span><span class="nova"></span><span class="nova"></span><span class="nova"></span><span class="nova"></span></div></div>
+    <div class="caixa" data-fala="dados-5"><h3>Regra no banco</h3>
+<pre><span class="k">SELECT</span> prazo_sla(prioridade, abertura, …, <span class="k">'America/Sao_Paulo'</span>)
+<span class="c">-- horas corridas ou úteis (expediente e feriados)</span></pre></div>
+  </div>
+</section>
+
+<!-- 4 · segurança: entrada -->
+<section class="slide">
+  <div class="cab" data-fala="seg1-1"><span class="n">04</span><h2>Segurança · a entrada</h2></div>
+  <div class="grade">
+    <div class="caixa" data-fala="seg1-2"><h3><span class="icone">bcrypt</span>Senha e tentativas</h3><p>5 erros por e-mail ou 20 por IP em 15 min bloqueiam; mesma resposta para conta existente ou não</p></div>
+    <div class="caixa" data-fala="seg1-3"><h3><span class="icone">cookie</span>HttpOnly · SameSite=Strict</h3><p>script nenhum lê a sessão; escrita pelo cookie exige o cabeçalho <code>X-Conserva</code> (anti-CSRF)</p></div>
+    <div class="caixa" data-fala="seg1-4"><h3><span class="icone">sv</span>Sessão revogável</h3><p>versão da sessão por conta: trocar a senha ou “sair de todos” derruba as sessões na hora</p></div>
+    <div class="caixa" data-fala="seg1-5"><h3><span class="icone">TOTP</span>Duas etapas (RFC 6238)</h3><p>código do aplicativo, uso único por janela; 8 códigos de recuperação guardados como hash</p></div>
+  </div>
+</section>
+
+<!-- 5 · segurança: autorização e dados -->
+<section class="slide">
+  <div class="cab" data-fala="seg2-1"><span class="n">05</span><h2>Segurança · autorização e dados</h2></div>
+  <div class="grade">
+    <div class="caixa" data-fala="seg2-2"><h3><span class="icone">RBAC</span>Permissão no servidor</h3><p>perfil e relação com o chamado conferidos na API; a tela esconder um botão é só cortesia</p></div>
+    <div class="caixa" data-fala="seg2-3"><h3><span class="icone">CSP</span>Política de conteúdo estrita</h3><p><code>default-src 'self'</code>, sem <code>'unsafe-inline'</code>; testada no navegador pelo e2e</p></div>
+    <div class="caixa" data-fala="seg2-4"><h3><span class="icone">SQL</span>Banco fechado ao PostgREST</h3><p>tabelas e funções só para <code>smp_backend</code> (migrações 005, 023, 024); verificador do Supabase zerado</p></div>
+    <div class="caixa" data-fala="seg2-5"><h3><span class="icone">LGPD</span>Anexos e dados pessoais</h3><p>arquivo conferido pelo conteúdo; retenção definida e anonimização de conta</p></div>
+  </div>
+</section>
+
+<!-- 6 · frontend -->
+<section class="slide">
+  <div class="cab" data-fala="front-1"><span class="n">06</span><h2>Frontend</h2></div>
+  <div class="grade tres">
+    <div class="caixa" data-fala="front-2" style="grid-column: span 3"><h3><span class="icone">sw.js</span>Uso sem conexão, sem mentir</h3><p>leituras da fila guardadas e marcadas como “guardadas”; nenhuma escrita fica na fila para depois: falha na hora, com “nada foi registrado”; dados guardados apagados no login e no logout</p></div>
+    <div class="caixa" data-fala="front-3"><h3><span class="icone">QR</span>Etiquetas</h3><p>QR desenhado em SVG pelo React, conferido por um decodificador real nos testes</p></div>
+    <div class="caixa" data-fala="front-4" style="grid-column: span 2"><h3><span class="icone">a11y</span>Acessibilidade</h3><p>navegação por teclado, foco visível, rótulos para leitor de tela, <code>prefers-reduced-motion</code> respeitado nas animações</p></div>
+  </div>
+</section>
+
+<!-- 7 · qualidade -->
+<section class="slide">
+  <div class="cab" data-fala="qual-1"><span class="n">07</span><h2>Qualidade</h2></div>
+  <div class="barras" data-fala="qual-2">
+    <div class="barra"><span>API (Jest + PostgreSQL)</span><div class="trilho"><div class="cheio" style="--w:100%"></div></div><b>543</b></div>
+    <div class="barra"><span>Telas (Vitest)</span><div class="trilho"><div class="cheio" style="--w:52.5%"></div></div><b>285</b></div>
+    <div class="barra"><span>Ponta a ponta (Playwright)</span><div class="trilho"><div class="cheio" style="--w:22.7%"></div></div><b>123</b></div>
+  </div>
+  <div class="ci" data-fala="qual-3" style="margin-top:22px">
+    <div class="caixa job"><h3>Backend</h3><p><span class="ok">✔</span> migra um banco do zero e roda a suíte</p></div>
+    <div class="caixa job"><h3>Frontend</h3><p><span class="ok">✔</span> testes de tela e build</p></div>
+    <div class="caixa job"><h3>Ponta a ponta</h3><p><span class="ok">✔</span> navegador real, computador e celular</p></div>
+    <div class="caixa job"><h3>Auditoria</h3><p><span class="ok">✔</span> npm audit semanal · Dependabot</p></div>
+  </div>
+  <div class="caixa" data-fala="qual-4" style="margin-top:18px;display:flex;align-items:center;gap:28px">
+    <div class="grande">102/102</div>
+    <p style="font-size:18px">mutações acusadas: cada uma quebra uma regra de propósito (código de uso único, versão da sessão, preventiva duplicada, EXECUTE público…) e algum teste precisa falhar</p>
+  </div>
+</section>
+
+<!-- 8 · operação -->
+<section class="slide">
+  <div class="cab" data-fala="op-1"><span class="n">08</span><h2>Operação</h2></div>
+  <div class="grade">
+    <div class="caixa" data-fala="op-2"><h3><span class="icone">CD</span>Deploy contínuo</h3><p>merge na main publica frontend e backend; migrações antes, só aditivas, compatíveis com o código anterior</p></div>
+    <div class="caixa" data-fala="op-3"><h3><span class="icone">cron</span>Tarefas monitoradas</h3><p>cada passagem registrada em <code>execucao_tarefa</code>; a gestão vê “parada” ou “falhando”; <code>/health/db</code> responde 503 sem banco</p></div>
+    <div class="caixa" data-fala="op-4" style="grid-column: span 2"><h3><span class="icone">piloto</span>Roteiro do piloto</h3><p>backup e restauração testada, projeto que pausa sozinho no plano gratuito, indicadores, e as limitações declaradas desde o começo (<code>docs/piloto.md</code>)</p></div>
+  </div>
+</section>
+
+<!-- 9 · encerramento -->
+<section class="slide">
+  <div class="capa" data-fala="encerramento">
+    <h1>Conserva <b>Predial</b></h1>
+    <p>Regras no servidor · segurança em camadas · cada regra cobrada por um teste</p>
+    <div><span class="etq">github.com/codetcccomp-sys/Manutencao-Predial</span></div>
+  </div>
+</section>
+
+<div id="legenda"><span></span></div>
+
+<script>
+  // Chamado pela gravação: revela todos os trechos da próxima fala (trocando de slide
+  // quando ela começa noutro), escreve o texto na legenda e devolve a chave da fala.
+  const trechos = [...document.querySelectorAll('[data-fala]')];
+  const ordem = [...new Set(trechos.map((t) => t.dataset.fala))];
+  let pos = 0;
+  window.__falas = () => ordem;
+  window.__proximo = (texto) => {
+    const chave = ordem[pos++];
+    if (!chave) return null;
+    const desta = trechos.filter((t) => t.dataset.fala === chave);
+    const slide = desta[0].closest('.slide');
+    if (!slide.classList.contains('atual')) {
+      document.querySelectorAll('.slide.atual').forEach((s) => s.classList.remove('atual'));
+      slide.classList.add('atual');
+    }
+    desta.forEach((t) => t.classList.add('on'));
+    document.querySelector('#legenda span').textContent = texto ?? '';
+    return chave;
+  };
+</script>
+</body>
+</html>

@@ -22,6 +22,9 @@ export function AuthProvider({ children }) {
     return salvo ? JSON.parse(salvo) : null;
   });
   const [sessaoExpirada, setSessaoExpirada] = useState(false);
+  // Saiu pelo botão Sair. A rota protegida usa isto para não guardar o endereço
+  // de volta: o próximo a entrar no aparelho não deve cair na tela de quem saiu.
+  const [saiu, setSaiu] = useState(false);
 
   // Sem isto, uma sessão vencida derrubava só o armazenamento: o usuário
   // seguia em memória, a rota protegida continuava renderizando e cada
@@ -30,6 +33,7 @@ export function AuthProvider({ children }) {
     function aoExpirar() {
       limparDadosOffline();
       setUsuario(null);
+      setSaiu(false);
       setSessaoExpirada(true);
     }
 
@@ -42,6 +46,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem(CHAVE_USUARIO, JSON.stringify(dados.usuario));
     setUsuario(dados.usuario);
     setSessaoExpirada(false);
+    setSaiu(false);
     return dados.usuario;
   }, []);
 
@@ -77,6 +82,7 @@ export function AuthProvider({ children }) {
     // mesmo jeito — e o cookie vence sozinho no prazo da sessão.
     api.post('/auth/sair').catch(() => {});
     localStorage.removeItem(CHAVE_USUARIO);
+    setSaiu(true);
     setUsuario(null);
     // Sair por vontade própria não é sessão expirada: o aviso na tela de login
     // só faz sentido para quem foi desconectado sem pedir.
@@ -84,7 +90,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ usuario, sessaoExpirada, login, confirmarCodigo, registrar, logout }}>
+    <AuthContext.Provider value={{ usuario, sessaoExpirada, saiu, login, confirmarCodigo, registrar, logout }}>
       {children}
     </AuthContext.Provider>
   );
