@@ -139,8 +139,30 @@ uma vez por dia, de madrugada (03:00 de Brasília, por exemplo)
 Uma vez por dia basta: o plano tem granularidade de dia. Rodar mais vezes é
 inofensivo — cada execução prevista vira no máximo um chamado. A resposta diz
 `chamados_gerados` e `falhas`; ligue a notificação de falha como no job do
-atraso. Antes, aplique no Supabase a migração `018_equipamentos_e_preventiva`
-(`node database/migrate.js` com a `DATABASE_URL` de produção, ou pelo painel).
+atraso. Antes, aplique no Supabase as migrações pendentes (de
+`017_indices_de_data` em diante: `node database/migrate.js` com a
+`DATABASE_URL` de produção, que roda como `postgres`). As que criam função SQL
+já concedem `EXECUTE` ao `smp_backend` — o papel com que a API conecta não
+recebe função nova sozinho.
+
+A tela inicial da gestão passa a avisar quando um dos dois jobs parou
+("Tarefas automáticas paradas"). Logo depois de criar os jobs, o aviso diz
+"nenhuma passagem registrada" até a primeira execução — é esperado.
+
+### 2.1.2 Anexos fora do banco (opcional)
+
+O plano gratuito do Supabase tem 500 MB de banco para tudo, e foto é o que
+mais cresce. Para mandar os anexos novos para o Storage:
+
+1. No painel do Supabase, Storage → crie o bucket `anexos`, **privado**.
+2. Nas variáveis do projeto `manutencao-predial-backend` na Vercel:
+   `ANEXOS_ARMAZENAMENTO=supabase`, `SUPABASE_URL=https://<projeto>.supabase.co`
+   e `SUPABASE_SERVICE_ROLE_KEY` (Settings → API → service_role). Redeploy.
+3. A chave de serviço ignora as políticas de acesso: fica só no backend, nunca
+   no frontend, e não passa por conversa nem commit.
+
+Os anexos já enviados continuam no banco e continuam abrindo. Sem as
+variáveis, nada muda.
 
 ### 2.2 E-mail (decisão, não obrigação)
 

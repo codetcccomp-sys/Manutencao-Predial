@@ -509,6 +509,28 @@ const MUTACOES = [
     spec: 'e2e/pwa.spec.js',
   },
   {
+    descricao: 'aviso do agendador passa a alarmar também com tudo em dia',
+    arquivo: 'src/components/AvisoDoAgendador.jsx',
+    de: 'setProblemas((data?.tarefas ?? []).filter((t) => FRASES[t.situacao]));',
+    para: 'setProblemas(data?.tarefas ?? []);',
+    spec: 'testes/Operacao.test.jsx',
+  },
+  {
+    descricao: 'expediente salvo leva junto os dias desmarcados',
+    arquivo: 'src/components/ExpedienteEFeriados.jsx',
+    de: '            .filter((d) => d.ativo)\n',
+    para: '',
+    spec: 'testes/Operacao.test.jsx',
+  },
+  {
+    descricao: 'abas de cadastros voltam a alargar a página no celular',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: '<div className="flex gap-2 border-b overflow-x-auto">',
+    para: '<div className="flex gap-2 border-b">',
+    motor: 'playwright',
+    spec: 'e2e/layout.spec.js',
+  },
+  {
     descricao: 'sem matchMedia (jsdom) o sistema passa a tentar animar',
     arquivo: 'src/animacao/movimento.js',
     de: "if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;",

@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useSearchParams } from 'react-router';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
+import ExpedienteEFeriados from '../components/ExpedienteEFeriados';
 
 const ABAS = [
   { id: 'locais', rotulo: 'Locais' },
   { id: 'categorias', rotulo: 'Categorias' },
   { id: 'equipes', rotulo: 'Equipes' },
+  { id: 'expediente', rotulo: 'Expediente' },
 ];
 
 const LOCAL_VAZIO = { unidade: '', bloco: '', pavimento: '', setor: '', ambiente: '' };
@@ -58,7 +60,12 @@ function Cadastros() {
   const { usuario } = useAuth();
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
 
-  const [aba, setAba] = useState('locais');
+  // A aba pode vir no endereço: o link "ajustar expediente" dos relatórios
+  // cai direto nela.
+  const [parametros] = useSearchParams();
+  const [aba, setAba] = useState(() =>
+    ABAS.some((a) => a.id === parametros.get('aba')) ? parametros.get('aba') : 'locais'
+  );
   const [locais, setLocais] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [equipes, setEquipes] = useState([]);
@@ -175,12 +182,14 @@ function Cadastros() {
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {aviso && <Aviso tipo="sucesso">{aviso}</Aviso>}
 
-      <div className="flex gap-2 border-b">
+      {/* Rola por dentro no celular: com a quarta aba, a fileira passou dos
+          393px e levava a página inteira junto para o lado. */}
+      <div className="flex gap-2 border-b overflow-x-auto">
         {ABAS.map((a) => (
           <button
             key={a.id}
             onClick={() => setAba(a.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
               aba === a.id ? 'border-navy text-navy' : 'border-transparent text-tinta-2'
             }`}
           >
@@ -356,6 +365,8 @@ function Cadastros() {
           </div>
         </>
       )}
+
+      {!carregando && aba === 'expediente' && <ExpedienteEFeriados />}
 
       {!carregando && aba === 'categorias' && (
         <>

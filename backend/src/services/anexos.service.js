@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { AppError } = require('../middlewares/errorHandler');
+const armazenamento = require('./armazenamento.service');
 
 // Limite do corpo de uma requisição em função serverless na Vercel é 4,5 MB;
 // 4 MB deixa folga para o restante do multipart.
@@ -65,22 +66,37 @@ function validarArquivo(arquivo) {
 async function anexar(chamadoId, usuarioId, arquivo) {
   validarArquivo(arquivo);
 
-  const { rows } = await pool.query(
-    `INSERT INTO anexo (chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes, conteudo)
-     VALUES ($1, $2, $3::tipo_anexo, $4, $5, $6, $7)
-     RETURNING id, chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes, data_upload`,
-    [
-      chamadoId,
-      usuarioId,
-      TIPOS_ACEITOS[arquivo.mimetype].categoria,
-      arquivo.originalname.slice(0, 255),
-      arquivo.mimetype,
-      arquivo.size,
-      arquivo.buffer,
-    ]
-  );
+  const noStorage = armazenamento.modo() === 'supabase';
+  const chave = noStorage ? armazenamento.novaChave(chamadoId) : null;
 
-  return rows[0];
+  // O arquivo sobe ANTES da linha existir: uma linha apontando para um objeto
+  // que não subiu seria um anexo que não abre. O contrário (objeto sem linha,
+  // se o INSERT falhar) é desfeito logo abaixo.
+  if (noStorage) await armazenamento.guardar(chave, arquivo.buffer, arquivo.mimetype);
+
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO anexo (chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes,
+                          conteudo, armazenamento, chave_externa)
+       VALUES ($1, $2, $3::tipo_anexo, $4, $5, $6, $7, $8, $9)
+       RETURNING id, chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes, data_upload`,
+      [
+        chamadoId,
+        usuarioId,
+        TIPOS_ACEITOS[arquivo.mimetype].categoria,
+        arquivo.originalname.slice(0, 255),
+        arquivo.mimetype,
+        arquivo.size,
+        noStorage ? null : arquivo.buffer,
+        noStorage ? 'supabase' : 'banco',
+        chave,
+      ]
+    );
+    return rows[0];
+  } catch (err) {
+    if (noStorage) await armazenamento.apagar(chave);
+    throw err;
+  }
 }
 
 // A listagem nunca traz "conteudo": um chamado com cinco fotos devolveria
@@ -110,9 +126,26 @@ async function buscarMetadados(anexoId) {
   return rows[0];
 }
 
+/**
+ * O anexo com os bytes, de onde quer que estejam.
+ *
+ * Cada linha diz onde está o seu arquivo: trocar a configuração de
+ * armazenamento vale para os anexos novos, e os antigos continuam abrindo.
+ * Quem chama confere a permissão ANTES de pedir os bytes (ver o controller),
+ * para não buscar no Storage um arquivo que não vai entregar.
+ */
 async function buscarConteudo(anexoId) {
+  const anexo = await buscarRegistroCompleto(anexoId);
+  if (anexo.armazenamento === 'supabase') {
+    anexo.conteudo = await armazenamento.ler(anexo.chave_externa);
+  }
+  return anexo;
+}
+
+async function buscarRegistroCompleto(anexoId) {
   const { rows } = await pool.query(
-    'SELECT id, chamado_id, nome_arquivo, mime_type, conteudo FROM anexo WHERE id = $1',
+    `SELECT id, chamado_id, nome_arquivo, mime_type, conteudo, armazenamento, chave_externa
+       FROM anexo WHERE id = $1`,
     [anexoId]
   );
   if (!rows[0]) {
@@ -122,10 +155,14 @@ async function buscarConteudo(anexoId) {
 }
 
 async function remover(anexoId) {
-  const { rowCount } = await pool.query('DELETE FROM anexo WHERE id = $1', [anexoId]);
-  if (rowCount === 0) {
+  const { rows } = await pool.query(
+    'DELETE FROM anexo WHERE id = $1 RETURNING armazenamento, chave_externa',
+    [anexoId]
+  );
+  if (!rows[0]) {
     throw new AppError('Anexo não encontrado.', 404, 'ANEXO_NAO_ENCONTRADO');
   }
+  if (rows[0].armazenamento === 'supabase') await armazenamento.apagar(rows[0].chave_externa);
 }
 
 module.exports = {

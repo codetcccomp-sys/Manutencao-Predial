@@ -1,4 +1,5 @@
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 const {
   limparChamadosDeTeste,
   limparPlanosDeTeste,
@@ -33,7 +34,7 @@ async function inserirPessoa(email) {
 
 async function inserirChamado(protocolo, solicitanteId) {
   const categoria = (await pool.query('SELECT id FROM categoria LIMIT 1')).rows[0].id;
-  const local = (await pool.query('SELECT id FROM local LIMIT 1')).rows[0].id;
+  const local = await garantirLocal({ unidade: 'Unidade da suíte de limpeza' });
   const { rows } = await pool.query(
     `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, solicitante_id)
      VALUES ($1, 'Chamado de teste', 'Descrição do chamado de teste.', $2, $3, $4) RETURNING id`,
@@ -114,7 +115,7 @@ describe('Limpeza dos chamados de teste', () => {
 describe('Limpeza dos planos preventivos de teste', () => {
   async function inserirPlano(criadoPor) {
     const categoria = (await pool.query('SELECT id FROM categoria LIMIT 1')).rows[0].id;
-    const local = (await pool.query('SELECT id FROM local LIMIT 1')).rows[0].id;
+    const local = await garantirLocal({ unidade: 'Unidade da suíte de limpeza' });
     const { rows } = await pool.query(
       `INSERT INTO plano_preventivo
          (titulo, descricao, local_id, categoria_id, repetir_a_cada, unidade_repeticao,

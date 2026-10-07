@@ -138,10 +138,13 @@ function Relatorios() {
   async function salvarPrazo(prioridade, valor, anterior) {
     const horas = Number(valor);
     if (!Number.isInteger(horas) || horas === anterior) return;
+    await alterarSla(prioridade, { prazo_horas: horas });
+  }
 
+  async function alterarSla(prioridade, campos) {
     setErro('');
     try {
-      await api.patch(`/sla/${prioridade}`, { prazo_horas: horas });
+      await api.patch(`/sla/${prioridade}`, campos);
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível alterar o prazo.');
@@ -458,14 +461,26 @@ function Relatorios() {
                         onBlur={(e) => salvarPrazo(s.prioridade, e.target.value, s.prazo_horas)}
                         className="border rounded px-2 py-1 w-24"
                       />
-                      <span className="text-tinta-2 text-xs">horas</span>
+                      <select
+                        aria-label={`Contagem do prazo ${rotuloPrioridade(s.prioridade)}`}
+                        value={s.contagem ?? 'corridas'}
+                        onChange={(e) => alterarSla(s.prioridade, { contagem: e.target.value })}
+                        className="border rounded px-2 py-1 text-xs"
+                      >
+                        <option value="corridas">horas corridas</option>
+                        <option value="uteis">horas úteis</option>
+                      </select>
                     </span>
                   </label>
                 ))}
               </div>
               <p className="text-xs text-tinta-2 mt-2">
                 Alterar o prazo vale para chamados abertos daqui em diante; os já existentes mantêm o
-                prazo com que nasceram.
+                prazo com que nasceram. Horas úteis contam só o expediente, fora dos feriados —{' '}
+                <Link to="/cadastros?aba=expediente" className="text-navy hover:underline">
+                  ajustar expediente e feriados
+                </Link>
+                .
               </p>
             </div>
           </div>

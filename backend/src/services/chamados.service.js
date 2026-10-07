@@ -3,10 +3,10 @@ const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { gerarProtocolo } = require('../utils/protocolo');
 const notificacoesService = require('./notificacoes.service');
-const slaService = require('./sla.service');
 const priorizacaoService = require('./priorizacao.service');
 const { rotuloSql } = require('./locais.service');
 const equipamentosService = require('./equipamentos.service');
+const { FUSO } = require('../config/fuso');
 
 // "Em atraso" não é um estado da máquina, é uma leitura do relógio sobre o
 // estado atual: vira e desvira sozinho quando o prazo passa ou quando o
@@ -99,14 +99,14 @@ async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id
     const alvo = await resolverAlvo(client, { categoria_id, local_id, equipamento_id });
 
     // O prazo nasce junto do chamado, na mesma transação: um chamado sem
-    // prazo ficaria invisível para toda a apuração de atraso.
-    const prazoHoras = await slaService.calcularPrazo(client, prioridade);
-
+    // prazo ficaria invisível para toda a apuração de atraso. A conta (horas
+    // corridas ou úteis, conforme a prioridade) é da função prazo_sla, a
+    // mesma que repriorizar e reabrir usam.
     const { rows } = await client.query(
       `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, equipamento_id,
                             solicitante_id, prioridade, prazo_estimado)
        VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::prioridade_chamado, 'baixa'),
-               CASE WHEN $9::int IS NULL THEN NULL ELSE now() + ($9::int * interval '1 hour') END)
+               prazo_sla(COALESCE($8::prioridade_chamado, 'baixa'), now(), '0 seconds', '0 seconds', $9))
        RETURNING *, ${EM_ATRASO} AS em_atraso`,
       [
         protocolo,
@@ -117,7 +117,7 @@ async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id
         alvo.equipamento_id,
         solicitanteId,
         prioridade,
-        prazoHoras,
+        FUSO,
       ]
     );
 
@@ -464,16 +464,28 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
     }
 
     if (chamado.estado === 'aguardando_material' && novoEstado !== 'aguardando_material') {
+      params.push(FUSO);
+      const fuso = `$${params.length}`;
       campos.push(
         "tempo_suspenso_total = tempo_suspenso_total + COALESCE(now() - aguardando_material_desde, '0 seconds')"
+      );
+      campos.push(
+        `tempo_suspenso_util = tempo_suspenso_util + horas_uteis_entre(aguardando_material_desde, now(), ${fuso})`
       );
       campos.push('aguardando_material_desde = NULL');
       // O prazo anda junto com a suspensão. Espera por insumo é falha de
       // suprimento, não da equipe de campo: descontar o tempo da métrica de
       // atendimento (como os relatórios já fazem) e ainda assim deixar o
-      // relógio do prazo correndo seria cobrar duas coisas incoerentes.
+      // relógio do prazo correndo seria cobrar duas coisas incoerentes. Na
+      // régua de horas úteis, devolve-se o expediente que a espera consumiu
+      // — dois dias de espera num fim de semana não valem dois dias de prazo.
       campos.push(
-        "prazo_estimado = prazo_estimado + COALESCE(now() - aguardando_material_desde, '0 seconds')"
+        `prazo_estimado = CASE
+           WHEN origem = 'corretiva'
+                AND (SELECT contagem FROM sla WHERE sla.prioridade = chamado.prioridade) = 'uteis'
+             THEN somar_horas_uteis(prazo_estimado, horas_uteis_entre(aguardando_material_desde, now(), ${fuso}), ${fuso})
+           ELSE prazo_estimado + COALESCE(now() - aguardando_material_desde, '0 seconds')
+         END`
       );
     }
 
@@ -542,7 +554,6 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
     // deixaria um chamado crítico com o relógio de um chamado baixo. A conta
     // parte da abertura e devolve o tempo já suspenso, para não consumir
     // prazo com espera por insumo.
-    const prazoHoras = await slaService.calcularPrazo(client, escolhida);
 
     const { rows } = await client.query(
       `UPDATE chamado SET
@@ -557,8 +568,10 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
          -- a prioridade dela muda a ordem na fila, não o dia combinado.
          prazo_estimado = CASE
            WHEN origem = 'preventiva' THEN prazo_estimado
-           WHEN $9::int IS NULL THEN prazo_estimado
-           ELSE data_abertura + ($9::int * interval '1 hour') + tempo_suspenso_total
+           ELSE COALESCE(
+             prazo_sla($5::prioridade_chamado, data_abertura, tempo_suspenso_total, tempo_suspenso_util, $9),
+             prazo_estimado
+           )
          END
        WHERE id = $10
        RETURNING *, ${EM_ATRASO} AS em_atraso`,
@@ -571,7 +584,7 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
         divergiu ? justificativa.trim() : null,
         regra.id,
         usuario.id,
-        prazoHoras,
+        FUSO,
         id,
       ]
     );
@@ -783,8 +796,6 @@ async function reabrir(id, { justificativa }, usuario) {
     // O prazo do ciclo anterior já foi gasto; o novo ciclo recebe prazo
     // próprio contado a partir de agora. O que sinaliza a falha do primeiro
     // atendimento é a contagem de reaberturas, não um prazo vencido herdado.
-    const prazoHoras = await slaService.calcularPrazo(client, atual.prioridade);
-
     const { rows } = await client.query(
       `UPDATE chamado SET
          estado = 'em_triagem',
@@ -796,13 +807,11 @@ async function reabrir(id, { justificativa }, usuario) {
          total_reaberturas = total_reaberturas + 1,
          reaberto_em = now(),
          inicio_execucao = NULL,
-         prazo_estimado = CASE
-           WHEN $1::int IS NULL THEN NULL
-           ELSE now() + ($1::int * interval '1 hour')
-         END
+         tempo_suspenso_util = '0 seconds',
+         prazo_estimado = prazo_sla(prioridade, now(), '0 seconds', '0 seconds', $1)
        WHERE id = $2
        RETURNING *, ${EM_ATRASO} AS em_atraso`,
-      [prazoHoras, id]
+      [FUSO, id]
     );
 
     await registrarHistorico(

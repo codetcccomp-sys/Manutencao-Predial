@@ -18,11 +18,14 @@ const listar = asyncHandler(async (req, res) => {
 });
 
 const baixar = asyncHandler(async (req, res) => {
-  const anexo = await anexosService.buscarConteudo(req.params.anexoId);
   // A permissão é a do chamado a que o anexo pertence — checada a partir do
   // registro, não do que vem na URL, senão bastaria pedir /chamados/<meu>/
-  // anexos/<id alheio> para ler o anexo de outra pessoa.
-  await chamadosService.garantirLeitura(anexo.chamado_id, req.usuario);
+  // anexos/<id alheio> para ler o anexo de outra pessoa. E é checada antes de
+  // buscar os bytes: com o arquivo no Storage, buscar primeiro seria ler um
+  // objeto para quem não pode vê-lo.
+  const registro = await anexosService.buscarMetadados(req.params.anexoId);
+  await chamadosService.garantirLeitura(registro.chamado_id, req.usuario);
+  const anexo = await anexosService.buscarConteudo(req.params.anexoId);
 
   res.set({
     'Content-Type': anexo.mime_type,

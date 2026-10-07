@@ -36,6 +36,7 @@ const TELAS = [
   { rota: '/relatorios', espera: 'h2:has-text("Por local")', quem: 'gestor' },
   { rota: '/cadastros', espera: 'h2:has-text("Cadastrar local")', quem: 'gestor' },
   { rota: '/preventiva', espera: 'h2:has-text("Novo plano")', quem: 'gestor' },
+  { rota: '/cadastros?aba=expediente', espera: 'h2:has-text("Feriados")', quem: 'gestor' },
   { rota: '/etiquetas?tipo=locais', espera: 'svg[role="img"]', quem: 'gestor' },
   { rota: '/usuarios', espera: 'h1', quem: 'administrador' },
 ];

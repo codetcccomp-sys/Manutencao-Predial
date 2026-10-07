@@ -1,4 +1,5 @@
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 const { reancorar } = require('../database/reancorar-demo');
 
 // Tudo aqui nasce "dez dias atrás", como a massa de demonstração que ficou
@@ -24,7 +25,7 @@ async function inserirPessoa(email) {
 
 async function inserirChamado(protocolo, solicitanteId) {
   const categoria = (await pool.query('SELECT id FROM categoria LIMIT 1')).rows[0].id;
-  const local = (await pool.query('SELECT id FROM local LIMIT 1')).rows[0].id;
+  const local = await garantirLocal({ unidade: 'Unidade da suíte de reancoragem' });
   // Aberto uma hora depois da carga, com prazo de cinco: no dia da carga,
   // estava no prazo. Dez dias depois, estourado — é o que o script corrige.
   const { rows } = await pool.query(

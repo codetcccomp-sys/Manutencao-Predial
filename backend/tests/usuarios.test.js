@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
+const { garantirLocal } = require('./apoio/local');
 const usuariosService = require('../src/services/usuarios.service');
 
 const { ipDaSuite } = require('./apoio/ip');
@@ -209,7 +210,10 @@ describe('Técnico com chamado em aberto não sai da fila sem reatribuição', (
   // de qualquer pessoa. Parado em silêncio até estourar o prazo.
   async function tecnicoComChamado() {
     const tecnico = await criarUsuarioELogar('tecnico');
-    const { rows: local } = await pool.query('SELECT id FROM local LIMIT 1');
+    // O local é da suíte, e não "o primeiro do banco": num banco novo (o do CI)
+    // não há local nenhum até alguma outra suíte criar um, e a ordem das suítes
+    // não é garantida.
+    const local = [{ id: await garantirLocal({ unidade: 'Unidade da suíte de usuários' }) }];
     const { rows: categoria } = await pool.query('SELECT id FROM categoria LIMIT 1');
     const { body } = await request(app)
       .post('/chamados')

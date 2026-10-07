@@ -125,6 +125,30 @@ Alterar um prazo vale para chamados abertos daí em diante; os já existentes
 mantêm o prazo com que nasceram, para que uma mudança de política não
 reescreva retroativamente o histórico de cumprimento.
 
+### Horas corridas ou horas úteis
+
+Cada prioridade escolhe a régua (`sla.contagem`): **corridas** (o padrão, e o
+que existia) ou **úteis**, contadas só dentro do expediente da instituição
+(tabela `expediente`, por dia da semana; seg a sex, 8h às 18h, de partida) e
+fora dos feriados cadastrados (`feriado`). Um chamado médio de 72h aberto na
+sexta às 17h, em horas corridas, vence na segunda às 17h, depois de um fim de
+semana em que ninguém trabalha; em horas úteis, vence sete dias de expediente
+depois. Para o imprevisto grave (crítica, alta) a régua corrida costuma ser a
+certa; para o resto, a útil é a honesta.
+
+A conta é do banco, numa função só (`prazo_sla`, sobre `somar_horas_uteis` e
+`horas_uteis_entre`, migração 021), usada na abertura, na repriorização e na
+reabertura. A espera por material devolve ao prazo o **expediente** que
+consumiu (dois dias de espera num fim de semana não valem dois dias de prazo),
+e fica guardada em `tempo_suspenso_util` para a repriorização refazer a conta
+desde a abertura. Sem nenhum dia de expediente cadastrado, não há hora útil
+para contar e vale a régua corrida. Preventivas não usam SLA: o prazo delas é o
+fim do dia previsto.
+
+Rotas: `PATCH /sla/:prioridade` (`prazo_horas` e/ou `contagem`),
+`GET PUT /sla/expediente` (a semana inteira de uma vez),
+`GET POST /sla/feriados`, `DELETE /sla/feriados/:data`.
+
 ## Segurança
 
 O que o código faz, e onde procurar:
@@ -571,8 +595,18 @@ um envio malformado (corpo cortado, cabeçalho de parte quebrado) volta 400
 `ENVIO_MALFORMADO`, não 500. O
 conteúdo fica em `bytea` no próprio banco, porque o sistema de arquivos das
 funções serverless é efêmero — um caminho gravado em disco apontaria para um
-arquivo que já não existe na requisição seguinte. Se o volume crescer, o
-passo seguinte é migrar para armazenamento de objetos.
+arquivo que já não existe na requisição seguinte.
+
+Com `ANEXOS_ARMAZENAMENTO=supabase` (mais `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY` e, opcional, `ANEXOS_BUCKET`, padrão `anexos`), os
+anexos **novos** vão para um bucket **privado** do Supabase Storage e o banco
+guarda só a chave do objeto. A API continua sendo o único caminho até o
+arquivo: confere a permissão do chamado e só então lê o objeto com a chave de
+serviço — não sai URL pública nem assinada para o navegador. Os anexos antigos
+continuam no banco e continuam abrindo: cada linha diz onde está o seu arquivo
+(`anexo.armazenamento`). Storage fora do ar vira 502 `ARMAZENAMENTO_INDISPONIVEL`,
+sem linha órfã. A chave de serviço ignora as políticas de acesso do banco: fica
+só nas variáveis do backend, nunca no frontend.
 
 ## Priorização
 
@@ -687,3 +721,14 @@ Cada execução tem teto: o alcance é chamados × destinatários, não a soma, 
 uma varredura sem limite poderia gerar milhares de avisos numa transação só,
 dentro de uma função com limite de tempo. O que passar do teto fica para a
 passagem seguinte — a marcação é persistente, nada se perde.
+
+### O agendador parou?
+
+Cada passagem por `/tarefas/*` fica registrada em `execucao_tarefa` (início,
+fim, sucesso, o que respondeu, o erro). `GET /operacao/agendador` (gestão)
+diz, para cada tarefa, se está `ok`, `parada` (sem sucesso há mais que a
+tolerância: 1 h para o aviso de atraso, 26 h para a preventiva), `falhando`
+(a última passagem falhou, ou começou e não terminou) ou `nunca` (nenhuma
+passagem: o job não foi criado). A tela inicial da gestão mostra um aviso
+quando alguma não está `ok`. Antes disso, um agendador parado era silêncio —
+e silêncio parece saúde.

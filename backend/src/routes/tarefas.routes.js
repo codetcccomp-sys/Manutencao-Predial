@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const atrasosService = require('../services/atrasos.service');
 const preventivaService = require('../services/preventiva.service');
+const execucoes = require('../services/execucoes.service');
 const { autenticarAgendador } = require('../middlewares/cron');
 const { asyncHandler } = require('../utils/asyncHandler');
 
@@ -20,8 +21,7 @@ router.use(autenticarAgendador);
 router.post(
   '/notificar-atrasos',
   asyncHandler(async (req, res) => {
-    const resultado = await atrasosService.notificarAtrasados();
-    res.json(resultado);
+    res.json(await execucoes.registrar('notificar-atrasos', () => atrasosService.notificarAtrasados()));
   })
 );
 
@@ -32,7 +32,7 @@ router.post(
 router.post(
   '/gerar-preventivas',
   asyncHandler(async (req, res) => {
-    res.json(await preventivaService.gerarVencidos());
+    res.json(await execucoes.registrar('gerar-preventivas', () => preventivaService.gerarVencidos()));
   })
 );
 
