@@ -29,12 +29,16 @@ router.post(
 // de antecedência. Uma vez por dia basta (o plano tem granularidade de dia),
 // mas rodar mais vezes é inofensivo: cada execução prevista vira no máximo
 // um chamado, garantido pelo índice único de plano + data.
-router.post(
-  '/gerar-preventivas',
-  asyncHandler(async (req, res) => {
-    res.json(await execucoes.registrar('gerar-preventivas', () => preventivaService.gerarVencidos()));
-  })
-);
+const gerarPreventivas = asyncHandler(async (req, res) => {
+  res.json(await execucoes.registrar('gerar-preventivas', () => preventivaService.gerarVencidos()));
+});
+router.post('/gerar-preventivas', gerarPreventivas);
+
+// O Vercel Cron (backend/vercel.json) só faz GET, com o mesmo
+// `Authorization: Bearer <CRON_SECRET>`. O GET aqui não abre porta nova: sem o
+// segredo é 401 como no POST, então crawler ou pré-carregador de link não
+// dispara nada — e a geração é idempotente de qualquer forma.
+router.get('/gerar-preventivas', gerarPreventivas);
 
 // Só leitura, para conferir de fora se a varredura está dando conta sem
 // precisar disparar nada.

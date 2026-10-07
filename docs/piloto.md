@@ -125,25 +125,26 @@ aviso mede o processo errado.
 > fail-closed: sem `CRON_SECRET` configurado ela recusa (503) em vez de ficar
 > aberta.
 
-### 2.1.1 Manutenção preventiva (mesmo segredo, outro job)
+### 2.1.1 Manutenção preventiva (automática, pela Vercel)
 
-Os planos preventivos só geram chamados se alguém chamar a tarefa. Crie um
-**segundo job** no mesmo agendador, com o mesmo cabeçalho:
+Os planos preventivos só geram chamados se alguém chamar a tarefa. Esse job
+não depende de agendador externo: está no `backend/vercel.json` como **Vercel
+Cron**, uma vez por dia às 06:00 UTC (03:00 de Brasília; no plano gratuito a
+Vercel dispara em algum momento dentro dessa hora):
 
 ```
-POST https://manutencao-predial-backend-delta.vercel.app/tarefas/gerar-preventivas
-Authorization: Bearer <o segredo>
-uma vez por dia, de madrugada (03:00 de Brasília, por exemplo)
+GET /tarefas/gerar-preventivas
+Authorization: Bearer <CRON_SECRET>   ← a própria Vercel manda, com a variável já cadastrada
 ```
 
-Uma vez por dia basta: o plano tem granularidade de dia. Rodar mais vezes é
-inofensivo — cada execução prevista vira no máximo um chamado. A resposta diz
-`chamados_gerados` e `falhas`; ligue a notificação de falha como no job do
-atraso. Antes, aplique no Supabase as migrações pendentes (de
-`017_indices_de_data` em diante: `node database/migrate.js` com a
-`DATABASE_URL` de produção, que roda como `postgres`). As que criam função SQL
-já concedem `EXECUTE` ao `smp_backend` — o papel com que a API conecta não
-recebe função nova sozinho.
+Nada a fazer além de manter o `CRON_SECRET` em Production (o mesmo do item
+2.1). Uma vez por dia basta: o plano tem granularidade de dia, e rodar mais
+vezes é inofensivo — cada execução prevista vira no máximo um chamado. O
+histórico fica em Vercel → projeto `manutencao-predial-backend` → Settings →
+Cron Jobs, onde também dá para disparar na hora ("Run").
+
+O aviso de atraso (item 2.1) continua no agendador externo: ele roda a cada
+15 minutos, e o Cron do plano gratuito da Vercel só roda uma vez por dia.
 
 A tela inicial da gestão passa a avisar quando um dos dois jobs parou
 ("Tarefas automáticas paradas"). Logo depois de criar os jobs, o aviso diz
