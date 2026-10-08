@@ -72,8 +72,11 @@ export function AuthProvider({ children }) {
     [iniciarSessao]
   );
 
+  // Devolve a resposta: com a aprovação ligada (RF01), o cadastro nasce
+  // esperando a gestão, e a tela precisa dizer isso em vez de mandar ao login.
   const registrar = useCallback(async (nome, email, senha) => {
-    await api.post('/auth/registrar', { nome, email, senha });
+    const { data } = await api.post('/auth/registrar', { nome, email, senha });
+    return data;
   }, []);
 
   const logout = useCallback(() => {

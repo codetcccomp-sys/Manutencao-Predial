@@ -21,6 +21,12 @@ router.post(
   usuariosController.criar
 );
 
+// RF01: autocadastro sob aprovação. A gestão aprova junto com a
+// administração: é quem recebe os chamados de quem se cadastra, e o pedido só
+// cria solicitante — nunca um perfil interno.
+router.post('/aprovar', authorize('administrador', 'gestor'), usuariosController.aprovar);
+router.post('/recusar', authorize('administrador', 'gestor'), usuariosController.recusar);
+
 router.patch(
   '/:id',
   authorize('administrador'),

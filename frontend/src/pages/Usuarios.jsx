@@ -8,6 +8,7 @@ import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import Botao from '../components/ui/Botao';
 import { Esqueleto, Regiao } from '../components/ui/Estados';
 import Confirmacao from '../components/ui/Confirmacao';
+import CadastrosPendentes from '../components/CadastrosPendentes';
 
 const PERFIS = [
   { valor: 'solicitante', rotulo: 'Solicitante' },
@@ -138,12 +139,14 @@ function Usuarios() {
         <CabecalhoDePagina titulo="Usuários" className="mb-0" />
         <p className="text-sm text-tinta-2">
           Técnicos, gestores e administradores só podem ser criados aqui — o cadastro público sempre
-          gera um solicitante.
+          gera um solicitante, e com a aprovação ligada ele espera a gestão antes de entrar.
         </p>
       </div>
 
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {aviso && <div className="bg-sucesso-tenue text-sucesso text-sm rounded p-3">{aviso}</div>}
+
+      <CadastrosPendentes comConfiguracao />
 
       <form onSubmit={criar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
         <h2 className="font-medium text-navy">Cadastrar usuário</h2>

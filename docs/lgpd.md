@@ -92,6 +92,7 @@ Dois prazos, porque são duas coisas diferentes:
 | --- | --- | --- |
 | Chamado, histórico, comentário, avaliação, anexo | **5 anos** a partir da conclusão | Descarte |
 | Conta de pessoa desligada | **2 anos** após o desligamento | Anonimização (seção 5) |
+| Pedido de cadastro recusado | Nenhum | Apagado na recusa: a pessoa nunca entrou no sistema |
 
 O registro de manutenção fica cinco anos porque é documentação do patrimônio,
 não dado sobre a pessoa: o que interessa ali é o que foi feito no prédio. A

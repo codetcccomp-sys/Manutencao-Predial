@@ -5,6 +5,7 @@ const pool = require('../config/db');
 const { transacao } = require('../config/transacao');
 const totp = require('../utils/totp');
 const { AppError } = require('../middlewares/errorHandler');
+const configuracaoService = require('./configuracao.service');
 
 const SALT_ROUNDS = 10;
 
@@ -39,7 +40,7 @@ function normalizarNome(nome) {
   return String(nome ?? '').trim().replace(/\s+/g, ' ');
 }
 
-async function criarUsuario({ nome, email, senha, perfil }) {
+async function criarUsuario({ nome, email, senha, perfil }, { pendente = false } = {}) {
   const emailNormalizado = normalizarEmail(email);
 
   const existente = await pool.query('SELECT id FROM usuario WHERE email = $1', [emailNormalizado]);
@@ -49,11 +50,14 @@ async function criarUsuario({ nome, email, senha, perfil }) {
 
   const senhaHash = await bcrypt.hash(senha, SALT_ROUNDS);
 
+  // Pendente nasce inativa: tudo o que já recusa conta inativa (login,
+  // recuperação de senha, listas, avisos) recusa a pendente sem precisar
+  // saber que ela existe.
   const { rows } = await pool.query(
-    `INSERT INTO usuario (nome, email, senha_hash, perfil)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, nome, email, perfil, ativo, criado_em`,
-    [normalizarNome(nome), emailNormalizado, senhaHash, perfil]
+    `INSERT INTO usuario (nome, email, senha_hash, perfil, ativo, cadastro_pendente_desde)
+     VALUES ($1, $2, $3, $4, NOT $5::boolean, CASE WHEN $5::boolean THEN now() END)
+     RETURNING id, nome, email, perfil, ativo, criado_em, cadastro_pendente_desde`,
+    [normalizarNome(nome), emailNormalizado, senhaHash, perfil, pendente]
   );
 
   return rows[0];
@@ -63,8 +67,12 @@ async function criarUsuario({ nome, email, senha, perfil }) {
 // (tecnico, gestor, administrador) só podem ser criados por um administrador
 // autenticado, via usuariosService.criarUsuario, para evitar escalonamento
 // de privilégio por auto-cadastro.
+//
+// Com a aprovação ligada (RF01: "autocadastro sob aprovação"), a conta nasce
+// esperando a gestão e não entra até ser aprovada.
 async function registrar({ nome, email, senha }) {
-  return criarUsuario({ nome, email, senha, perfil: 'solicitante' });
+  const pendente = await configuracaoService.cadastroExigeAprovacao();
+  return criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente });
 }
 
 const publico = (u) => ({ id: u.id, nome: u.nome, email: u.email, perfil: u.perfil });
@@ -82,11 +90,26 @@ const VALIDADE_DESAFIO = '5m';
  */
 async function login({ email, senha }) {
   const { rows } = await pool.query(
-    `SELECT id, nome, email, senha_hash, perfil, ativo, sessao_versao, totp_segredo
+    `SELECT id, nome, email, senha_hash, perfil, ativo, sessao_versao, totp_segredo, cadastro_pendente_desde
        FROM usuario WHERE email = $1`,
     [normalizarEmail(email)]
   );
   const usuario = rows[0];
+
+  // Cadastro esperando a gestão: quem acertou a senha merece saber por que não
+  // entra — senão tenta de novo, pede outra senha, cadastra outra conta. Só
+  // depois da senha certa, para a resposta não virar um "este e-mail pediu
+  // cadastro?" aberto a qualquer um.
+  if (usuario?.cadastro_pendente_desde) {
+    if (await bcrypt.compare(senha, usuario.senha_hash)) {
+      throw new AppError(
+        'Seu cadastro ainda aguarda a aprovação da gestão. Você poderá entrar assim que ele for aprovado.',
+        403,
+        'CADASTRO_PENDENTE'
+      );
+    }
+    throw new AppError('E-mail ou senha inválidos.', 401, 'CREDENCIAIS_INVALIDAS');
+  }
 
   if (!usuario || !usuario.ativo) {
     await bcrypt.compare(senha, HASH_FICTICIO);

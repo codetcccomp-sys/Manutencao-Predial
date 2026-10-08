@@ -11,6 +11,7 @@ function Cadastro() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState(false);
+  const [aguardando, setAguardando] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const { registrar } = useAuth();
   const navigate = useNavigate();
@@ -20,7 +21,13 @@ function Cadastro() {
     setErro('');
     setCarregando(true);
     try {
-      await registrar(nome, email, senha);
+      const resposta = await registrar(nome, email, senha);
+      // Esperando aprovação não vai ao login: lá a pessoa leria "aguarda
+      // aprovação" como erro e tentaria de novo.
+      if (resposta?.aguardando_aprovacao) {
+        setAguardando(true);
+        return;
+      }
       setSucesso(true);
       setTimeout(() => navigate('/login'), 1200);
     } catch (err) {
@@ -28,6 +35,23 @@ function Cadastro() {
     } finally {
       setCarregando(false);
     }
+  }
+
+  if (aguardando) {
+    return (
+      <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
+        <div className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4">
+          <h1 className="text-xl font-bold text-navy">Pedido enviado</h1>
+          <Aviso tipo="sucesso">
+            Seu cadastro foi recebido e aguarda a aprovação da gestão. Você poderá entrar com este e-mail e
+            senha assim que ele for aprovado.
+          </Aviso>
+          <Link to="/login" className="text-sm font-medium text-navy hover:underline text-center">
+            Voltar para o login
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (

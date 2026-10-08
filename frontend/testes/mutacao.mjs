@@ -716,6 +716,27 @@ const MUTACOES = [
     para: 'if (hojeLocal() <= aberturaDaJanela(p) || true)',
     spec: 'testes/Preventiva.test.jsx',
   },
+  {
+    descricao: 'aprovação: recusar apaga o pedido sem perguntar',
+    arquivo: 'src/components/CadastrosPendentes.jsx',
+    de: 'onClick={() => setARecusar([p])}',
+    para: "onClick={() => decidir('recusar', [p.id])}",
+    spec: 'testes/CadastrosPendentes.test.jsx',
+  },
+  {
+    descricao: 'aprovação: cadastro pendente é mandado ao login como se tivesse entrado',
+    arquivo: 'src/pages/Cadastro.jsx',
+    de: '      if (resposta?.aguardando_aprovacao) {',
+    para: '      if (false) {',
+    spec: 'testes/CadastrosPendentes.test.jsx',
+  },
+  {
+    descricao: 'aprovação: o painel da gestão passa a ler (e oferecer) a exigência',
+    arquivo: 'src/components/CadastrosPendentes.jsx',
+    de: '    if (comConfiguracao) {\n      api',
+    para: '    if (true) {\n      api',
+    spec: 'testes/CadastrosPendentes.test.jsx',
+  },
 ];
 
 /**

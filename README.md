@@ -67,6 +67,17 @@ O cadastro público cria sempre `solicitante`. Os demais perfis só são criados
 por um administrador autenticado — do contrário bastaria mandar
 `"perfil": "administrador"` no corpo do cadastro para escalar privilégio.
 
+**Cadastro sob aprovação (RF01).** Com a opção ligada em **Usuários**
+("Novos cadastros precisam de aprovação", só o administrador muda), quem se
+cadastra pelo link público fica esperando a gestão: a conta nasce inativa, o
+login com a senha certa responde que o cadastro aguarda aprovação, e senha
+errada responde como sempre, sem revelar que o pedido existe. Gestor e
+administrador veem os pedidos no painel inicial e em Usuários, e aprovam ou
+recusam um a um ou em lote. Aprovar avisa a pessoa por e-mail; recusar apaga
+o pedido (nunca entrou no sistema, então não há histórico a preservar, e
+guardar nome e e-mail de quem foi recusado seria reter dado sem finalidade).
+A migração deixa a opção desligada: ligar é decisão de quem administra.
+
 ### Quem sai da conta
 
 Desativar uma pessoa, trocar o perfil dela ou anonimizá-la são as saídas da
@@ -497,6 +508,8 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `GET` | `/usuarios` | gestor, administrador |
 | `POST PATCH` | `/usuarios`, `/usuarios/:id` | administrador |
 | `POST` | `/usuarios/:id/anonimizar` | administrador (ver [docs/lgpd.md](docs/lgpd.md)) |
+| `POST` | `/usuarios/aprovar`, `/usuarios/recusar` | gestor, administrador (corpo `{ "ids": [...] }`; só toca em pedidos pendentes) |
+| `GET PATCH` | `/configuracoes` | leitura: gestor, administrador; alteração: administrador |
 | `POST` | `/usuarios/:id/2fa/redefinir` | administrador (quem perdeu o celular e os códigos) |
 | `GET PATCH` | `/notificacoes`, `/notificacoes/:id/lida` | o próprio usuário |
 | `GET POST PATCH` | `/locais`, `/categorias` | leitura autenticada, escrita para gestão |

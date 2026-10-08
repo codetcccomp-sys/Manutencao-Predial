@@ -173,6 +173,48 @@ const MUTACOES = [
     para: '  return;',
     spec: 'tests/distribuicao.test.js',
   },
+  {
+    descricao: 'aprovação: login de pedido pendente revela a pendência sem conferir a senha',
+    arquivo: 'src/services/auth.service.js',
+    de: '    if (await bcrypt.compare(senha, usuario.senha_hash)) {\n      throw new AppError(\n        \'Seu cadastro ainda aguarda',
+    para: '    if (true) {\n      throw new AppError(\n        \'Seu cadastro ainda aguarda',
+    spec: 'tests/cadastroAprovacao.test.js',
+  },
+  {
+    descricao: 'aprovação: o cadastro ignora a exigência e entra direto',
+    arquivo: 'src/services/auth.service.js',
+    de: "return criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente });",
+    para: "return criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente: false });",
+    spec: 'tests/cadastroAprovacao.test.js',
+  },
+  {
+    descricao: 'aprovação: aprovar vira porta dos fundos para reativar conta desligada',
+    arquivo: 'src/services/usuarios.service.js',
+    de: '      WHERE id = ANY($1::int[]) AND cadastro_pendente_desde IS NOT NULL\n      RETURNING id, nome, email`,',
+    para: '      WHERE id = ANY($1::int[])\n      RETURNING id, nome, email`,',
+    spec: 'tests/cadastroAprovacao.test.js',
+  },
+  {
+    descricao: 'aprovação: recusar apaga conta que não é pedido',
+    arquivo: 'src/services/usuarios.service.js',
+    de: '      WHERE id = ANY($1::int[]) AND cadastro_pendente_desde IS NOT NULL\n      RETURNING id`,',
+    para: '      WHERE id = ANY($1::int[])\n      RETURNING id`,',
+    spec: 'tests/cadastroAprovacao.test.js',
+  },
+  {
+    descricao: 'aprovação: pedido pendente aparece na lista comum de contas',
+    arquivo: 'src/services/usuarios.service.js',
+    de: "const condicoes = ['cadastro_pendente_desde IS NULL'];",
+    para: 'const condicoes = [];',
+    spec: 'tests/cadastroAprovacao.test.js',
+  },
+  {
+    descricao: 'aprovação: a gestão passa a mudar a exigência',
+    arquivo: 'src/routes/configuracao.routes.js',
+    de: "router.patch('/', authorize('administrador'), configuracaoController.definir);",
+    para: "router.patch('/', authorize('administrador', 'gestor'), configuracaoController.definir);",
+    spec: 'tests/cadastroAprovacao.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';
