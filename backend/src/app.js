@@ -131,6 +131,7 @@ app.use('/notificacoes', require('./routes/notificacoes.routes'));
 app.use('/sla', require('./routes/sla.routes'));
 app.use('/regras-priorizacao', require('./routes/priorizacao.routes'));
 app.use('/regras-distribuicao', require('./routes/distribuicao.routes'));
+app.use('/configuracoes', require('./routes/configuracao.routes'));
 app.use('/tarefas', require('./routes/tarefas.routes'));
 app.use('/operacao', require('./routes/operacao.routes'));
 

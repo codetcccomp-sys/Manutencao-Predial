@@ -208,6 +208,22 @@ Para medir o efeito no piloto: o tempo entre a abertura e a atribuição dos
 chamados distribuídos (`regra_distribuicao_id` preenchido) contra os da
 triagem manual.
 
+### 2.1.5 Cadastro sob aprovação
+
+A migração `026_cadastro_sob_aprovacao` vai antes do merge e deixa a opção
+**desligada**: o cadastro continua entrando direto até alguém decidir o
+contrário. Para o piloto, ligue em **Usuários** → "Novos cadastros precisam de
+aprovação" (só o administrador vê a caixa). A partir daí:
+
+- quem se cadastra vê "Pedido enviado" e só entra depois de aprovado;
+- os pedidos aparecem no painel inicial da gestão e em Usuários;
+- aprovar manda um e-mail avisando (com o SMTP configurado); recusar apaga o
+  pedido.
+
+Divulgue o link de cadastro só depois de ligar. Sem domínio de e-mail
+institucional para restringir, a aprovação é o que impede quem tem o link de
+entrar sozinho.
+
 ### 2.2 E-mail (decisão, não obrigação)
 
 > **Se configurar SMTP, configure `URL_APP` junto.** Ela guarda o endereço do

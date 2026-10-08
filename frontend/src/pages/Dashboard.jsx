@@ -8,6 +8,7 @@ import CartaoDeChamado from '../components/chamados/CartaoDeChamado';
 import { ESTADOS, ORDEM_ESTADOS } from '../dominio/rotulos';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import AvisoDoAgendador from '../components/AvisoDoAgendador';
+import CadastrosPendentes from '../components/CadastrosPendentes';
 import Aviso from '../components/ui/Aviso';
 import Botao from '../components/ui/Botao';
 import { EstadoVazio, Esqueleto, Regiao } from '../components/ui/Estados';
@@ -171,6 +172,7 @@ function Dashboard() {
       />
 
       <AvisoDoAgendador />
+      <CadastrosPendentes />
 
       {resumo && (
         <div ref={refResumo} className="mb-4 grid gap-3 sm:grid-cols-3">

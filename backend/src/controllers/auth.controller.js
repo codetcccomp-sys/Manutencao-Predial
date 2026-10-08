@@ -53,7 +53,7 @@ function urlDoApp(req) {
 
 const registrar = asyncHandler(async (req, res) => {
   const usuario = await authService.registrar(req.body);
-  res.status(201).json({ usuario });
+  res.status(201).json({ usuario, aguardando_aprovacao: Boolean(usuario.cadastro_pendente_desde) });
 });
 
 const login = asyncHandler(async (req, res) => {

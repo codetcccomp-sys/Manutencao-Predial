@@ -2,10 +2,12 @@ const pool = require('../config/db');
 const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { normalizarNome } = require('./auth.service');
+const emailService = require('./email.service');
 
 // `dois_fatores` diz só SE está ligado: o segredo nunca sai daqui.
 const CAMPOS =
-  'id, nome, email, perfil, ativo, criado_em, anonimizado_em, (totp_ativado_em IS NOT NULL) AS dois_fatores';
+  'id, nome, email, perfil, ativo, criado_em, anonimizado_em, cadastro_pendente_desde, ' +
+  '(totp_ativado_em IS NOT NULL) AS dois_fatores';
 
 /**
  * Por padrão lista só quem está ativo.
@@ -14,8 +16,17 @@ const CAMPOS =
  * desligados ali permitiria atribuir um chamado a quem não atende mais. Quem
  * precisa ver a lista inteira — a tela de administração — pede explicitamente.
  */
-async function listar({ perfil, incluirInativos } = {}) {
-  const condicoes = [];
+async function listar({ perfil, incluirInativos, situacao } = {}) {
+  // Pedido de cadastro não é conta desligada: tem lista própria. Misturado aos
+  // inativos, ganharia um "Reativar" que aprovaria sem passar pela aprovação.
+  if (situacao === 'pendentes') {
+    const { rows } = await pool.query(
+      `SELECT ${CAMPOS} FROM usuario WHERE cadastro_pendente_desde IS NOT NULL ORDER BY cadastro_pendente_desde`
+    );
+    return rows;
+  }
+
+  const condicoes = ['cadastro_pendente_desde IS NULL'];
   const params = [];
 
   if (perfil) {
@@ -26,7 +37,7 @@ async function listar({ perfil, incluirInativos } = {}) {
     condicoes.push('ativo = TRUE');
   }
 
-  const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
+  const where = `WHERE ${condicoes.join(' AND ')}`;
   const { rows } = await pool.query(
     `SELECT ${CAMPOS} FROM usuario ${where} ORDER BY ativo DESC, nome`,
     params
@@ -93,6 +104,14 @@ async function garantirSemChamadosEmAberto(id, acao) {
 async function atualizar(id, { nome, perfil, ativo }, autor) {
   const alvo = await buscarPorId(id);
   const ehAPropriaConta = alvo.id === autor.id;
+
+  if (alvo.cadastro_pendente_desde) {
+    throw new AppError(
+      'Este cadastro aguarda aprovação: aprove ou recuse antes de alterá-lo.',
+      409,
+      'CADASTRO_PENDENTE'
+    );
+  }
 
   if (ehAPropriaConta && ativo === false) {
     throw new AppError('Você não pode desativar a própria conta.', 422, 'AUTO_DESATIVACAO');
@@ -248,4 +267,74 @@ async function anonimizar(id, autor) {
   });
 }
 
-module.exports = { listar, buscarPorId, atualizar, anonimizar };
+const MAXIMO_POR_VEZ = 100;
+
+function idsValidos(ids) {
+  if (
+    !Array.isArray(ids) ||
+    ids.length === 0 ||
+    ids.length > MAXIMO_POR_VEZ ||
+    !ids.every((id) => Number.isInteger(id) && id > 0)
+  ) {
+    throw new AppError(
+      `Informe de 1 a ${MAXIMO_POR_VEZ} cadastros, pelos números (ids).`,
+      422,
+      'VALIDACAO'
+    );
+  }
+  return [...new Set(ids)];
+}
+
+/**
+ * Aprova cadastros pendentes: a conta passa a entrar como solicitante.
+ *
+ * Só toca em quem está de fato pendente. Um id de conta comum na lista não
+ * a reativa — reativar conta desligada é outra decisão, de outra tela — e não
+ * derruba o lote: volta fora de `aprovados`, e a tela diz quantos foram.
+ */
+async function aprovar(ids, autor) {
+  const { rows } = await pool.query(
+    `UPDATE usuario SET ativo = TRUE, cadastro_pendente_desde = NULL
+      WHERE id = ANY($1::int[]) AND cadastro_pendente_desde IS NOT NULL
+      RETURNING id, nome, email`,
+    [idsValidos(ids)]
+  );
+
+  // Fora da transação e sem esperar a confirmação de cada um: o e-mail é
+  // cortesia, e a aprovação vale com ou sem ele (enviar nunca lança).
+  const app = process.env.URL_APP;
+  await Promise.all(
+    rows.map((u) =>
+      emailService.enviar({
+        para: u.email,
+        assunto: 'Seu cadastro no Conserva Predial foi aprovado',
+        texto:
+          `Olá, ${u.nome}.\n\nSeu cadastro foi aprovado por ${autor.nome} e você já pode entrar` +
+          (app ? ` em ${app.replace(/\/$/, '')}/login` : '') +
+          ' com o e-mail e a senha que escolheu.\n',
+      })
+    )
+  );
+
+  return rows.map(({ id, nome }) => ({ id, nome }));
+}
+
+/**
+ * Recusa cadastros pendentes apagando a conta.
+ *
+ * Apagar, e não anonimizar: o pedido nunca entrou no sistema, então não há
+ * chamado, comentário nem histórico que dependa dele. Guardar nome e e-mail
+ * de quem foi recusado seria reter dado pessoal sem finalidade (LGPD), e o
+ * e-mail fica livre para um novo pedido, se foi engano.
+ */
+async function recusar(ids) {
+  const { rows } = await pool.query(
+    `DELETE FROM usuario
+      WHERE id = ANY($1::int[]) AND cadastro_pendente_desde IS NOT NULL
+      RETURNING id`,
+    [idsValidos(ids)]
+  );
+  return rows.map((r) => r.id);
+}
+
+module.exports = { listar, buscarPorId, atualizar, anonimizar, aprovar, recusar };

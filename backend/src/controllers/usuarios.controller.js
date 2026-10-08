@@ -6,6 +6,7 @@ const listar = asyncHandler(async (req, res) => {
   const usuarios = await usuariosService.listar({
     perfil: req.query.perfil,
     incluirInativos: req.query.incluir_inativos === 'true',
+    situacao: req.query.situacao,
   });
   res.json({ usuarios });
 });
@@ -35,4 +36,12 @@ const redefinir2fa = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { listar, criar, atualizar, me, anonimizar, redefinir2fa };
+const aprovar = asyncHandler(async (req, res) => {
+  res.json({ aprovados: await usuariosService.aprovar(req.body.ids, req.usuario) });
+});
+
+const recusar = asyncHandler(async (req, res) => {
+  res.json({ recusados: await usuariosService.recusar(req.body.ids) });
+});
+
+module.exports = { listar, criar, atualizar, me, anonimizar, redefinir2fa, aprovar, recusar };
