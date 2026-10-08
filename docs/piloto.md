@@ -322,48 +322,76 @@ pooler (Supavisor) com `user: "smp_backend"`: se aparece, aquele é o que está
 em uso. Faça o dump no projeto certo — um dump do outro seria um backup
 perfeito de nada.
 
-O backup, aqui, é seu. Antes de entrar dado de pessoa real:
+**O backup é automático e diário**, com a restauração testada a cada vez
+(`.github/workflows/backup.yml`, que roda `backend/database/backup.sh`):
 
-1. **Tire o dump.** Pegue a string de conexão em Connect → Session pooler, no
-   painel do projeto, e rode:
+1. às 03h23 (Brasília), um `pg_dump` do schema `public` de produção;
+2. o arquivo é **restaurado num PostgreSQL 17 descartável** e as contagens de
+   usuários, chamados, histórico, locais, planos e migrações são comparadas com
+   as da origem — se não baterem, a execução falha e o GitHub avisa por e-mail;
+3. só então o arquivo é cifrado (AES-256) e guardado como artefato da execução,
+   por 30 dias, no repositório privado.
 
-   ```bash
-   pg_dump "postgresql://postgres.cwchhmstcyqxizwwusxn:SENHA@aws-0-sa-east-1.pooler.supabase.com:5432/postgres" \
-     --no-owner --no-privileges -Fc -f conserva-$(date +%F).dump
-   ```
+**Para ligar (uma vez, só você):**
 
-   Sem `pg_dump` na máquina, o mesmo sai com a CLI do Supabase:
-   `npx supabase db dump --db-url "<a mesma string>" -f conserva-$(date +%F).sql`
-
-2. **Guarde fora do Supabase e fora do computador.** Um backup que mora ao
-   lado do que ele protege não protege de nada. Drive, pendrive, e-mail para
-   si mesmo — qualquer coisa que sobreviva ao sumiço da máquina.
-
-3. **Restaure de verdade, uma vez.** Crie um projeto Supabase novo (o Free
-   permite outro) e traga o dump para dentro:
-
-   ```bash
-   pg_restore --no-owner --no-privileges -d "<string do projeto novo>" conserva-AAAA-MM-DD.dump
-   ```
-
-   Depois confira que voltou com conteúdo:
+1. O backup entra com o papel **`smp_backup`**, que só lê: se o segredo vazar,
+   quem o pegar não altera nem apaga nada (e não precisa da senha principal do
+   banco). O papel já existe, sem senha. Defina uma no painel do Supabase,
+   projeto `manutencao-predial-prod` → **SQL Editor**:
 
    ```sql
-   SELECT (SELECT count(*) FROM usuario)           AS usuarios,
-          (SELECT count(*) FROM chamado)           AS chamados,
-          (SELECT count(*) FROM historico_chamado) AS eventos;
+   ALTER ROLE smp_backup WITH PASSWORD 'invente-uma-senha-longa';
    ```
 
-   **Só este passo prova alguma coisa.** Os dois primeiros produzem um arquivo;
-   o terceiro é o que responde se o arquivo serve.
+   Use só letras, números e hífen: `@`, `:` e `/` quebram a string de conexão.
+   Depois, em Connect → **Session pooler** (porta 5432; a de transação, 6543,
+   não serve ao `pg_dump`), copie a string e troque o começo `postgres.` por
+   `smp_backup.` e `[YOUR-PASSWORD]` pela senha que você definiu.
+2. No GitHub, no repositório → Settings → Secrets and variables → Actions →
+   New repository secret, crie dois segredos:
+   - `BACKUP_DATABASE_URL`: a string do passo 1;
+   - `BACKUP_PASSPHRASE`: uma frase longa que você inventa. **Guarde-a também
+     fora do GitHub** (gerenciador de senhas, papel): sem ela, nenhum backup
+     abre, e o GitHub não mostra um segredo depois de salvo.
+3. Em Actions → "Backup do banco" → Run workflow, rode uma vez na mão e
+   confira que ficou verde e que o artefato `backup-N` apareceu.
 
-4. **Anote quanto tempo levou.** Esse é o seu tempo de recuperação real, e é o
-   número que interessa no dia em que fizer falta.
+A senha do banco e a frase vão direto para o GitHub: não passam por conversa,
+commit nem log (o GitHub esconde segredos na saída das execuções).
 
-5. **Apague o projeto de teste** depois de conferir, para não confundir com o
-   de produção mais tarde.
+**Para restaurar de verdade** (do artefato baixado em Actions → execução →
+Artifacts):
 
-Com dado real entrando, repita o passo 1 semanalmente. É um comando.
+```bash
+unzip backup-N.zip
+gpg -d conserva-AAAA-MM-DDTHHMMZ.dump.gpg > conserva.dump   # pede a frase
+pg_restore --no-owner --no-privileges -d "<string do banco de destino>" conserva.dump
+```
+
+O `pg_restore` mostra um erro ignorado, `schema "public" already exists`: é
+esperado (o banco de destino já tem o schema) e não afeta os dados. Confira o
+conteúdo com:
+
+```sql
+SELECT (SELECT count(*) FROM usuario)           AS usuarios,
+       (SELECT count(*) FROM chamado)           AS chamados,
+       (SELECT count(*) FROM historico_chamado) AS eventos;
+```
+
+e compare com o `contagem-origem.txt` que vem junto no artefato.
+
+**Ainda vale uma vez na mão:** restaurar um backup num projeto Supabase novo
+(o Free permite outro), anotar quanto tempo levou — esse é o seu tempo de
+recuperação real — e apagar o projeto de teste depois. O automático prova que
+o arquivo serve; o manual prova que **você** sabe usá-lo no dia que fizer
+falta.
+
+**Sem o GitHub**, o mesmo backup sai da sua máquina com o script:
+
+```bash
+ORIGEM_URL="<string do Session pooler>" RESTAURO_URL="<banco vazio>" \
+SENHA_BACKUP="<frase>" bash backend/database/backup.sh ./backups
+```
 
 ### 2.3.1 O projeto pausa sozinho
 

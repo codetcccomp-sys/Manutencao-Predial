@@ -476,6 +476,12 @@ como artefato quando algo falha.
 aparece sem ninguém ter mexido no código, e dentro do `ci.yml` ele deixaria
 vermelha qualquer PR sem relação com a falha.
 
+`.github/workflows/backup.yml` faz o backup diário do banco de produção: dump,
+**restauração num PostgreSQL descartável com as contagens conferidas contra a
+origem**, e só então o arquivo cifrado vira artefato (30 dias). Precisa dos
+segredos `BACKUP_DATABASE_URL` e `BACKUP_PASSPHRASE`; como cadastrar e como
+restaurar estão em [docs/piloto.md](docs/piloto.md), §2.3.
+
 ## Rotas
 
 Exceto as indicadas como públicas, `/health`, `/health/db` e as de agendador,

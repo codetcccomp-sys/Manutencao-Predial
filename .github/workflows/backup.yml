@@ -1,0 +1,171 @@
+name: Backup do banco
+
+# Todo dia, um dump do banco de produção, restaurado e conferido num Postgres
+# descartável antes de ser guardado, e cifrado (backend/database/backup.sh).
+# Fica como artefato da execução por 30 dias, no próprio repositório privado.
+#
+# Precisa de dois segredos do repositório (Settings → Secrets and variables →
+# Actions), que ninguém além de quem os cadastra chega a ver:
+#   BACKUP_DATABASE_URL  string do Session pooler do Supabase (porta 5432),
+#                        com o papel só de leitura smp_backup
+#   BACKUP_PASSPHRASE    frase para cifrar; guarde-a também fora do GitHub,
+#                        porque sem ela o backup não abre
+# O passo a passo está em docs/piloto.md, §2.3.
+on:
+  schedule:
+    # 06:23 UTC = 03:23 em Brasília: madrugada, fora do horário de uso. O
+    # minuto quebrado foge da fila de agendamentos que começam na hora cheia.
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+  # Ensaio: PR que mexe no backup roda o mesmo caminho contra um banco migrado
+  # na hora, sem segredo nenhum. Sem isso, o primeiro sinal de um script ou de
+  # uma instalação quebrada seria a execução das 3h falhando.
+  pull_request:
+    paths:
+      - 'backend/database/backup.sh'
+      - '.github/workflows/backup.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Dump, restauração conferida e artefato cifrado
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # O banco descartável onde a restauração é testada. Mesma versão maior da
+    # produção (17): restaurar num Postgres mais antigo poderia falhar por
+    # motivo que não existe no dia de uma restauração de verdade.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: restauro
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir os segredos
+        env:
+          ORIGEM_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          SENHA_BACKUP: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          faltando=""
+          [ -n "$ORIGEM_URL" ] || faltando="$faltando BACKUP_DATABASE_URL"
+          [ -n "$SENHA_BACKUP" ] || faltando="$faltando BACKUP_PASSPHRASE"
+          if [ -n "$faltando" ]; then
+            echo "::error::Faltam os segredos:$faltando. Veja docs/piloto.md, §2.3."
+            exit 1
+          fi
+
+      # O pg_dump precisa ser da versão do servidor ou mais nova; o runner
+      # traz um mais antigo. O repositório oficial do PostgreSQL resolve.
+      - name: Instalar o cliente do PostgreSQL 17
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Backup
+        env:
+          ORIGEM_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          SENHA_BACKUP: ${{ secrets.BACKUP_PASSPHRASE }}
+          RESTAURO_URL: postgresql://postgres:postgres@localhost:5432/restauro
+        run: |
+          pg_dump --version
+          bash backend/database/backup.sh saida
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ github.run_number }}
+          path: |
+            saida/*.gpg
+            saida/contagem-origem.txt
+          retention-days: 30
+          if-no-files-found: error
+
+  ensaio:
+    name: Ensaio do backup (banco migrado na hora)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: restauro
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+        working-directory: backend
+
+      - name: Instalar o cliente do PostgreSQL 17
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      # A origem do ensaio é um banco construído pelas mesmas migrações da
+      # produção: o dump tem as mesmas tabelas, funções e gatilhos.
+      - name: Criar e migrar a origem
+        working-directory: backend
+        env:
+          PGPASSWORD: postgres
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_NAME: origem
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d restauro -c 'CREATE DATABASE origem'
+          npm run migrate
+
+      - name: Backup
+        env:
+          ORIGEM_URL: postgresql://postgres:postgres@localhost:5432/origem
+          RESTAURO_URL: postgresql://postgres:postgres@localhost:5432/restauro
+          SENHA_BACKUP: frase-do-ensaio
+        run: |
+          pg_dump --version
+          bash backend/database/backup.sh saida
+          # O arquivo cifrado abre com a frase, e só com ela.
+          arquivo=$(ls saida/*.gpg)
+          gpg --batch --quiet --pinentry-mode loopback --passphrase frase-do-ensaio -d "$arquivo" > /dev/null
+          if gpg --batch --quiet --pinentry-mode loopback --passphrase outra-frase -d "$arquivo" > /dev/null 2>&1; then
+            echo "::error::o arquivo abriu com a frase errada"; exit 1
+          fi
