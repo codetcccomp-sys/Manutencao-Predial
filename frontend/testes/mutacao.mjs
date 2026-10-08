@@ -674,6 +674,27 @@ const MUTACOES = [
     para: "      setAviso('Verificação em duas etapas ligada.",
     spec: 'testes/DuasEtapas.test.jsx',
   },
+  {
+    descricao: 'distribuição: trocar a unidade deixa o bloco da unidade anterior',
+    arquivo: 'src/components/RegrasDeDistribuicao.jsx',
+    de: "      if (campo === 'unidade') proxima.bloco = '';\n",
+    para: '',
+    spec: 'testes/RegrasDeDistribuicao.test.jsx',
+  },
+  {
+    descricao: 'distribuição: técnico inativo aparece como plantonista',
+    arquivo: 'src/components/RegrasDeDistribuicao.jsx',
+    de: 'setMembros(data.equipe.tecnicos.filter((t) => t.ativo))',
+    para: 'setMembros(data.equipe.tecnicos)',
+    spec: 'testes/RegrasDeDistribuicao.test.jsx',
+  },
+  {
+    descricao: 'distribuição: campo de alcance vazio vai para a API como texto vazio',
+    arquivo: 'src/components/RegrasDeDistribuicao.jsx',
+    de: '    if (nova.unidade) corpo.unidade = nova.unidade;',
+    para: '    corpo.unidade = nova.unidade;',
+    spec: 'testes/RegrasDeDistribuicao.test.jsx',
+  },
 ];
 
 /**

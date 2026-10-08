@@ -124,6 +124,55 @@ const MUTACOES = [
     para: '  const anexo = await anexosService.buscarConteudo(req.params.anexoId);\n  await chamadosService.garantirLeitura(anexo.chamado_id, req.usuario);',
     spec: 'tests/anexosStorage.test.js',
   },
+  {
+    descricao: 'distribuição: a regra mais geral passa a vencer a mais específica',
+    arquivo: 'src/services/distribuicao.service.js',
+    de: 'ORDER BY (r.bloco IS NOT NULL) DESC, (r.unidade IS NOT NULL) DESC',
+    para: 'ORDER BY (r.bloco IS NOT NULL) ASC, (r.unidade IS NOT NULL) ASC',
+    spec: 'tests/distribuicao.test.js',
+  },
+  {
+    descricao: 'distribuição: regra desligada continua distribuindo',
+    arquivo: 'src/services/distribuicao.service.js',
+    de: '      WHERE r.ativo\n        AND r.categoria_id = $1',
+    para: '      WHERE r.categoria_id = $1',
+    spec: 'tests/distribuicao.test.js',
+  },
+  {
+    descricao: 'distribuição: a divisão manda para quem tem MAIS chamados em aberto',
+    arquivo: 'src/services/distribuicao.service.js',
+    de: 'ORDER BY em_aberto ASC,',
+    para: 'ORDER BY em_aberto DESC,',
+    spec: 'tests/distribuicao.test.js',
+  },
+  {
+    descricao: 'distribuição: chamado concluído passa a pesar na carga',
+    arquivo: 'src/services/distribuicao.service.js',
+    de: "const ESTADOS_EM_ABERTO = \"('atribuido', 'em_andamento', 'aguardando_material')\";",
+    para: "const ESTADOS_EM_ABERTO = \"('atribuido', 'em_andamento', 'aguardando_material', 'concluido')\";",
+    spec: 'tests/distribuicao.test.js',
+  },
+  {
+    descricao: 'distribuição: plantonista desativado continua recebendo',
+    arquivo: 'src/services/distribuicao.service.js',
+    de: "WHERE et.equipe_id = $1 AND u.id = $2\n          AND u.perfil = 'tecnico' AND u.ativo AND u.anonimizado_em IS NULL",
+    para: "WHERE et.equipe_id = $1 AND u.id = $2",
+    spec: 'tests/distribuicao.test.js',
+  },
+  {
+    descricao: 'distribuição: dois chamados simultâneos deixam de esperar a vez da equipe',
+    arquivo: 'src/services/distribuicao.service.js',
+    de: "  await client.query(\"SELECT pg_advisory_xact_lock(hashtext('regra_distribuicao'), $1)\", [regra.equipe_id]);\n",
+    para: '',
+    spec: 'tests/distribuicao.test.js',
+  },
+  {
+    descricao: 'distribuição: o plantonista pode ser de fora da equipe',
+    arquivo: 'src/services/distribuicao.service.js',
+    de: '  if (tecnicoId === null || tecnicoId === undefined) return;',
+    para: '  return;',
+    spec: 'tests/distribuicao.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';
