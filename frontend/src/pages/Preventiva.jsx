@@ -6,11 +6,13 @@ import Aviso from '../components/ui/Aviso';
 import Botao from '../components/ui/Botao';
 import Cartao from '../components/ui/Cartao';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
+import Confirmacao from '../components/ui/Confirmacao';
 import { AreaDeTexto, Campo, Selecao } from '../components/ui/Campo';
 import { BadgeEstado } from '../components/ui/Badge';
 import { ORDEM_PRIORIDADES, PRIORIDADES } from '../dominio/rotulos';
 import {
   UNIDADES_REPETICAO,
+  aberturaDaJanela,
   descreverPeriodicidade,
   formatarDia,
   hojeLocal,
@@ -76,6 +78,11 @@ function Preventiva() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
+  // Qual plano está gerando agora, e qual espera a confirmação de antecipar.
+  // Um clique duplo no "Gerar agora" gerava DUAS execuções (a próxima e a
+  // seguinte), adiantando o calendário dois períodos sem ninguém pedir.
+  const [gerando, setGerando] = useState(null);
+  const [antecipar, setAntecipar] = useState(null);
 
   const carregar = useCallback(() => {
     setCarregando(true);
@@ -115,6 +122,26 @@ function Preventiva() {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível concluir a operação.');
       return false;
     }
+  }
+
+  async function gerar(p) {
+    setGerando(p.id);
+    await executar(
+      () => api.post(`/planos-preventivos/${p.id}/gerar`),
+      ({ data }) =>
+        `Chamado ${data.gerado.protocolo} gerado, previsto para ${formatarDia(data.gerado.dataPrevista)}.`
+    );
+    setGerando(null);
+    setAntecipar(null);
+  }
+
+  // Dentro da janela de antecedência o agendador já geraria hoje: "Gerar
+  // agora" só adianta algumas horas. Fora dela, o chamado nasce semanas antes
+  // e o plano pula para a execução seguinte — isso merece uma pergunta.
+  function pedirGeracao(p) {
+    if (gerando !== null) return;
+    if (hojeLocal() < aberturaDaJanela(p)) setAntecipar(p);
+    else gerar(p);
   }
 
   async function criarPlano(e) {
@@ -365,13 +392,9 @@ function Preventiva() {
                         {p.ativo && (
                           <Botao
                             tamanho="sm"
-                            onClick={() =>
-                              executar(
-                                () => api.post(`/planos-preventivos/${p.id}/gerar`),
-                                ({ data }) =>
-                                  `Chamado ${data.gerado.protocolo} gerado, previsto para ${formatarDia(data.gerado.dataPrevista)}.`
-                              )
-                            }
+                            carregando={gerando === p.id}
+                            disabled={gerando !== null}
+                            onClick={() => pedirGeracao(p)}
                           >
                             Gerar agora
                           </Botao>
@@ -553,6 +576,24 @@ function Preventiva() {
           </Cartao>
         </>
       )}
+
+      <Confirmacao
+        aberto={antecipar !== null}
+        titulo="Antecipar a preventiva?"
+        rotuloConfirmar="Gerar agora"
+        carregando={gerando !== null}
+        onConfirmar={() => gerar(antecipar)}
+        onCancelar={() => setAntecipar(null)}
+      >
+        {antecipar && (
+          <p>
+            A próxima execução de “{antecipar.titulo}” é em{' '}
+            <strong>{formatarDia(antecipar.proxima_execucao)}</strong>, e o agendador já criaria o chamado
+            sozinho em {formatarDia(aberturaDaJanela(antecipar))}. Gerar agora cria esse chamado hoje e passa
+            o plano para a execução seguinte.
+          </p>
+        )}
+      </Confirmacao>
     </div>
   );
 }

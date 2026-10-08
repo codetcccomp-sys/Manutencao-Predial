@@ -16,7 +16,7 @@ import api from '../src/api/client';
 import Preventiva from '../src/pages/Preventiva';
 import Equipamento from '../src/pages/Equipamento';
 import NovoChamado from '../src/pages/NovoChamado';
-import { descreverPeriodicidade, formatarDia } from '../src/dominio/preventiva';
+import { aberturaDaJanela, descreverPeriodicidade, formatarDia, hojeLocal } from '../src/dominio/preventiva';
 
 const LOCAIS = [
   { id: 1, unidade: 'Prédio A', bloco: '1', pavimento: null, setor: null, ambiente: 'Sala 204', ativo: true },
@@ -75,6 +75,15 @@ function abrirPreventiva() {
     </MemoryRouter>
   );
 }
+
+describe('janela de antecedência', () => {
+  it('é a próxima execução menos a antecedência, atravessando mês e ano', () => {
+    expect(aberturaDaJanela({ proxima_execucao: '2026-11-03', antecedencia_dias: 3 })).toBe('2026-10-31');
+    expect(aberturaDaJanela({ proxima_execucao: '2027-01-02', antecedencia_dias: 5 })).toBe('2026-12-28');
+    expect(aberturaDaJanela({ proxima_execucao: '2027-03-01', antecedencia_dias: 1 })).toBe('2027-02-28');
+    expect(aberturaDaJanela({ proxima_execucao: '2026-11-03', antecedencia_dias: 0 })).toBe('2026-11-03');
+  });
+});
 
 describe('vocabulário da preventiva', () => {
   it('descreve a periodicidade como o histórico do chamado escreve', () => {
@@ -137,15 +146,92 @@ describe('Tela de manutenção preventiva', () => {
     expect(corpo.categoria_id).toBeUndefined();
   });
 
-  it('"Gerar agora" chama o plano e diz qual chamado saiu, com a data no formato daqui', async () => {
+  it('"Gerar agora" fora da janela pergunta antes, e confirmado diz qual chamado saiu', async () => {
     const usuario = userEvent.setup();
     abrirPreventiva();
     api.post.mockResolvedValueOnce({ data: { gerado: { protocolo: 'SMP-77', dataPrevista: '2031-03-10' } } });
 
     await usuario.click(await screen.findByRole('button', { name: 'Gerar agora' }));
 
+    // A execução de 10/03/2031 só entraria na janela em 05/03/2031: gerar hoje
+    // é antecipar, e isso pergunta antes.
+    const dialogo = await screen.findByRole('dialog', { name: 'Antecipar a preventiva?' });
+    expect(dialogo).toHaveTextContent('10/03/2031');
+    expect(dialogo).toHaveTextContent('05/03/2031');
+    expect(api.post).not.toHaveBeenCalledWith('/planos-preventivos/3/gerar');
+
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Gerar agora' }));
+
     expect(api.post).toHaveBeenCalledWith('/planos-preventivos/3/gerar');
     expect(await screen.findByText('Chamado SMP-77 gerado, previsto para 10/03/2031.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('desistir da antecipação não gera nada', async () => {
+    const usuario = userEvent.setup();
+    abrirPreventiva();
+
+    await usuario.click(await screen.findByRole('button', { name: 'Gerar agora' }));
+    await usuario.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Voltar' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(api.post).not.toHaveBeenCalledWith('/planos-preventivos/3/gerar');
+  });
+
+  describe('dentro da janela de antecedência', () => {
+    // A próxima execução daqui a dois dias, com cinco de antecedência: o
+    // agendador já geraria hoje, então não há o que perguntar.
+    const daqui = (dias) => {
+      const d = new Date();
+      d.setDate(d.getDate() + dias);
+      return hojeLocal(d);
+    };
+    const abrirNaJanela = () => {
+      api.get.mockImplementation(async (caminho) =>
+        caminho === '/planos-preventivos'
+          ? { data: { planos: [{ ...PLANO, proxima_execucao: daqui(2) }] } }
+          : respostasPadrao(caminho)
+      );
+      api.post.mockResolvedValue({ data: {} });
+      return render(
+        <MemoryRouter>
+          <Preventiva />
+        </MemoryRouter>
+      );
+    };
+
+    it('gera direto, sem perguntar', async () => {
+      const usuario = userEvent.setup();
+      abrirNaJanela();
+      api.post.mockResolvedValueOnce({ data: { gerado: { protocolo: 'SMP-78', dataPrevista: daqui(2) } } });
+
+      await usuario.click(await screen.findByRole('button', { name: 'Gerar agora' }));
+
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(api.post).toHaveBeenCalledWith('/planos-preventivos/3/gerar');
+    });
+
+    it('clique duplo gera uma vez só: o botão trava enquanto o pedido anda', async () => {
+      const usuario = userEvent.setup();
+      abrirNaJanela();
+      let responder;
+      api.post.mockImplementationOnce(
+        () =>
+          new Promise((resolver) => {
+            responder = resolver;
+          })
+      );
+
+      const botao = await screen.findByRole('button', { name: 'Gerar agora' });
+      await usuario.dblClick(botao);
+      await usuario.click(botao);
+
+      expect(api.post.mock.calls.filter(([caminho]) => caminho === '/planos-preventivos/3/gerar')).toHaveLength(1);
+      expect(botao).toBeDisabled();
+
+      responder({ data: { gerado: { protocolo: 'SMP-79', dataPrevista: daqui(2) } } });
+      expect(await screen.findByText(/Chamado SMP-79 gerado/)).toBeInTheDocument();
+    });
   });
 
   it('cadastra equipamento e mostra o erro da API quando o código já existe', async () => {
