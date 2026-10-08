@@ -17,6 +17,8 @@ import Login from '../src/pages/Login';
 import MinhaConta from '../src/pages/MinhaConta';
 
 function abrirLogin() {
+  // A tela pergunta se o login com Google está ligado; aqui, não está.
+  api.get.mockResolvedValue({ data: { client_id: null } });
   return render(
     <AuthProvider>
       <MemoryRouter initialEntries={[{ pathname: '/login', state: { de: '/chamados/novo?equipamento=AC-1' } }]}>

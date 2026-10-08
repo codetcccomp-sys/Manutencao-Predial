@@ -61,6 +61,11 @@ Dois pontos que passam despercebidos:
 pegar uma pessoa no enquadramento sem que ninguém tenha pensado nisso. O
 arquivo fica no banco (`anexo.conteudo`), não num serviço externo.
 
+**Entrar com Google não traz dado novo.** Do Google, o sistema usa só o nome
+e o e-mail da credencial, para achar ou criar a conta; não guarda a
+credencial, nem foto, nem token de acesso ao Google, e não pede permissão a
+nada além do login.
+
 **`tentativa_login` guarda o e-mail de quem tentou entrar e errou** — inclusive
 de quem não tem conta. É dado pessoal de gente que nunca se cadastrou.
 

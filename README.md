@@ -78,6 +78,19 @@ o pedido (nunca entrou no sistema, então não há histórico a preservar, e
 guardar nome e e-mail de quem foi recusado seria reter dado sem finalidade).
 A migração deixa a opção desligada: ligar é decisão de quem administra.
 
+**Entrar com Google.** Com `GOOGLE_CLIENT_ID` definido no backend (o ID do
+cliente OAuth, que é público), a tela de login mostra o botão do Google. O
+servidor confere a credencial do botão: assinatura com as chaves públicas do
+Google, emitida para este sistema, não vencida, e com o e-mail garantido pelo
+Google (Gmail ou conta de organização; uma conta Google criada com e-mail de
+outro provedor não entra por aqui, porque o Google não é dono daquele
+e-mail). Conta que já existe com o e-mail entra nela, e a verificação em duas
+etapas continua sendo pedida; conta nova nasce solicitante e passa pela
+aprovação, se ligada. Com `GOOGLE_DOMINIO` (por exemplo `escola.edu.br`), só
+contas Google daquela organização entram: é o login institucional. Sem
+`GOOGLE_CLIENT_ID`, nada muda, e o script do Google nem é carregado. Passo a
+passo em `docs/piloto.md`, §2.1.6.
+
 ### Quem sai da conta
 
 Desativar uma pessoa, trocar o perfil dela ou anonimizá-la são as saídas da
@@ -496,6 +509,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `POST` | `/auth/registrar` | público (cria `solicitante`) |
 | `POST` | `/auth/login` | público (limitado por tentativa). Com duas etapas ligadas, responde `{ requer_2fa, desafio }` em vez da sessão |
 | `POST` | `/auth/login/2fa` | público: `{ desafio, codigo }` — código do aplicativo ou de recuperação; mesmo limite do login |
+| `GET POST` | `/auth/google` | público: `GET` diz se o login com Google está ligado (`{ client_id }`); `POST { credencial }` entra como o login, ou responde `202 { aguardando_aprovacao }` |
 | `POST` | `/auth/sair` | público (apaga o cookie) |
 | `POST` | `/auth/sair-de-todos` | autenticado: derruba todas as sessões da própria conta |
 | `GET POST` | `/auth/2fa`, `/auth/2fa/iniciar`, `/auth/2fa/ativar` e `/auth/2fa/desativar` (senha + código), `/auth/2fa/codigos` | autenticado, na própria conta; senha e código errados contam no limite do login |

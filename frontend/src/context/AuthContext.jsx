@@ -91,6 +91,18 @@ export function AuthProvider({ children }) {
     [iniciarSessao]
   );
 
+  // A credencial do botão do Google faz o papel de e-mail e senha: a resposta
+  // tem as mesmas formas do login, mais a conta nova que espera a aprovação.
+  const entrarComGoogle = useCallback(
+    async (credencial) => {
+      const { data } = await api.post('/auth/google', { credencial });
+      if (data.aguardando_aprovacao) return { aguardandoAprovacao: true };
+      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio };
+      return iniciarSessao(data);
+    },
+    [iniciarSessao]
+  );
+
   // Devolve a resposta: com a aprovação ligada (RF01), o cadastro nasce
   // esperando a gestão, e a tela precisa dizer isso em vez de mandar ao login.
   const registrar = useCallback(async (nome, email, senha) => {
@@ -113,7 +125,17 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ usuario, sessaoExpirada, saiu, login, confirmarCodigo, registrar, logout, concluirDoisFatores }}
+      value={{
+        usuario,
+        sessaoExpirada,
+        saiu,
+        login,
+        entrarComGoogle,
+        confirmarCodigo,
+        registrar,
+        logout,
+        concluirDoisFatores,
+      }}
     >
       {children}
     </AuthContext.Provider>

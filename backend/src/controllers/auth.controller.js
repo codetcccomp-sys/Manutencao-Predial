@@ -3,6 +3,7 @@ const { asyncHandler } = require('../utils/asyncHandler');
 const { registrarTentativa, ipDoCliente } = require('../middlewares/rateLimit');
 const recuperacaoService = require('../services/recuperacao.service');
 const sessao = require('../services/sessao.service');
+const googleService = require('../services/google.service');
 
 /**
  * O endereço do APP, que é para onde o link de redefinição leva.
@@ -81,6 +82,24 @@ const login = asyncHandler(async (req, res) => {
     }
     throw err;
   }
+});
+
+const configuracaoGoogle = (req, res) => {
+  // O ID do cliente é público por definição: é o que o botão do Google
+  // recebe no navegador. Sem ele, a tela não mostra o botão.
+  res.json({ client_id: googleService.clienteId() });
+};
+
+const entrarComGoogle = asyncHandler(async (req, res) => {
+  const resultado = await authService.entrarComGoogle(req.body);
+  if (resultado.aguardandoAprovacao) {
+    return res.status(202).json({ aguardando_aprovacao: true });
+  }
+  if (resultado.requer2fa) {
+    return res.json({ requer_2fa: true, desafio: resultado.desafio });
+  }
+  const token = sessao.emitir(res, req, resultado.conta);
+  res.json({ token, usuario: resultado.usuario });
 });
 
 /**
@@ -202,6 +221,8 @@ const novosCodigos = asyncHandler(async (req, res) => {
 module.exports = {
   registrar,
   login,
+  configuracaoGoogle,
+  entrarComGoogle,
   segundoFator,
   sair,
   sairDeTodos,

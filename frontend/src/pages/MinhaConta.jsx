@@ -223,6 +223,7 @@ function MinhaConta() {
                 autoComplete="current-password"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
+                ajuda='Entrou só pelo Google e não tem senha? Crie uma em "Esqueci minha senha", na tela de login.'
               />
               <div className="flex flex-wrap gap-2">
                 <Botao type="submit" variante="primaria">

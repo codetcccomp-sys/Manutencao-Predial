@@ -107,6 +107,10 @@ Passo a passo, no SQL Editor do Supabase:
 
 3. Com o resumo certo, rode o mesmo bloco trocando `ROLLBACK` por `COMMIT`.
 
+Do começo ao `COMMIT` (ou `ROLLBACK`), as tabelas que a limpeza mexe ficam
+travadas para escrita: quem abrir um chamado nesses segundos espera, em vez
+de o chamado entrar no meio da limpeza. Rode fora do horário de uso.
+
 O script para sem apagar nada quando a lista não foi dada (para ficar só a
 administração, escreva `'so-administradores'`), quando um e-mail da lista não
 tem conta (o erro de digitação que apagaria a conta certa), quando não há
@@ -270,6 +274,35 @@ aprovação" (só o administrador vê a caixa). A partir daí:
 Divulgue o link de cadastro só depois de ligar. Sem domínio de e-mail
 institucional para restringir, a aprovação é o que impede quem tem o link de
 entrar sozinho.
+
+### 2.1.6 Entrar com Google (opcional)
+
+O botão "Fazer login com o Google" aparece na tela de login quando o backend
+tem `GOOGLE_CLIENT_ID`. Para criar o ID, com a conta Google de quem administra:
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → crie um projeto
+   (por exemplo, "Conserva Predial").
+2. **APIs e serviços → Tela de permissão OAuth**: tipo **Externo**, nome do
+   app, e-mail de suporte e de contato. Os escopos padrão bastam (e-mail e
+   perfil); não precisa enviar para verificação. Em "Testando", só os e-mails
+   listados como usuários de teste entram; para o piloto, publique o app.
+3. **Credenciais → Criar credenciais → ID do cliente OAuth**, tipo
+   **Aplicativo da Web**. Em **Origens JavaScript autorizadas**, ponha
+   `https://conserva-predial.vercel.app` (e `http://localhost:5173` para
+   desenvolver). Não precisa de URI de redirecionamento.
+4. Copie o **ID do cliente** (termina em `.apps.googleusercontent.com`). Ele é
+   público: é o que o navegador recebe. A **chave secreta do cliente não é
+   usada** e não deve ser colada em lugar nenhum.
+5. Vercel → projeto do backend → Settings → Environment Variables:
+   `GOOGLE_CLIENT_ID` com o ID, em Production. Redeploy.
+
+Opcional: `GOOGLE_DOMINIO` com o domínio da instituição (`escola.edu.br`), se
+ela usar Google Workspace. Aí só contas daquela organização entram pelo
+botão, e quem sai da instituição perde o acesso junto com a conta de lá.
+
+Depois de ligar, entre uma vez pelo botão para conferir. Conta nova pelo
+Google espera a aprovação, como o cadastro público; quem tem a verificação em
+duas etapas ligada continua digitando o código.
 
 ### 2.2 E-mail (decisão, não obrigação)
 

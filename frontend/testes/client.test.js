@@ -58,6 +58,12 @@ describe('Sessão expirada', () => {
     // errada.
   });
 
+  it('401 no login pelo Google também é credencial recusada', async () => {
+    localStorage.setItem('smp_usuario', '{"nome":"Alguém"}');
+    await passarPeloInterceptor(erroDe(401, { url: '/auth/google' }));
+    expect(avisado).toBe(false);
+  });
+
   it('401 sem sessão guardada não dispara o aviso', async () => {
     await passarPeloInterceptor(erroDe(401));
     expect(avisado).toBe(false);

@@ -53,6 +53,15 @@ BEGIN
   END IF;
 END $$;
 
+-- Ninguém escreve nessas tabelas até o COMMIT (ou ROLLBACK); ler continua
+-- valendo. Sem isto, um chamado aberto no meio da limpeza aparecia entre um
+-- DELETE e outro e derrubava a transação, ou sobrava depois dela. A ordem
+-- começa pelo chamado, que é por onde as escritas do sistema começam.
+LOCK TABLE chamado, historico_chamado, comentario, anexo, avaliacao, chamado_material, notificacao,
+           usuario, equipe_tecnico, plano_preventivo, regra_distribuicao, configuracao,
+           recuperacao_senha, codigo_recuperacao_2fa, tentativa_login, tentativa_recuperacao
+  IN EXCLUSIVE MODE;
+
 -- 2. Quem fica, e a contagem de antes para o resumo.
 DROP TABLE IF EXISTS pg_temp.limpeza_contas;
 CREATE TEMP TABLE limpeza_contas AS

@@ -51,7 +51,13 @@ async function ligar2fa(token) {
 }
 
 afterEach(() => exigencia?.mockRestore());
-afterAll(() => pool.end());
+afterAll(async () => {
+  // Se a trava de "só liga quem tem a própria verificação" quebrar, o teste de
+  // recusa grava a exigência ligada de verdade, e todas as suítes seguintes
+  // tropeçam nela. Ela não tem linha por padrão: sai a que sobrar.
+  await pool.query("DELETE FROM configuracao WHERE chave = 'exigir_2fa_gestao'");
+  await pool.end();
+});
 
 describe('Exigência desligada', () => {
   it('gestão sem a verificação segue como antes', async () => {

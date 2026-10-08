@@ -6,6 +6,7 @@ const { transacao } = require('../config/transacao');
 const totp = require('../utils/totp');
 const { AppError } = require('../middlewares/errorHandler');
 const configuracaoService = require('./configuracao.service');
+const googleService = require('./google.service');
 const { PERFIS_DA_GESTAO } = require('../middlewares/auth');
 
 const SALT_ROUNDS = 10;
@@ -132,12 +133,62 @@ async function login({ email, senha }) {
   }
 
   if (usuario.totp_segredo) {
-    const desafio = jwt.sign({ id: usuario.id, tipo: '2fa' }, process.env.JWT_SECRET, {
-      expiresIn: VALIDADE_DESAFIO,
-    });
-    return { requer2fa: true, desafio };
+    return { requer2fa: true, desafio: desafioDe(usuario) };
   }
 
+  return { conta: usuario, usuario: await publico(usuario) };
+}
+
+const desafioDe = (usuario) =>
+  jwt.sign({ id: usuario.id, tipo: '2fa' }, process.env.JWT_SECRET, { expiresIn: VALIDADE_DESAFIO });
+
+/**
+ * Entrar com Google: a credencial do botão substitui o e-mail e a senha, e o
+ * resto é o mesmo caminho do login.
+ *
+ * - Conta que já existe com o e-mail: entra nela. Com a verificação em duas
+ *   etapas ligada, o Google não a dispensa: devolve o desafio, como a senha.
+ * - Conta nova: nasce solicitante, e espera a gestão se a aprovação estiver
+ *   ligada (RF01) — o Google prova quem é a pessoa, não que ela pode entrar.
+ *   A senha é aleatória e ninguém a conhece; quem quiser entrar também por
+ *   e-mail e senha usa "Esqueci minha senha".
+ *
+ * Aqui o Google já provou a identidade, então dizer "conta desativada" ou
+ * "aguardando aprovação" não conta nada a quem não é a pessoa.
+ */
+async function entrarComGoogle({ credencial }) {
+  const { email, nome } = await googleService.conferir(credencial);
+
+  const buscar = () =>
+    pool.query(
+      `SELECT id, nome, email, perfil, ativo, anonimizado_em, sessao_versao, totp_segredo, cadastro_pendente_desde
+         FROM usuario WHERE email = $1`,
+      [email]
+    );
+
+  let usuario = (await buscar()).rows[0];
+  if (!usuario) {
+    const pendente = await configuracaoService.cadastroExigeAprovacao();
+    const senha = crypto.randomBytes(32).toString('base64url');
+    try {
+      await criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente });
+    } catch (err) {
+      // Dois cliques no botão chegam juntos: o segundo encontra a conta que o
+      // primeiro acabou de criar, e segue com ela.
+      if (err.code !== 'EMAIL_EM_USO') throw err;
+    }
+    usuario = (await buscar()).rows[0];
+  }
+
+  if (usuario.cadastro_pendente_desde) {
+    return { aguardandoAprovacao: true };
+  }
+  if (!usuario.ativo || usuario.anonimizado_em) {
+    throw new AppError('Esta conta está desativada. Fale com a gestão.', 403, 'CONTA_DESATIVADA');
+  }
+  if (usuario.totp_segredo) {
+    return { requer2fa: true, desafio: desafioDe(usuario) };
+  }
   return { conta: usuario, usuario: await publico(usuario) };
 }
 
@@ -390,6 +441,7 @@ async function redefinir2fa(usuarioId) {
 module.exports = {
   registrar,
   login,
+  entrarComGoogle,
   segundoFator,
   emailDoDesafio,
   situacao2fa,

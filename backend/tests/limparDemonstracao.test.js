@@ -37,6 +37,11 @@ async function conta(client, quem, perfil) {
 
 /** Uma demonstração pequena: cada tabela ligada a conta ou chamado com uma linha. */
 async function demonstracao(client) {
+  // Outra suíte da mesma rodada pode ter deixado anexo "no Storage" (o falso,
+  // dela) até a limpeza do fim; ele dispararia a trava do Storage aqui. Sai
+  // só dentro desta transação.
+  await client.query("DELETE FROM anexo WHERE armazenamento <> 'banco'");
+
   const d = {};
   d.admin = await conta(client, 'admin', 'administrador');
   d.gestorDemo = await conta(client, 'gestordemo', 'gestor');
@@ -189,6 +194,22 @@ describe('Limpeza da demonstração', () => {
       // para janeiro. Outubro, concluído, não volta.
       const { rows } = await client.query('SELECT proxima_execucao FROM plano_preventivo WHERE id = $1', [d.plano]);
       expect(rows[0].proxima_execucao).toBe('2026-11-03');
+    });
+  });
+
+  // A trava vale até o fim da transação: uma escrita de fora espera, e não
+  // entra no meio da limpeza.
+  test('enquanto a limpeza não termina, ninguém escreve num chamado', async () => {
+    await emTransacao(async (client) => {
+      await demonstracao(client);
+      await limpar(client, 'so-administradores');
+      const outra = await pool.connect();
+      try {
+        await outra.query("SET lock_timeout = '200ms'");
+        await expect(outra.query("UPDATE chamado SET titulo = titulo WHERE false")).rejects.toThrow(/lock timeout/);
+      } finally {
+        outra.release();
+      }
     });
   });
 

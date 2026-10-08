@@ -62,7 +62,8 @@ api.interceptors.response.use(
     // está tentando entrar não tem sessão para perder, e tratar os dois casos
     // igual faria a tela de login anunciar que a sessão expirou a cada senha
     // errada.
-    const ehTentativaDeLogin = error.config?.url?.includes('/auth/login');
+    const url = error.config?.url ?? '';
+    const ehTentativaDeLogin = url.includes('/auth/login') || url.includes('/auth/google');
     const tinhaSessao = Boolean(localStorage.getItem(CHAVE_USUARIO));
 
     if (error.response?.status === 401 && tinhaSessao && !ehTentativaDeLogin) {

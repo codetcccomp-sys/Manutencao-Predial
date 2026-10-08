@@ -29,6 +29,17 @@ router.post(
   authController.login
 );
 
+// Entrar com Google (google.service). A credencial dura cerca de uma hora e
+// vale só para este sistema; não há senha a adivinhar, então não passa pelo
+// limite de tentativas. Com a verificação em duas etapas ligada, devolve o
+// mesmo desafio do login.
+router.get('/google', authController.configuracaoGoogle);
+router.post(
+  '/google',
+  validate({ credencial: { obrigatorio: true, tipo: 'string', maxLength: 4096 } }),
+  authController.entrarComGoogle
+);
+
 // Segunda etapa do login, para quem ligou a verificação em duas etapas. O
 // limite de tentativas é o mesmo do login, contado pelo e-mail do desafio:
 // errar o código conta como errar a senha.

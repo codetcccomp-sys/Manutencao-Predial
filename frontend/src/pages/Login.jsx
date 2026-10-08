@@ -5,6 +5,7 @@ import { Campo } from '../components/ui/Campo';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
 import Marca from '../components/ui/Marca';
+import BotaoGoogle from '../components/BotaoGoogle';
 
 /**
  * Para onde voltar depois de entrar.
@@ -26,12 +27,13 @@ function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
+  const [aviso, setAviso] = useState('');
   const [carregando, setCarregando] = useState(false);
   // Com a verificação em duas etapas, a senha certa devolve um desafio, e a
   // tela passa a pedir o código. O desafio vale poucos minutos.
   const [desafio, setDesafio] = useState(null);
   const [codigo, setCodigo] = useState('');
-  const { login, confirmarCodigo, sessaoExpirada } = useAuth();
+  const { login, entrarComGoogle, confirmarCodigo, sessaoExpirada } = useAuth();
   const navigate = useNavigate();
   const local = useLocation();
 
@@ -67,6 +69,30 @@ function Login() {
     }
   }
 
+  // Mesmo destino do login por senha: com duas etapas, o mesmo desafio; conta
+  // nova com a aprovação ligada, o aviso de que espera a gestão.
+  async function entrarPeloGoogle(credencial) {
+    setErro('');
+    setAviso('');
+    setCarregando(true);
+    try {
+      const resultado = await entrarComGoogle(credencial);
+      if (resultado?.aguardandoAprovacao) {
+        setAviso('Pedido de cadastro enviado. Ele aguarda a aprovação da gestão; você poderá entrar assim que for aprovado.');
+        return;
+      }
+      if (resultado?.requer2fa) {
+        setDesafio(resultado.desafio);
+        return;
+      }
+      seguir();
+    } catch (err) {
+      setErro(err.response?.data?.erro?.mensagem || 'Não foi possível entrar com o Google.');
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
       <form
@@ -90,6 +116,7 @@ function Login() {
         )}
 
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
+        {aviso && <Aviso tipo="info">{aviso}</Aviso>}
 
         {desafio ? (
           <>
@@ -141,6 +168,8 @@ function Login() {
             <Botao type="submit" variante="primaria" carregando={carregando} larguraTotal>
               {carregando ? 'Entrando...' : 'Entrar'}
             </Botao>
+
+            <BotaoGoogle onCredencial={entrarPeloGoogle} />
           </>
         )}
 
