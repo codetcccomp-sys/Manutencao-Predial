@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import api, { EVENTO_SESSAO_EXPIRADA, MENSAGEM_SEM_CONEXAO, baixarArquivo } from '../src/api/client';
+import api, { EVENTO_2FA_OBRIGATORIO, EVENTO_SESSAO_EXPIRADA, MENSAGEM_SEM_CONEXAO, baixarArquivo } from '../src/api/client';
 import { EVENTO_DADOS_GUARDADOS } from '../src/api/eventos';
 
 /**
@@ -69,6 +69,22 @@ describe('Sessão expirada', () => {
 
     // Acesso negado por perfil não invalida a sessão; derrubar o usuário aqui
     // o mandaria para o login sem motivo.
+    expect(avisado).toBe(false);
+    expect(localStorage.getItem('smp_usuario')).toBe('{"nome":"Alguém"}');
+  });
+
+  it('403 da verificação exigida avisa a tela, e só ele', async () => {
+    let exigida = 0;
+    const contar = () => (exigida += 1);
+    window.addEventListener(EVENTO_2FA_OBRIGATORIO, contar);
+    localStorage.setItem('smp_usuario', '{"nome":"Alguém"}');
+
+    await passarPeloInterceptor(erroDe(403, { data: { erro: { codigo: 'DOIS_FATORES_OBRIGATORIO' } } }));
+    await passarPeloInterceptor(erroDe(403, { data: { erro: { codigo: 'OUTRO' } } }));
+    window.removeEventListener(EVENTO_2FA_OBRIGATORIO, contar);
+
+    expect(exigida).toBe(1);
+    // A sessão continua: a pessoa precisa dela para ligar a verificação.
     expect(avisado).toBe(false);
     expect(localStorage.getItem('smp_usuario')).toBe('{"nome":"Alguém"}');
   });

@@ -737,6 +737,34 @@ const MUTACOES = [
     para: '    if (true) {\n      api',
     spec: 'testes/CadastrosPendentes.test.jsx',
   },
+  {
+    descricao: 'exigência de 2FA: a rota protegida deixa abrir qualquer tela',
+    arquivo: 'src/components/RotaProtegida.jsx',
+    de: "if (usuario.dois_fatores_pendente && local.pathname !== '/conta') {",
+    para: 'if (false) {',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'exigência de 2FA: o 403 da API deixa de avisar a tela',
+    arquivo: 'src/api/client.js',
+    de: "error.response.data?.erro?.codigo === 'DOIS_FATORES_OBRIGATORIO'",
+    para: 'false',
+    spec: 'testes/client.test.js',
+  },
+  {
+    descricao: 'exigência de 2FA: ligar a verificação não tira a restrição',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: '      concluirDoisFatores();\n',
+    para: '',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'exigência de 2FA: conta desativada entra na lista de quem falta',
+    arquivo: 'src/components/ExigenciaDoisFatores.jsx',
+    de: '&& u.ativo && !u.anonimizado_em',
+    para: '&& !u.anonimizado_em',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
 ];
 
 /**

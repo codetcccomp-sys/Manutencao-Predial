@@ -186,8 +186,11 @@ O que o código faz, e onde procurar:
   etapas e a redefinição dela pelo administrador sobem a versão: todas as
   sessões abertas daquela pessoa caem na hora. Antes, quem tivesse roubado a
   sessão continuava dentro por até 8 horas depois de a vítima trocar a senha.
-- **Verificação em duas etapas (TOTP).** Opcional por pessoa, recomendada para
-  gestão e administração, ligada na tela **Minha conta**: QR Code para o
+- **Verificação em duas etapas (TOTP).** Opcional por pessoa, e a
+  administração pode exigi-la de gestores e administradores (tela de
+  **Usuários**): quem ainda não ligou entra, mas a API só atende Minha conta
+  até ligar (`403 DOIS_FATORES_OBRIGATORIO`), e a tela leva a pessoa para lá.
+  Ligada na tela **Minha conta**: QR Code para o
   aplicativo autenticador (Google/Microsoft Authenticator, Aegis, o do
   gerenciador de senhas), confirmação com um código e a senha antes de valer
   (só a sessão aberta não cadastra outro aplicativo), e 8 códigos de
@@ -515,7 +518,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `POST PATCH` | `/usuarios`, `/usuarios/:id` | administrador |
 | `POST` | `/usuarios/:id/anonimizar` | administrador (ver [docs/lgpd.md](docs/lgpd.md)) |
 | `POST` | `/usuarios/aprovar`, `/usuarios/recusar` | gestor, administrador (corpo `{ "ids": [...] }`; só toca em pedidos pendentes) |
-| `GET PATCH` | `/configuracoes` | leitura: gestor, administrador; alteração: administrador |
+| `GET PATCH` | `/configuracoes` | leitura: gestor, administrador; alteração: administrador. Chaves: `cadastro_exige_aprovacao`, `exigir_2fa_gestao` (só liga quem já tem a própria verificação) |
 | `POST` | `/usuarios/:id/2fa/redefinir` | administrador (quem perdeu o celular e os códigos) |
 | `GET PATCH` | `/notificacoes`, `/notificacoes/:id/lida` | o próprio usuário |
 | `GET POST PATCH` | `/locais`, `/categorias` | leitura autenticada, escrita para gestão |

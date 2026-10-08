@@ -6,6 +6,7 @@ const { transacao } = require('../config/transacao');
 const totp = require('../utils/totp');
 const { AppError } = require('../middlewares/errorHandler');
 const configuracaoService = require('./configuracao.service');
+const { PERFIS_DA_GESTAO } = require('../middlewares/auth');
 
 const SALT_ROUNDS = 10;
 
@@ -75,7 +76,16 @@ async function registrar({ nome, email, senha }) {
   return criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente });
 }
 
-const publico = (u) => ({ id: u.id, nome: u.nome, email: u.email, perfil: u.perfil });
+/**
+ * O que a tela recebe de quem entrou. `dois_fatores_pendente` avisa que a
+ * administração exige a verificação em duas etapas deste perfil e ela ainda
+ * não está ligada: a tela leva direto para Minha conta, em vez de deixar a
+ * pessoa bater em recusa a cada clique (middlewares/auth.js).
+ */
+async function publico(u, { tem2fa = false } = {}) {
+  const pendente = !tem2fa && PERFIS_DA_GESTAO.includes(u.perfil) && (await configuracaoService.exige2faGestao());
+  return { id: u.id, nome: u.nome, email: u.email, perfil: u.perfil, dois_fatores_pendente: pendente };
+}
 
 // O desafio do segundo fator vale poucos minutos: é o tempo de abrir o
 // aplicativo e digitar. Quem o intercepta sem a senha não tem o que fazer com
@@ -128,7 +138,7 @@ async function login({ email, senha }) {
     return { requer2fa: true, desafio };
   }
 
-  return { conta: usuario, usuario: publico(usuario) };
+  return { conta: usuario, usuario: await publico(usuario) };
 }
 
 /** Quem é o desafio (para o limitador), sem aceitar nada além dele. */
@@ -200,7 +210,7 @@ async function segundoFator({ desafio, codigo }) {
     throw new AppError('Código inválido ou já usado.', 401, 'CODIGO_INVALIDO');
   }
 
-  return { conta: usuario, usuario: publico(usuario), meio };
+  return { conta: usuario, usuario: await publico(usuario, { tem2fa: true }), meio };
 }
 
 // ---------------------------------------------------------------------------
@@ -304,12 +314,22 @@ async function ativar2fa(usuarioId, { senha, codigo }) {
  */
 async function desativar2fa(usuarioId, { senha, codigo }) {
   const { rows } = await pool.query(
-    'SELECT id, senha_hash, totp_segredo, totp_ultimo_passo FROM usuario WHERE id = $1',
+    'SELECT id, perfil, senha_hash, totp_segredo, totp_ultimo_passo FROM usuario WHERE id = $1',
     [usuarioId]
   );
   const conta = rows[0];
   if (!conta.totp_segredo) {
     throw new AppError('A verificação em duas etapas não está ligada.', 409, 'NAO_ATIVO');
+  }
+  // Exigida do perfil, desligar só trocaria a conta protegida por uma conta
+  // restrita a Minha conta. Quem perdeu o celular pede ao administrador para
+  // redefinir, e liga de novo.
+  if (PERFIS_DA_GESTAO.includes(conta.perfil) && (await configuracaoService.exige2faGestao())) {
+    throw new AppError(
+      'A administração exige a verificação em duas etapas para o seu perfil: ela não pode ser desligada.',
+      409,
+      'DOIS_FATORES_EXIGIDO'
+    );
   }
   if (!(await bcrypt.compare(String(senha ?? ''), conta.senha_hash))) {
     throw new AppError('Senha incorreta.', 422, 'SENHA_INCORRETA');

@@ -226,6 +226,13 @@ atrapalham o código antigo). Duas coisas a saber no dia do deploy:
 Para quem acha que alguém entrou na conta: "Sair de todos os aparelhos", na
 mesma tela, derruba todas as sessões abertas. Redefinir a senha faz o mesmo.
 
+**Para não depender de lembrar ninguém:** em Usuários → "Verificação em duas
+etapas da gestão", o administrador liga a exigência. O cartão lista antes
+quem da gestão ativa ainda não ligou. Ligada, essas contas continuam
+entrando, mas só alcançam Minha conta até ligar a verificação, e quem já tem
+não consegue desligar (perdeu o celular: o administrador redefine, e a pessoa
+liga de novo). Só liga quem já tem a própria verificação ligada.
+
 ### 2.1.4 Distribuição automática (depois da folha de validação)
 
 A migração `025_distribuicao_automatica` vai antes do merge, como as outras. Ela

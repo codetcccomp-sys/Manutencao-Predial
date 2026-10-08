@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import api, { CHAVE_USUARIO, EVENTO_SESSAO_EXPIRADA } from '../api/client';
+import api, { CHAVE_USUARIO, EVENTO_2FA_OBRIGATORIO, EVENTO_SESSAO_EXPIRADA } from '../api/client';
 import { limparDadosOffline } from '../pwa';
 
 const AuthContext = createContext(null);
@@ -40,6 +40,25 @@ export function AuthProvider({ children }) {
     window.addEventListener(EVENTO_SESSAO_EXPIRADA, aoExpirar);
     return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, aoExpirar);
   }, []);
+
+  // A marca vem no login; a API também avisa quem já estava dentro quando a
+  // exigência foi ligada. Com ela, a rota protegida leva a Minha conta.
+  const marcarDoisFatores = useCallback((pendente) => {
+    setUsuario((atual) => {
+      if (!atual || Boolean(atual.dois_fatores_pendente) === pendente) return atual;
+      const proximo = { ...atual, dois_fatores_pendente: pendente };
+      localStorage.setItem(CHAVE_USUARIO, JSON.stringify(proximo));
+      return proximo;
+    });
+  }, []);
+
+  useEffect(() => {
+    const aoExigir = () => marcarDoisFatores(true);
+    window.addEventListener(EVENTO_2FA_OBRIGATORIO, aoExigir);
+    return () => window.removeEventListener(EVENTO_2FA_OBRIGATORIO, aoExigir);
+  }, [marcarDoisFatores]);
+
+  const concluirDoisFatores = useCallback(() => marcarDoisFatores(false), [marcarDoisFatores]);
 
   const iniciarSessao = useCallback((dados) => {
     limparDadosOffline();
@@ -93,7 +112,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ usuario, sessaoExpirada, saiu, login, confirmarCodigo, registrar, logout }}>
+    <AuthContext.Provider
+      value={{ usuario, sessaoExpirada, saiu, login, confirmarCodigo, registrar, logout, concluirDoisFatores }}
+    >
       {children}
     </AuthContext.Provider>
   );

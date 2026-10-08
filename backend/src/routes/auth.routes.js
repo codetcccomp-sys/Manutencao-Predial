@@ -2,7 +2,7 @@ const { Router } = require('express');
 const authController = require('../controllers/auth.controller');
 const { validate } = require('../validators/validate');
 const { limitarLogin, limitarRecuperacao, conferirLimite } = require('../middlewares/rateLimit');
-const { authenticate } = require('../middlewares/auth');
+const { authenticate, authenticateSem2fa } = require('../middlewares/auth');
 const authService = require('../services/auth.service');
 
 const router = Router();
@@ -53,17 +53,20 @@ router.post(
 );
 
 router.post('/sair', authController.sair);
-router.post('/sair-de-todos', authenticate, authController.sairDeTodos);
+// Com a verificação exigida da gestão (configuração `exigir_2fa_gestao`),
+// quem ainda não ligou alcança só estas: as que ligam a verificação e a que
+// encerra as próprias sessões.
+router.post('/sair-de-todos', authenticateSem2fa, authController.sairDeTodos);
 
 // As rotas que conferem senha ou código na própria conta usam o mesmo limite
 // do login, pelo e-mail da conta logada.
 const limitarPelaConta = (req, res, next) => conferirLimite(req, res, next, req.usuario.email);
 
-router.get('/2fa', authenticate, authController.situacao2fa);
-router.post('/2fa/iniciar', authenticate, authController.iniciar2fa);
+router.get('/2fa', authenticateSem2fa, authController.situacao2fa);
+router.post('/2fa/iniciar', authenticateSem2fa, authController.iniciar2fa);
 router.post(
   '/2fa/ativar',
-  authenticate,
+  authenticateSem2fa,
   validate({
     senha: { obrigatorio: true, tipo: 'string', maxLength: 200 },
     codigo: { obrigatorio: true, tipo: 'string', maxLength: 20 },
