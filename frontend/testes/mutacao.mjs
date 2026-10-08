@@ -695,6 +695,27 @@ const MUTACOES = [
     para: '    corpo.unidade = nova.unidade;',
     spec: 'testes/RegrasDeDistribuicao.test.jsx',
   },
+  {
+    descricao: 'preventiva: "Gerar agora" volta a aceitar clique enquanto o pedido anda',
+    arquivo: 'src/pages/Preventiva.jsx',
+    de: '                            carregando={gerando === p.id}\n                            disabled={gerando !== null}\n',
+    para: '',
+    spec: 'testes/Preventiva.test.jsx',
+  },
+  {
+    descricao: 'preventiva: antecipar fora da janela deixa de perguntar',
+    arquivo: 'src/pages/Preventiva.jsx',
+    de: '    if (hojeLocal() < aberturaDaJanela(p)) setAntecipar(p);\n    else gerar(p);',
+    para: '    gerar(p);',
+    spec: 'testes/Preventiva.test.jsx',
+  },
+  {
+    descricao: 'preventiva: dentro da janela passa a perguntar à toa',
+    arquivo: 'src/pages/Preventiva.jsx',
+    de: 'if (hojeLocal() < aberturaDaJanela(p))',
+    para: 'if (hojeLocal() <= aberturaDaJanela(p) || true)',
+    spec: 'testes/Preventiva.test.jsx',
+  },
 ];
 
 /**

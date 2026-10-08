@@ -54,6 +54,11 @@ test('gestão cadastra equipamento e plano, gera a execução, e o técnico a re
   await expect(plano).toContainText('10/03/2031');
 
   await plano.getByRole('button', { name: 'Gerar agora' }).click();
+  // 2031 está longe da janela de antecedência: gerar hoje é antecipar, e o
+  // sistema pergunta antes de pular o plano para a execução seguinte.
+  const antecipar = page.getByRole('dialog', { name: 'Antecipar a preventiva?' });
+  await expect(antecipar).toContainText('10/03/2031');
+  await antecipar.getByRole('button', { name: 'Gerar agora' }).click();
   await expect(page.getByText(/gerado, previsto para 10\/03\/2031/)).toBeVisible();
   // O plano andou um período.
   await expect(plano).toContainText('10/06/2031');

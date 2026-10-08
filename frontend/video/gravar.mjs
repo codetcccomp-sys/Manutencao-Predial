@@ -364,7 +364,11 @@ try {
   await mover(planoBomba);
   await pausa(1200);
   await legenda('Na data, o agendador gera o chamado sozinho; aqui, pelo botão Gerar agora', 800);
-  await clicar(planoBomba.getByRole('button', { name: 'Gerar agora' }), 2400);
+  await clicar(planoBomba.getByRole('button', { name: 'Gerar agora' }), 1600);
+  // A bomba vence daqui a seis dias e a janela abre em três: gerar hoje é
+  // antecipar, e o sistema pergunta antes de pular o plano um período.
+  const antecipar = page.getByRole('dialog', { name: 'Antecipar a preventiva?' });
+  await clicar(antecipar.getByRole('button', { name: 'Gerar agora' }), 2400);
   await legenda('O chamado nasce com o roteiro do serviço e segue o fluxo normal', 3200, true);
   await legenda('', 0);
 

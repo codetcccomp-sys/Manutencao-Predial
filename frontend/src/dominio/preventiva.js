@@ -35,6 +35,15 @@ export function hojeLocal(agora = new Date()) {
   return `${agora.getFullYear()}-${mes}-${dia}`;
 }
 
+/** O dia em que o agendador gera sozinho a próxima execução do plano. */
+export function aberturaDaJanela(plano) {
+  // Meio-dia: somar e subtrair dias à meia-noite cai no dia errado na virada
+  // do horário de verão de outros fusos.
+  const dia = new Date(`${String(plano.proxima_execucao).slice(0, 10)}T12:00:00`);
+  dia.setDate(dia.getDate() - (Number(plano.antecedencia_dias) || 0));
+  return hojeLocal(dia);
+}
+
 export function rotuloLocal(local) {
   if (!local) return '';
   return [local.unidade, local.bloco, local.pavimento, local.setor, local.ambiente]
