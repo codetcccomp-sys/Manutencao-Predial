@@ -74,6 +74,46 @@ estiver preenchido.
 
 ## 2. Antes de abrir para as pessoas
 
+### 2.0 Primeiro: limpar a demonstração
+
+A produção guarda os chamados e as contas da demonstração. Misturados ao
+piloto, eles entram nos relatórios e estragam a comparação com a medida de
+antes. [`backend/database/limpar-demonstracao.sql`](../backend/database/limpar-demonstracao.sql)
+apaga todos os chamados (com histórico, comentários, anexos, avaliações,
+materiais usados e avisos) e as contas que não ficam. O cadastro fica: locais,
+equipamentos, planos preventivos, equipes, categorias, materiais, feriados,
+expediente, prazos e regras.
+
+**Quem fica:** toda conta de administrador, mais as listadas. Plano ou regra
+cujo técnico saiu passa a ir para a triagem (o plano) ou para a equipe toda (a
+regra); a autoria passa ao administrador mais antigo.
+
+**A preventiva já gerada não se perde.** Se o plano já tinha gerado a
+execução de novembro e ela ainda estava aberta, o plano volta para novembro e
+o agendador gera de novo na janela certa.
+
+Passo a passo, no SQL Editor do Supabase:
+
+1. Confira que o backup do dia rodou (Actions → Backup do banco, §2.3).
+2. Ensaie: cole o bloco abaixo com o conteúdo do arquivo no meio e `ROLLBACK`
+   no fim. O resultado é um resumo com quanto havia, quanto fica e quem fica.
+
+   ```sql
+   BEGIN;
+   SET LOCAL limpeza.manter = 'pessoa@instituicao.br, outra@instituicao.br';
+   -- conteúdo de backend/database/limpar-demonstracao.sql
+   ROLLBACK;
+   ```
+
+3. Com o resumo certo, rode o mesmo bloco trocando `ROLLBACK` por `COMMIT`.
+
+O script para sem apagar nada quando a lista não foi dada (para ficar só a
+administração, escreva `'so-administradores'`), quando um e-mail da lista não
+tem conta (o erro de digitação que apagaria a conta certa), quando não há
+administrador ativo e quando há anexo no Supabase Storage, porque apagar a
+linha não apaga o arquivo. O teste `tests/limparDemonstracao.test.js` roda o
+arquivo inteiro a cada mudança, numa transação desfeita.
+
 ### 2.1 Aviso de atraso (só você pode fazer)
 
 Sem isto, a RF08 não acontece: o sistema registra o prazo, mostra "em atraso"

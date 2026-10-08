@@ -215,6 +215,34 @@ const MUTACOES = [
     para: "router.patch('/', authorize('administrador', 'gestor'), configuracaoController.definir);",
     spec: 'tests/cadastroAprovacao.test.js',
   },
+  {
+    descricao: 'limpeza: e-mail digitado errado deixa de parar o script',
+    arquivo: 'database/limpar-demonstracao.sql',
+    de: "  IF faltando IS NOT NULL THEN\n    RAISE EXCEPTION 'Sem conta com este e-mail",
+    para: "  IF false THEN\n    RAISE EXCEPTION 'Sem conta com este e-mail",
+    spec: 'tests/limparDemonstracao.test.js',
+  },
+  {
+    descricao: 'limpeza: lista vazia passa a valer como "só administradores"',
+    arquivo: 'database/limpar-demonstracao.sql',
+    de: "  IF lista = '' THEN",
+    para: '  IF lista IS NULL THEN',
+    spec: 'tests/limparDemonstracao.test.js',
+  },
+  {
+    descricao: 'limpeza: preventiva aberta apagada some do calendário do plano',
+    arquivo: 'database/limpar-demonstracao.sql',
+    de: ' WHERE p.id = aberta.plano_id AND aberta.primeira < p.proxima_execucao;',
+    para: ' WHERE false;',
+    spec: 'tests/limparDemonstracao.test.js',
+  },
+  {
+    descricao: 'limpeza: anexo no Storage deixa de parar o script',
+    arquivo: 'database/limpar-demonstracao.sql',
+    de: "IF EXISTS (SELECT 1 FROM anexo WHERE armazenamento <> 'banco') THEN",
+    para: 'IF false THEN',
+    spec: 'tests/limparDemonstracao.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';
