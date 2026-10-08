@@ -6,7 +6,8 @@ name: Backup do banco
 #
 # Precisa de dois segredos do repositório (Settings → Secrets and variables →
 # Actions), que ninguém além de quem os cadastra chega a ver:
-#   BACKUP_DATABASE_URL  string do Session pooler do Supabase (porta 5432)
+#   BACKUP_DATABASE_URL  string do Session pooler do Supabase (porta 5432),
+#                        com o papel só de leitura smp_backup
 #   BACKUP_PASSPHRASE    frase para cifrar; guarde-a também fora do GitHub,
 #                        porque sem ela o backup não abre
 # O passo a passo está em docs/piloto.md, §2.3.

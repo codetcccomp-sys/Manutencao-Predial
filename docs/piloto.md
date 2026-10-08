@@ -334,9 +334,19 @@ perfeito de nada.
 
 **Para ligar (uma vez, só você):**
 
-1. No painel do Supabase, projeto `manutencao-predial-prod` → Connect →
-   **Session pooler** (porta 5432; a de transação, 6543, não serve ao
-   `pg_dump`). Copie a string e troque `[YOUR-PASSWORD]` pela senha do banco.
+1. O backup entra com o papel **`smp_backup`**, que só lê: se o segredo vazar,
+   quem o pegar não altera nem apaga nada (e não precisa da senha principal do
+   banco). O papel já existe, sem senha. Defina uma no painel do Supabase,
+   projeto `manutencao-predial-prod` → **SQL Editor**:
+
+   ```sql
+   ALTER ROLE smp_backup WITH PASSWORD 'invente-uma-senha-longa';
+   ```
+
+   Use só letras, números e hífen: `@`, `:` e `/` quebram a string de conexão.
+   Depois, em Connect → **Session pooler** (porta 5432; a de transação, 6543,
+   não serve ao `pg_dump`), copie a string e troque o começo `postgres.` por
+   `smp_backup.` e `[YOUR-PASSWORD]` pela senha que você definiu.
 2. No GitHub, no repositório → Settings → Secrets and variables → Actions →
    New repository secret, crie dois segredos:
    - `BACKUP_DATABASE_URL`: a string do passo 1;
