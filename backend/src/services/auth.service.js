@@ -6,6 +6,8 @@ const { transacao } = require('../config/transacao');
 const totp = require('../utils/totp');
 const { AppError } = require('../middlewares/errorHandler');
 const configuracaoService = require('./configuracao.service');
+const googleService = require('./google.service');
+const { PERFIS_DA_GESTAO } = require('../middlewares/auth');
 
 const SALT_ROUNDS = 10;
 
@@ -75,7 +77,16 @@ async function registrar({ nome, email, senha }) {
   return criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente });
 }
 
-const publico = (u) => ({ id: u.id, nome: u.nome, email: u.email, perfil: u.perfil });
+/**
+ * O que a tela recebe de quem entrou. `dois_fatores_pendente` avisa que a
+ * administração exige a verificação em duas etapas deste perfil e ela ainda
+ * não está ligada: a tela leva direto para Minha conta, em vez de deixar a
+ * pessoa bater em recusa a cada clique (middlewares/auth.js).
+ */
+async function publico(u, { tem2fa = false } = {}) {
+  const pendente = !tem2fa && PERFIS_DA_GESTAO.includes(u.perfil) && (await configuracaoService.exige2faGestao());
+  return { id: u.id, nome: u.nome, email: u.email, perfil: u.perfil, dois_fatores_pendente: pendente };
+}
 
 // O desafio do segundo fator vale poucos minutos: é o tempo de abrir o
 // aplicativo e digitar. Quem o intercepta sem a senha não tem o que fazer com
@@ -122,13 +133,64 @@ async function login({ email, senha }) {
   }
 
   if (usuario.totp_segredo) {
-    const desafio = jwt.sign({ id: usuario.id, tipo: '2fa' }, process.env.JWT_SECRET, {
-      expiresIn: VALIDADE_DESAFIO,
-    });
-    return { requer2fa: true, desafio };
+    return { requer2fa: true, desafio: desafioDe(usuario) };
   }
 
-  return { conta: usuario, usuario: publico(usuario) };
+  return { conta: usuario, usuario: await publico(usuario) };
+}
+
+const desafioDe = (usuario) =>
+  jwt.sign({ id: usuario.id, tipo: '2fa' }, process.env.JWT_SECRET, { expiresIn: VALIDADE_DESAFIO });
+
+/**
+ * Entrar com Google: a credencial do botão substitui o e-mail e a senha, e o
+ * resto é o mesmo caminho do login.
+ *
+ * - Conta que já existe com o e-mail: entra nela. Com a verificação em duas
+ *   etapas ligada, o Google não a dispensa: devolve o desafio, como a senha.
+ * - Conta nova: nasce solicitante, e espera a gestão se a aprovação estiver
+ *   ligada (RF01) — o Google prova quem é a pessoa, não que ela pode entrar.
+ *   A senha é aleatória e ninguém a conhece; quem quiser entrar também por
+ *   e-mail e senha usa "Esqueci minha senha".
+ *
+ * Aqui o Google já provou a identidade, então dizer "conta desativada" ou
+ * "aguardando aprovação" não conta nada a quem não é a pessoa.
+ */
+async function entrarComGoogle({ credencial }) {
+  const { email, nome } = await googleService.conferir(credencial);
+
+  const buscar = () =>
+    pool.query(
+      `SELECT id, nome, email, perfil, ativo, anonimizado_em, sessao_versao, totp_segredo, cadastro_pendente_desde
+         FROM usuario WHERE email = $1`,
+      [email]
+    );
+
+  let usuario = (await buscar()).rows[0];
+  if (!usuario) {
+    const pendente = await configuracaoService.cadastroExigeAprovacao();
+    const senha = crypto.randomBytes(32).toString('base64url');
+    try {
+      await criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente });
+    } catch (err) {
+      // Dois cliques no botão chegam juntos: o segundo encontra a conta que o
+      // primeiro acabou de criar (na conferência, ou no índice único se os
+      // dois passaram dela ao mesmo tempo), e segue com ela.
+      if (err.code !== 'EMAIL_EM_USO' && err.code !== '23505') throw err;
+    }
+    usuario = (await buscar()).rows[0];
+  }
+
+  if (usuario.cadastro_pendente_desde) {
+    return { aguardandoAprovacao: true };
+  }
+  if (!usuario.ativo || usuario.anonimizado_em) {
+    throw new AppError('Esta conta está desativada. Fale com a gestão.', 403, 'CONTA_DESATIVADA');
+  }
+  if (usuario.totp_segredo) {
+    return { requer2fa: true, desafio: desafioDe(usuario) };
+  }
+  return { conta: usuario, usuario: await publico(usuario) };
 }
 
 /** Quem é o desafio (para o limitador), sem aceitar nada além dele. */
@@ -200,7 +262,7 @@ async function segundoFator({ desafio, codigo }) {
     throw new AppError('Código inválido ou já usado.', 401, 'CODIGO_INVALIDO');
   }
 
-  return { conta: usuario, usuario: publico(usuario), meio };
+  return { conta: usuario, usuario: await publico(usuario, { tem2fa: true }), meio };
 }
 
 // ---------------------------------------------------------------------------
@@ -304,12 +366,22 @@ async function ativar2fa(usuarioId, { senha, codigo }) {
  */
 async function desativar2fa(usuarioId, { senha, codigo }) {
   const { rows } = await pool.query(
-    'SELECT id, senha_hash, totp_segredo, totp_ultimo_passo FROM usuario WHERE id = $1',
+    'SELECT id, perfil, senha_hash, totp_segredo, totp_ultimo_passo FROM usuario WHERE id = $1',
     [usuarioId]
   );
   const conta = rows[0];
   if (!conta.totp_segredo) {
     throw new AppError('A verificação em duas etapas não está ligada.', 409, 'NAO_ATIVO');
+  }
+  // Exigida do perfil, desligar só trocaria a conta protegida por uma conta
+  // restrita a Minha conta. Quem perdeu o celular pede ao administrador para
+  // redefinir, e liga de novo.
+  if (PERFIS_DA_GESTAO.includes(conta.perfil) && (await configuracaoService.exige2faGestao())) {
+    throw new AppError(
+      'A administração exige a verificação em duas etapas para o seu perfil: ela não pode ser desligada.',
+      409,
+      'DOIS_FATORES_EXIGIDO'
+    );
   }
   if (!(await bcrypt.compare(String(senha ?? ''), conta.senha_hash))) {
     throw new AppError('Senha incorreta.', 422, 'SENHA_INCORRETA');
@@ -370,6 +442,7 @@ async function redefinir2fa(usuarioId) {
 module.exports = {
   registrar,
   login,
+  entrarComGoogle,
   segundoFator,
   emailDoDesafio,
   situacao2fa,

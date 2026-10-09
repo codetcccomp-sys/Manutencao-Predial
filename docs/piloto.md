@@ -74,6 +74,50 @@ estiver preenchido.
 
 ## 2. Antes de abrir para as pessoas
 
+### 2.0 Primeiro: limpar a demonstração
+
+A produção guarda os chamados e as contas da demonstração. Misturados ao
+piloto, eles entram nos relatórios e estragam a comparação com a medida de
+antes. [`backend/database/limpar-demonstracao.sql`](../backend/database/limpar-demonstracao.sql)
+apaga todos os chamados (com histórico, comentários, anexos, avaliações,
+materiais usados e avisos) e as contas que não ficam. O cadastro fica: locais,
+equipamentos, planos preventivos, equipes, categorias, materiais, feriados,
+expediente, prazos e regras.
+
+**Quem fica:** toda conta de administrador, mais as listadas. Plano ou regra
+cujo técnico saiu passa a ir para a triagem (o plano) ou para a equipe toda (a
+regra); a autoria passa ao administrador mais antigo.
+
+**A preventiva já gerada não se perde.** Se o plano já tinha gerado a
+execução de novembro e ela ainda estava aberta, o plano volta para novembro e
+o agendador gera de novo na janela certa.
+
+Passo a passo, no SQL Editor do Supabase:
+
+1. Confira que o backup do dia rodou (Actions → Backup do banco, §2.3).
+2. Ensaie: cole o bloco abaixo com o conteúdo do arquivo no meio e `ROLLBACK`
+   no fim. O resultado é um resumo com quanto havia, quanto fica e quem fica.
+
+   ```sql
+   BEGIN;
+   SET LOCAL limpeza.manter = 'pessoa@instituicao.br, outra@instituicao.br';
+   -- conteúdo de backend/database/limpar-demonstracao.sql
+   ROLLBACK;
+   ```
+
+3. Com o resumo certo, rode o mesmo bloco trocando `ROLLBACK` por `COMMIT`.
+
+Do começo ao `COMMIT` (ou `ROLLBACK`), as tabelas que a limpeza mexe ficam
+travadas para escrita: quem abrir um chamado nesses segundos espera, em vez
+de o chamado entrar no meio da limpeza. Rode fora do horário de uso.
+
+O script para sem apagar nada quando a lista não foi dada (para ficar só a
+administração, escreva `'so-administradores'`), quando um e-mail da lista não
+tem conta (o erro de digitação que apagaria a conta certa), quando não há
+administrador ativo e quando há anexo no Supabase Storage, porque apagar a
+linha não apaga o arquivo. O teste `tests/limparDemonstracao.test.js` roda o
+arquivo inteiro a cada mudança, numa transação desfeita.
+
 ### 2.1 Aviso de atraso (só você pode fazer)
 
 Sem isto, a RF08 não acontece: o sistema registra o prazo, mostra "em atraso"
@@ -186,6 +230,13 @@ atrapalham o código antigo). Duas coisas a saber no dia do deploy:
 Para quem acha que alguém entrou na conta: "Sair de todos os aparelhos", na
 mesma tela, derruba todas as sessões abertas. Redefinir a senha faz o mesmo.
 
+**Para não depender de lembrar ninguém:** em Usuários → "Verificação em duas
+etapas da gestão", o administrador liga a exigência. O cartão lista antes
+quem da gestão ativa ainda não ligou. Ligada, essas contas continuam
+entrando, mas só alcançam Minha conta até ligar a verificação, e quem já tem
+não consegue desligar (perdeu o celular: o administrador redefine, e a pessoa
+liga de novo). Só liga quem já tem a própria verificação ligada.
+
 ### 2.1.4 Distribuição automática (depois da folha de validação)
 
 A migração `025_distribuicao_automatica` vai antes do merge, como as outras. Ela
@@ -223,6 +274,35 @@ aprovação" (só o administrador vê a caixa). A partir daí:
 Divulgue o link de cadastro só depois de ligar. Sem domínio de e-mail
 institucional para restringir, a aprovação é o que impede quem tem o link de
 entrar sozinho.
+
+### 2.1.6 Entrar com Google (opcional)
+
+O botão "Fazer login com o Google" aparece na tela de login quando o backend
+tem `GOOGLE_CLIENT_ID`. Para criar o ID, com a conta Google de quem administra:
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → crie um projeto
+   (por exemplo, "Conserva Predial").
+2. **APIs e serviços → Tela de permissão OAuth**: tipo **Externo**, nome do
+   app, e-mail de suporte e de contato. Os escopos padrão bastam (e-mail e
+   perfil); não precisa enviar para verificação. Em "Testando", só os e-mails
+   listados como usuários de teste entram; para o piloto, publique o app.
+3. **Credenciais → Criar credenciais → ID do cliente OAuth**, tipo
+   **Aplicativo da Web**. Em **Origens JavaScript autorizadas**, ponha
+   `https://conserva-predial.vercel.app` (e `http://localhost:5173` para
+   desenvolver). Não precisa de URI de redirecionamento.
+4. Copie o **ID do cliente** (termina em `.apps.googleusercontent.com`). Ele é
+   público: é o que o navegador recebe. A **chave secreta do cliente não é
+   usada** e não deve ser colada em lugar nenhum.
+5. Vercel → projeto do backend → Settings → Environment Variables:
+   `GOOGLE_CLIENT_ID` com o ID, em Production. Redeploy.
+
+Opcional: `GOOGLE_DOMINIO` com o domínio da instituição (`escola.edu.br`), se
+ela usar Google Workspace. Aí só contas daquela organização entram pelo
+botão, e quem sai da instituição perde o acesso junto com a conta de lá.
+
+Depois de ligar, entre uma vez pelo botão para conferir. Conta nova pelo
+Google espera a aprovação, como o cadastro público; quem tem a verificação em
+duas etapas ligada continua digitando o código.
 
 ### 2.2 E-mail (decisão, não obrigação)
 

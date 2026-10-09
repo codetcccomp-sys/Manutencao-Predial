@@ -17,7 +17,7 @@ import { rotuloPerfil } from '../dominio/rotulos';
  * sozinha.
  */
 function MinhaConta() {
-  const { usuario, logout } = useAuth();
+  const { usuario, logout, concluirDoisFatores } = useAuth();
   const recomendada = ['administrador', 'gestor'].includes(usuario?.perfil);
 
   const [situacao, setSituacao] = useState(null);
@@ -69,6 +69,7 @@ function MinhaConta() {
       setCodigo('');
       setCodigos(r.data.codigos_recuperacao);
       setAviso('Verificação em duas etapas ligada. As outras sessões desta conta foram encerradas.');
+      concluirDoisFatores();
       carregar();
     }
   }
@@ -126,6 +127,12 @@ function MinhaConta() {
         className="mb-0"
       />
 
+      {usuario.dois_fatores_pendente && (
+        <Aviso tipo="atencao" titulo="Falta ligar a verificação em duas etapas">
+          A administração exige a verificação para o seu perfil. Ligue abaixo para voltar a usar o
+          sistema; até lá, só esta tela fica disponível.
+        </Aviso>
+      )}
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {aviso && <Aviso tipo="sucesso">{aviso}</Aviso>}
 
@@ -216,6 +223,7 @@ function MinhaConta() {
                 autoComplete="current-password"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
+                ajuda='Entrou só pelo Google e não tem senha? Crie uma em "Esqueci minha senha", na tela de login.'
               />
               <div className="flex flex-wrap gap-2">
                 <Botao type="submit" variante="primaria">

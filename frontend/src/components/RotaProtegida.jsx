@@ -22,6 +22,12 @@ function RotaProtegida({ children }) {
     return <Navigate to="/login" replace state={{ de: `${local.pathname}${local.search}` }} />;
   }
 
+  // Gestão com a verificação em duas etapas exigida e ainda desligada: a API
+  // só atende Minha conta, então qualquer outra tela seria uma tela de erro.
+  if (usuario.dois_fatores_pendente && local.pathname !== '/conta') {
+    return <Navigate to="/conta" replace />;
+  }
+
   return children;
 }
 

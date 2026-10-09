@@ -25,6 +25,12 @@ export const CHAVE_USUARIO = 'smp_usuario';
 // enchia de erro sem nunca voltar para o login.
 export const EVENTO_SESSAO_EXPIRADA = 'smp:sessao-expirada';
 
+// A administração passou a exigir a verificação em duas etapas da gestão e
+// esta conta ainda não ligou: a API recusa tudo fora de Minha conta, e a tela
+// leva a pessoa para lá (AuthContext, RotaProtegida). Vale também para quem já
+// estava logado quando a exigência foi ligada.
+export const EVENTO_2FA_OBRIGATORIO = 'smp:2fa-obrigatorio';
+
 
 export const MENSAGEM_SEM_CONEXAO =
   'Sem conexão com o servidor: nada foi registrado. Tente de novo quando a conexão voltar.';
@@ -56,12 +62,17 @@ api.interceptors.response.use(
     // está tentando entrar não tem sessão para perder, e tratar os dois casos
     // igual faria a tela de login anunciar que a sessão expirou a cada senha
     // errada.
-    const ehTentativaDeLogin = error.config?.url?.includes('/auth/login');
+    const url = error.config?.url ?? '';
+    const ehTentativaDeLogin = url.includes('/auth/login') || url.includes('/auth/google');
     const tinhaSessao = Boolean(localStorage.getItem(CHAVE_USUARIO));
 
     if (error.response?.status === 401 && tinhaSessao && !ehTentativaDeLogin) {
       localStorage.removeItem(CHAVE_USUARIO);
       window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
+    }
+
+    if (error.response?.status === 403 && error.response.data?.erro?.codigo === 'DOIS_FATORES_OBRIGATORIO') {
+      window.dispatchEvent(new Event(EVENTO_2FA_OBRIGATORIO));
     }
 
     return Promise.reject(error);

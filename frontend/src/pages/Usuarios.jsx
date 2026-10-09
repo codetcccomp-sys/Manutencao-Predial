@@ -9,6 +9,7 @@ import Botao from '../components/ui/Botao';
 import { Esqueleto, Regiao } from '../components/ui/Estados';
 import Confirmacao from '../components/ui/Confirmacao';
 import CadastrosPendentes from '../components/CadastrosPendentes';
+import ExigenciaDoisFatores from '../components/ExigenciaDoisFatores';
 
 const PERFIS = [
   { valor: 'solicitante', rotulo: 'Solicitante' },
@@ -147,6 +148,8 @@ function Usuarios() {
       {aviso && <div className="bg-sucesso-tenue text-sucesso text-sm rounded p-3">{aviso}</div>}
 
       <CadastrosPendentes comConfiguracao />
+
+      {!carregando && <ExigenciaDoisFatores usuarios={usuarios} />}
 
       <form onSubmit={criar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
         <h2 className="font-medium text-navy">Cadastrar usuário</h2>

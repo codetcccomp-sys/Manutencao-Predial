@@ -39,8 +39,11 @@ function ItemDeMenu({ para, children }) {
 function Layout() {
   const localizacao = useLocation();
   const { usuario, logout } = useAuth();
-  const podeVerRelatorios = ['administrador', 'gestor'].includes(usuario?.perfil);
-  const ehAdministrador = usuario?.perfil === 'administrador';
+  // Enquanto a verificação exigida não é ligada, o menu levaria a telas que a
+  // API recusa: só fica Minha conta (RotaProtegida).
+  const restrito = Boolean(usuario?.dois_fatores_pendente);
+  const podeVerRelatorios = ['administrador', 'gestor'].includes(usuario?.perfil) && !restrito;
+  const ehAdministrador = usuario?.perfil === 'administrador' && !restrito;
 
   return (
     <div className="min-h-screen bg-fundo">

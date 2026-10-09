@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import api, { CHAVE_USUARIO, EVENTO_SESSAO_EXPIRADA } from '../api/client';
+import api, { CHAVE_USUARIO, EVENTO_2FA_OBRIGATORIO, EVENTO_SESSAO_EXPIRADA } from '../api/client';
 import { limparDadosOffline } from '../pwa';
 
 const AuthContext = createContext(null);
@@ -41,6 +41,25 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, aoExpirar);
   }, []);
 
+  // A marca vem no login; a API também avisa quem já estava dentro quando a
+  // exigência foi ligada. Com ela, a rota protegida leva a Minha conta.
+  const marcarDoisFatores = useCallback((pendente) => {
+    setUsuario((atual) => {
+      if (!atual || Boolean(atual.dois_fatores_pendente) === pendente) return atual;
+      const proximo = { ...atual, dois_fatores_pendente: pendente };
+      localStorage.setItem(CHAVE_USUARIO, JSON.stringify(proximo));
+      return proximo;
+    });
+  }, []);
+
+  useEffect(() => {
+    const aoExigir = () => marcarDoisFatores(true);
+    window.addEventListener(EVENTO_2FA_OBRIGATORIO, aoExigir);
+    return () => window.removeEventListener(EVENTO_2FA_OBRIGATORIO, aoExigir);
+  }, [marcarDoisFatores]);
+
+  const concluirDoisFatores = useCallback(() => marcarDoisFatores(false), [marcarDoisFatores]);
+
   const iniciarSessao = useCallback((dados) => {
     limparDadosOffline();
     localStorage.setItem(CHAVE_USUARIO, JSON.stringify(dados.usuario));
@@ -72,6 +91,18 @@ export function AuthProvider({ children }) {
     [iniciarSessao]
   );
 
+  // A credencial do botão do Google faz o papel de e-mail e senha: a resposta
+  // tem as mesmas formas do login, mais a conta nova que espera a aprovação.
+  const entrarComGoogle = useCallback(
+    async (credencial) => {
+      const { data } = await api.post('/auth/google', { credencial });
+      if (data.aguardando_aprovacao) return { aguardandoAprovacao: true };
+      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio };
+      return iniciarSessao(data);
+    },
+    [iniciarSessao]
+  );
+
   // Devolve a resposta: com a aprovação ligada (RF01), o cadastro nasce
   // esperando a gestão, e a tela precisa dizer isso em vez de mandar ao login.
   const registrar = useCallback(async (nome, email, senha) => {
@@ -93,7 +124,19 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ usuario, sessaoExpirada, saiu, login, confirmarCodigo, registrar, logout }}>
+    <AuthContext.Provider
+      value={{
+        usuario,
+        sessaoExpirada,
+        saiu,
+        login,
+        entrarComGoogle,
+        confirmarCodigo,
+        registrar,
+        logout,
+        concluirDoisFatores,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

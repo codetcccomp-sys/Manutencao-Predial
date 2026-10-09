@@ -737,6 +737,62 @@ const MUTACOES = [
     para: '    if (true) {\n      api',
     spec: 'testes/CadastrosPendentes.test.jsx',
   },
+  {
+    descricao: 'google: conta que espera aprovação entra como se tivesse sido aprovada',
+    arquivo: 'src/pages/Login.jsx',
+    de: '      if (resultado?.aguardandoAprovacao) {',
+    para: '      if (false) {',
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'google: o botão aparece (e o script do Google carrega) sem o ID do cliente',
+    arquivo: 'src/components/BotaoGoogle.jsx',
+    de: '    if (!clienteId) return undefined;',
+    para: '',
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'google: duas etapas pelo Google viram sessão sem o código',
+    arquivo: 'src/context/AuthContext.jsx',
+    de: "      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio };\n      return iniciarSessao(data);\n    },\n    [iniciarSessao]\n  );\n\n  // Devolve",
+    para: "      return iniciarSessao(data);\n    },\n    [iniciarSessao]\n  );\n\n  // Devolve",
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'google: 401 no login pelo Google anuncia sessão expirada',
+    arquivo: 'src/api/client.js',
+    de: " || url.includes('/auth/google')",
+    para: '',
+    spec: 'testes/client.test.js',
+  },
+  {
+    descricao: 'exigência de 2FA: a rota protegida deixa abrir qualquer tela',
+    arquivo: 'src/components/RotaProtegida.jsx',
+    de: "if (usuario.dois_fatores_pendente && local.pathname !== '/conta') {",
+    para: 'if (false) {',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'exigência de 2FA: o 403 da API deixa de avisar a tela',
+    arquivo: 'src/api/client.js',
+    de: "error.response.data?.erro?.codigo === 'DOIS_FATORES_OBRIGATORIO'",
+    para: 'false',
+    spec: 'testes/client.test.js',
+  },
+  {
+    descricao: 'exigência de 2FA: ligar a verificação não tira a restrição',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: '      concluirDoisFatores();\n',
+    para: '',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'exigência de 2FA: conta desativada entra na lista de quem falta',
+    arquivo: 'src/components/ExigenciaDoisFatores.jsx',
+    de: '&& u.ativo && !u.anonimizado_em',
+    para: '&& !u.anonimizado_em',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
 ];
 
 /**
