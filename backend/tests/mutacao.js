@@ -314,6 +314,13 @@ const MUTACOES = [
     spec: 'tests/limparDemonstracao.test.js',
   },
   {
+    descricao: 'limpeza: a espera pela trava deixa de ter limite',
+    arquivo: 'database/limpar-demonstracao.sql',
+    de: "PERFORM set_config('lock_timeout',",
+    para: "PERFORM set_config('application_name',",
+    spec: 'tests/limparDemonstracao.test.js',
+  },
+  {
     descricao: 'limpeza: anexo no Storage deixa de parar o script',
     arquivo: 'database/limpar-demonstracao.sql',
     de: "IF EXISTS (SELECT 1 FROM anexo WHERE armazenamento <> 'banco') THEN",

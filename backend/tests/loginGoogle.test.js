@@ -95,6 +95,14 @@ describe('Conta nova', () => {
     expect(rows[0]).toEqual({ n: 1, inativas: true });
   });
 
+  it('dois cliques ao mesmo tempo criam uma conta só, e os dois entram', async () => {
+    const email = gmailNovo();
+    const respostas = await Promise.all([1, 2, 3].map(() => entrarGoogle(credencial({ email }))));
+    expect(respostas.map((r) => r.status)).toEqual([200, 200, 200]);
+    const { rows } = await pool.query('SELECT count(*)::int AS n FROM usuario WHERE email = $1', [email]);
+    expect(rows[0].n).toBe(1);
+  });
+
   it('a conta criada pelo Google não tem senha padrão, e cada uma tem a sua', async () => {
     const emails = [gmailNovo(), gmailNovo()];
     for (const email of emails) await entrarGoogle(credencial({ email }));

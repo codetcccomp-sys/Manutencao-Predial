@@ -24,7 +24,25 @@
 -- limpeza falha inteira em vez de levar junto o que não devia; o teste
 -- (tests/limparDemonstracao.test.js) acusa a tabela antes disso.
 
--- 1. Travas: lista declarada, e-mails que existem, alguém para administrar.
+-- 1. Trava das tabelas, antes de qualquer conferência: o que se confere vale
+-- até o fim, porque ninguém muda nada no meio.
+-- Ninguém escreve nessas tabelas até o COMMIT (ou ROLLBACK); ler continua
+-- valendo. Sem isto, um chamado aberto no meio da limpeza aparecia entre um
+-- DELETE e outro e derrubava a transação, ou sobrava depois dela. A ordem
+-- começa pelo chamado, que é por onde as escritas do sistema começam.
+-- A espera pela trava tem limite (15 s, ou o valor de limpeza.espera): se uma
+-- escrita longa a estiver segurando, a limpeza desiste sem apagar nada, em vez
+-- de deixar na fila quem usa o sistema. É só rodar de novo.
+DO $$
+BEGIN
+  PERFORM set_config('lock_timeout', coalesce(nullif(current_setting('limpeza.espera', true), ''), '15s'), true);
+END $$;
+LOCK TABLE chamado, historico_chamado, comentario, anexo, avaliacao, chamado_material, notificacao,
+           usuario, equipe_tecnico, plano_preventivo, regra_distribuicao, configuracao,
+           recuperacao_senha, codigo_recuperacao_2fa, tentativa_login, tentativa_recuperacao
+  IN EXCLUSIVE MODE;
+
+-- 2. Travas de segurança: lista declarada, e-mails que existem, alguém para administrar.
 DO $$
 DECLARE
   lista text := btrim(coalesce(current_setting('limpeza.manter', true), ''));
@@ -53,16 +71,7 @@ BEGIN
   END IF;
 END $$;
 
--- Ninguém escreve nessas tabelas até o COMMIT (ou ROLLBACK); ler continua
--- valendo. Sem isto, um chamado aberto no meio da limpeza aparecia entre um
--- DELETE e outro e derrubava a transação, ou sobrava depois dela. A ordem
--- começa pelo chamado, que é por onde as escritas do sistema começam.
-LOCK TABLE chamado, historico_chamado, comentario, anexo, avaliacao, chamado_material, notificacao,
-           usuario, equipe_tecnico, plano_preventivo, regra_distribuicao, configuracao,
-           recuperacao_senha, codigo_recuperacao_2fa, tentativa_login, tentativa_recuperacao
-  IN EXCLUSIVE MODE;
-
--- 2. Quem fica, e a contagem de antes para o resumo.
+-- 3. Quem fica, e a contagem de antes para o resumo.
 DROP TABLE IF EXISTS pg_temp.limpeza_contas;
 CREATE TEMP TABLE limpeza_contas AS
 SELECT u.id, u.email, u.perfil,
@@ -97,7 +106,7 @@ $$;
 DROP TABLE IF EXISTS pg_temp.limpeza_antes;
 CREATE TEMP TABLE limpeza_antes AS SELECT * FROM pg_temp.limpeza_contagem();
 
--- 3. A preventiva aberta que sai volta para a fila do plano. Sem isto, o
+-- 4. A preventiva aberta que sai volta para a fila do plano. Sem isto, o
 -- plano que já tinha gerado a execução de novembro pularia para dezembro, e a
 -- de novembro não aconteceria no piloto. Volta para a mais antiga em aberto;
 -- o agendador gera de novo quando a janela dela chegar (ou já, se passou).
@@ -109,7 +118,7 @@ UPDATE plano_preventivo p
          GROUP BY plano_id) AS aberta
  WHERE p.id = aberta.plano_id AND aberta.primeira < p.proxima_execucao;
 
--- 4. Os chamados, e tudo o que pendura neles.
+-- 5. Os chamados, e tudo o que pendura neles.
 DELETE FROM anexo;
 DELETE FROM historico_chamado;
 DELETE FROM comentario;
@@ -118,7 +127,7 @@ DELETE FROM chamado_material;
 DELETE FROM notificacao;
 DELETE FROM chamado;
 
--- 5. As contas que saem, depois de soltar o que ainda aponta para elas.
+-- 6. As contas que saem, depois de soltar o que ainda aponta para elas.
 DELETE FROM equipe_tecnico WHERE usuario_id IN (SELECT id FROM limpeza_contas WHERE NOT fica);
 
 -- Plano e regra seguem valendo sem o técnico: o plano gera o chamado para a
@@ -143,7 +152,7 @@ DELETE FROM usuario WHERE id IN (SELECT id FROM limpeza_contas WHERE NOT fica);
 DELETE FROM tentativa_login;
 DELETE FROM tentativa_recuperacao;
 
--- 6. O resumo: quanto havia, quanto ficou, e quem ficou.
+-- 7. O resumo: quanto havia, quanto ficou, e quem ficou.
 SELECT item, antes, depois
   FROM (SELECT 1 AS ordem, a.item, a.total AS antes, d.total AS depois
           FROM limpeza_antes a

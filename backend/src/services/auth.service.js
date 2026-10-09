@@ -174,8 +174,9 @@ async function entrarComGoogle({ credencial }) {
       await criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente });
     } catch (err) {
       // Dois cliques no botão chegam juntos: o segundo encontra a conta que o
-      // primeiro acabou de criar, e segue com ela.
-      if (err.code !== 'EMAIL_EM_USO') throw err;
+      // primeiro acabou de criar (na conferência, ou no índice único se os
+      // dois passaram dela ao mesmo tempo), e segue com ela.
+      if (err.code !== 'EMAIL_EM_USO' && err.code !== '23505') throw err;
     }
     usuario = (await buscar()).rows[0];
   }

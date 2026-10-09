@@ -1,20 +1,65 @@
 const fs = require('fs');
 const path = require('path');
-const pool = require('../src/config/db');
+const { spawnSync } = require('child_process');
+const { Pool } = require('pg');
+const adminPool = require('../src/config/db');
 
 /**
  * A limpeza da demonstração (database/limpar-demonstracao.sql), que roda uma
  * vez, em produção, no dia em que o piloto começa.
  *
  * Por isso o teste roda o arquivo como ele é, numa transação desfeita no fim,
- * sobre um banco com uma demonstração em miniatura que toca toda tabela que
- * aponta para conta ou chamado. O script apaga o banco inteiro, não só o que
- * o teste criou: a transação é o que devolve tudo às outras suítes.
+ * sobre uma demonstração em miniatura que toca toda tabela que aponta para
+ * conta ou chamado.
+ *
+ * E num banco só dele, criado e migrado aqui e descartado no fim. O script
+ * apaga o banco inteiro e trava as tabelas até o fim da transação; no banco
+ * compartilhado, isso derrubaria (ou deixaria em deadlock) as outras suítes
+ * quando rodam juntas, e uma delas deixa dado que o script, de propósito,
+ * recusa. A migração real é a que constrói o banco: se uma tabela nova passar
+ * a apontar para conta ou chamado, o teste de chaves estrangeiras abaixo vê.
  */
 
 const SCRIPT = fs.readFileSync(path.join(__dirname, '../database/limpar-demonstracao.sql'), 'utf8');
 const MARCA = `limp${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+const BANCO = `smp_limpeza_${MARCA}`;
 const email = (quem) => `${MARCA}_${quem}@exemplo.com`;
+
+let pool; // o banco descartável
+
+beforeAll(async () => {
+  await adminPool.query(`CREATE DATABASE ${BANCO}`);
+  const migrar = spawnSync('node', ['database/migrate.js'], {
+    cwd: path.join(__dirname, '..'),
+    env: { ...process.env, DB_NAME: BANCO },
+    encoding: 'utf8',
+  });
+  if (migrar.status !== 0) throw new Error(`migração do banco descartável falhou:\n${migrar.stdout}\n${migrar.stderr}`);
+  pool = new Pool({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT) || 5432,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: BANCO,
+  });
+}, 120_000);
+
+afterAll(async () => {
+  await pool?.end();
+  // Sem FORCE: ele derruba as conexões à força, e uma que ainda estava
+  // fechando chega ao Node como erro sem tratador. As conexões do banco saem
+  // sozinhas em milissegundos; basta esperar por elas.
+  for (let tentativa = 0; tentativa < 50; tentativa++) {
+    try {
+      await adminPool.query(`DROP DATABASE IF EXISTS ${BANCO}`);
+      break;
+    } catch (erro) {
+      if (erro.code !== '55006' || tentativa === 49) throw erro; // 55006: ainda em uso
+      await new Promise((ok) => setTimeout(ok, 100));
+    }
+  }
+  await adminPool.end();
+});
 
 async function emTransacao(fn) {
   const client = await pool.connect();
@@ -37,11 +82,6 @@ async function conta(client, quem, perfil) {
 
 /** Uma demonstração pequena: cada tabela ligada a conta ou chamado com uma linha. */
 async function demonstracao(client) {
-  // Outra suíte da mesma rodada pode ter deixado anexo "no Storage" (o falso,
-  // dela) até a limpeza do fim; ele dispararia a trava do Storage aqui. Sai
-  // só dentro desta transação.
-  await client.query("DELETE FROM anexo WHERE armazenamento <> 'banco'");
-
   const d = {};
   d.admin = await conta(client, 'admin', 'administrador');
   d.gestorDemo = await conta(client, 'gestordemo', 'gestor');
@@ -143,6 +183,8 @@ async function limpar(client, manter) {
 
 const contar = async (client, tabela) => Number((await client.query(`SELECT count(*) FROM ${tabela}`)).rows[0].count);
 
+jest.setTimeout(30_000);
+
 describe('Limpeza da demonstração', () => {
   test('apaga chamados e contas que saem, e mantém o cadastro', async () => {
     await emTransacao(async (client) => {
@@ -208,9 +250,34 @@ describe('Limpeza da demonstração', () => {
         await outra.query("SET lock_timeout = '200ms'");
         await expect(outra.query("UPDATE chamado SET titulo = titulo WHERE false")).rejects.toThrow(/lock timeout/);
       } finally {
-        outra.release();
+        // Destruída, não devolvida: a conexão voltaria ao pool com o limite de
+        // 200 ms na sessão, e o teste da espera da limpeza passaria por ele.
+        outra.release(true);
       }
     });
+  });
+
+  // Uma escrita em andamento segura a tabela: a limpeza espera um pouco e
+  // desiste, sem apagar nada, em vez de travar a fila de quem usa o sistema.
+  test('com uma escrita em andamento, a limpeza desiste da espera em vez de travar a fila', async () => {
+    const escrita = await pool.connect();
+    try {
+      // Escrita aberta e não concluída: segura a tabela do chamado.
+      await escrita.query('BEGIN');
+      await demonstracao(escrita);
+
+      await emTransacao(async (client) => {
+        await client.query(`SELECT set_config('limpeza.espera', '200ms', true)`);
+        // Rede de segurança do próprio teste: sem o limite do script, a espera
+        // seria eterna e o Jest não conseguiria encerrar. Com ela, o teste
+        // falha em segundos dizendo "statement timeout", não "lock timeout".
+        await client.query(`SELECT set_config('statement_timeout', '3s', true)`);
+        await expect(limpar(client, 'so-administradores')).rejects.toThrow(/lock timeout/);
+      });
+    } finally {
+      await escrita.query('ROLLBACK');
+      escrita.release();
+    }
   });
 
   test('roda duas vezes sem erro: a segunda não acha o que apagar', async () => {
@@ -289,4 +356,3 @@ describe('Limpeza da demonstração', () => {
   });
 });
 
-afterAll(() => pool.end());
