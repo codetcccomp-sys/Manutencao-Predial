@@ -510,32 +510,33 @@ Nesta ordem, porque cada passo depende do anterior:
    que ninguém consegue cumprir transforma "atrasado" em ruído, e o indicador
    de prazo deixa de significar qualquer coisa.
 
-   **O relógio é de horas corridas.** `prazo_estimado = now() + prazo_horas`.
-   Ele não para à noite, no fim de semana nem em feriado. A única pausa é
-   `aguardando_material`, e essa é deliberada: espera por insumo é falha de
-   suprimento, não da equipe de campo.
+   **A régua que vale desde 9/10/2026** é a da folha de validação, respondida
+   pelo gestor da instituição: a Crítica conta em horas corridas, porque risco
+   não espera o expediente, e as outras três em horas úteis (segunda a sexta,
+   8h às 18h, fora os feriados cadastrados). O prazo (`prazo_estimado`) é
+   calculado na abertura do chamado: uma mudança de prazo vale só para os
+   chamados abertos depois dela. A única pausa é `aguardando_material`, e essa
+   é deliberada: espera por insumo é falha de suprimento, não da equipe de
+   campo.
 
-   Isso muda o que cada número significa. Com os padrões originais, um chamado
-   crítico aberto numa sexta às 18h estaria atrasado no sábado às 22h, e um
-   alto, no sábado à tarde — com equipe de horário comercial, os dois nasciam
-   condenados.
-
-   Ajustados em 20/09/2026, com a rotina da equipe ainda indefinida:
-
-   | Prioridade | Antes | Agora | Atravessa |
+   | Prioridade | Prazo | Contagem | Equivale a |
    | --- | --- | --- | --- |
-   | Crítica | 4h | **8h** | uma noite |
-   | Alta | 24h | **48h** | um dia útil com folga |
-   | Média | 72h | **120h** (5 dias) | um fim de semana |
-   | Baixa | 168h | **240h** (10 dias) | com sobra |
+   | Crítica | 8h | corridas | vale também de noite e no fim de semana |
+   | Alta | 16h | úteis | cerca de 2 dias úteis |
+   | Média | 40h | úteis | 4 dias úteis, cerca de uma semana |
+   | Baixa | 80h | úteis | 8 dias úteis, cerca de duas semanas |
 
-   Folgados de propósito. Prazo apertado demais é pior que frouxo demais:
-   se tudo nasce vermelho, "atrasado" vira ruído, ninguém olha mais, e o
-   indicador morre. Frouxo se conserta com dado real; apertado destrói a
-   medida antes de ela existir.
+   Antes eram 8h, 48h, 120h e 240h, todas em horas corridas. Em horas úteis o
+   número precisa ser menor: com expediente de 10h por dia, 48h úteis seriam
+   quase 5 dias úteis.
 
-   A crítica em 8h segue curta de propósito. Se um chamado crítico estourar
-   num fim de semana, o vermelho não é ruído — é o registro de que não havia
+   **Falta cadastrar os feriados estaduais e municipais e os recessos da
+   instituição** (a folha manda cadastrar, e depende das datas que a
+   instituição informar), em Cadastros → Expediente. Sem eles, um feriado local
+   conta como dia útil e o prazo vence um dia mais cedo do que devia.
+
+   A Crítica em 8h segue curta de propósito. Se um chamado crítico estourar
+   num fim de semana, o vermelho não é ruído: é o registro de que não havia
    ninguém para atender uma emergência, que é justamente o que o piloto
    precisa descobrir.
 
@@ -559,9 +560,11 @@ Nesta ordem, porque cada passo depende do anterior:
    cada dez casos. Um SLA colado na mediana reprova metade dos chamados por
    construção.
 4. **Pessoas** — pela tela de Usuários. O cadastro público só cria
-   solicitante; técnico, gestor e administrador saem daqui. Deixe pelo menos
-   dois administradores ativos: o sistema impede remover o último, mas dois
-   evitam depender de uma pessoa só.
+   solicitante; técnico, gestor e administrador saem daqui. A equipe decidiu
+   manter um único administrador, com a verificação em duas etapas ligada e os
+   códigos de recuperação guardados fora do celular (§2.1.3). Sem um segundo
+   administrador, perder o celular e os códigos só se resolve mexendo no
+   banco.
 
    > **Antes de qualquer outra coisa, crie um administrador com um e-mail que
    > você receba de verdade.** Em 20/09/2026 o único administrador do banco era
