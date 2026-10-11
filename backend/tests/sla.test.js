@@ -123,7 +123,7 @@ describe('Atraso', () => {
     await request(app)
       .patch(`/chamados/${chamado.id}/estado`)
       .set(comoGestor())
-      .send({ estado: caminho[2], servico_realizado: 'Servico executado e registrado conforme o combinado.' });
+      .send({ estado: caminho[2], servico_realizado: 'Servico executado e registrado conforme o combinado.', epi_confirmado: true });
 
     const detalhe = await request(app)
       .get(`/chamados/${chamado.id}`)

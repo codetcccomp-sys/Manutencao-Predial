@@ -159,7 +159,10 @@ describe('Situação: em aberto ou encerrado', () => {
     const encerrados = [];
     for (let i = 0; i < 3; i += 1) {
       const id = await chamadoCom({ titulo: `${marca} velho ${i}`, prazoEmHoras: -500 - i, tecnicoId: tecnico.id });
-      await pool.query("UPDATE chamado SET estado = 'concluido', servico_realizado = 'Serviço concluído no teste.' WHERE id = $1", [id]);
+      await pool.query(
+        "UPDATE chamado SET estado = 'concluido', servico_realizado = 'Serviço concluído no teste.', epi_confirmado_em = now(), epi_confirmado_por = COALESCE(tecnico_id, solicitante_id) WHERE id = $1",
+        [id]
+      );
       encerrados.push(id);
     }
     const aberto = await chamadoCom({ titulo: `${marca} aberto`, prazoEmHoras: 5, tecnicoId: tecnico.id });
@@ -186,7 +189,10 @@ describe('Situação: em aberto ou encerrado', () => {
     const concluido = await chamadoCom({ titulo: `${marca} a`, prazoEmHoras: 5 });
     const cancelado = await chamadoCom({ titulo: `${marca} b`, prazoEmHoras: 5 });
     const aberto = await chamadoCom({ titulo: `${marca} c`, prazoEmHoras: 5 });
-    await pool.query("UPDATE chamado SET estado = 'concluido', servico_realizado = 'Serviço concluído no teste.' WHERE id = $1", [concluido]);
+    await pool.query(
+      "UPDATE chamado SET estado = 'concluido', servico_realizado = 'Serviço concluído no teste.', epi_confirmado_em = now(), epi_confirmado_por = COALESCE(tecnico_id, solicitante_id) WHERE id = $1",
+      [concluido]
+    );
     await pool.query("UPDATE chamado SET estado = 'cancelado' WHERE id = $1", [cancelado]);
 
     const resp = await request(app)

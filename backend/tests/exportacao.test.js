@@ -187,7 +187,7 @@ describe('Planilha analítica (RF10)', () => {
     await request(app)
       .patch(`/chamados/${chamado.id}/estado`)
       .set(auth(gestor))
-      .send({ estado: 'concluido', servico_realizado: 'Troca da fechadura e ajuste do batente.' });
+      .send({ estado: 'concluido', servico_realizado: 'Troca da fechadura e ajuste do batente.', epi_confirmado: true });
 
     const resp = await request(app).get('/relatorios/exportar/chamados.csv').set(auth(gestor));
     const valores = separar(linhasDe(resp.text).find((l) => l.startsWith(chamado.protocolo)));

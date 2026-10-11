@@ -70,6 +70,7 @@ function ChamadoDetalhe() {
   const [tempoEmpregado, setTempoEmpregado] = useState('');
   const [concluindo, setConcluindo] = useState(false);
   const [servicoRealizado, setServicoRealizado] = useState('');
+  const [epiConfirmado, setEpiConfirmado] = useState(false);
   const [justificativaAtribuicao, setJustificativaAtribuicao] = useState('');
   const [justificativaReabertura, setJustificativaReabertura] = useState('');
   const [comentarios, setComentarios] = useState([]);
@@ -226,6 +227,10 @@ function ChamadoDetalhe() {
   // ação abre o campo em vez de tentar fechar o chamado e falhar no servidor.
   function acionarEstado(estado) {
     if (estado === 'concluido') {
+      // A caixa nasce desmarcada toda vez que o formulário abre, qualquer que
+      // tenha sido o fim da vez anterior (desistência, conclusão, reabertura):
+      // a declaração é de cada conclusão, não herdada.
+      setEpiConfirmado(false);
       setConcluindo(true);
       return;
     }
@@ -660,6 +665,12 @@ function ChamadoDetalhe() {
               Tempo empregado: <strong>{chamado.tempo_empregado_minutos} min</strong>
             </p>
           )}
+          {chamado.epi_confirmado_em && (
+            <p className="text-tinta-2">
+              Uso de EPI confirmado em{' '}
+              <strong>{new Date(chamado.epi_confirmado_em).toLocaleString('pt-BR')}</strong>
+            </p>
+          )}
         </div>
       )}
 
@@ -890,7 +901,10 @@ function ChamadoDetalhe() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                mudarEstado('concluido', { servico_realizado: servicoRealizado.trim() });
+                mudarEstado('concluido', {
+                  servico_realizado: servicoRealizado.trim(),
+                  epi_confirmado: epiConfirmado,
+                });
               }}
               className="grid gap-2 border-t pt-3"
             >
@@ -910,6 +924,26 @@ function ChamadoDetalhe() {
                   className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
                 />
               </label>
+              {/* A confirmação do uso de EPI é de quem conclui: o servidor a
+                  exige e guarda quem marcou e quando. A caixa começa
+                  desmarcada de propósito — marcada de antemão, deixaria de
+                  ser uma declaração. */}
+              <div className="grid gap-1 rounded border border-borda bg-fundo p-3 text-sm">
+                <label className="alvo-toque flex items-start gap-3 py-1 font-medium text-tinta">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={epiConfirmado}
+                    onChange={(e) => setEpiConfirmado(e.target.checked)}
+                    aria-describedby="epi-ajuda"
+                    className="mt-0.5 h-5 w-5 shrink-0"
+                  />
+                  Confirmo que os EPIs exigidos para este serviço foram utilizados.
+                </label>
+                <p id="epi-ajuda" className="pl-8 text-xs text-tinta-2">
+                  Obrigatório para concluir. Fica registrado com o seu nome e a hora.
+                </p>
+              </div>
               <div className="flex gap-2">
                 <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
                   Concluir chamado

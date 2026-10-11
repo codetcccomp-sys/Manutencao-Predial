@@ -243,7 +243,7 @@ describe('Aviso de atraso (RF08)', () => {
     await request(app)
       .patch(`/chamados/${chamado.id}/estado`)
       .set(auth(gestor))
-      .send({ estado: 'concluido', servico_realizado: 'Serviço executado e conferido no local.' });
+      .send({ estado: 'concluido', servico_realizado: 'Serviço executado e conferido no local.', epi_confirmado: true });
 
     await vencer(chamado.id);
     await varrer();

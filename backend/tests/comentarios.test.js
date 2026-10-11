@@ -199,7 +199,7 @@ describe('RN03: o comentário é o canal depois da janela de edição', () => {
     await request(app)
       .patch(`/chamados/${chamado.id}/estado`)
       .set(auth(gestor))
-      .send({ estado: 'concluido', servico_realizado: 'Reparo executado e conferido no local.' });
+      .send({ estado: 'concluido', servico_realizado: 'Reparo executado e conferido no local.', epi_confirmado: true });
 
     const resp = await comentar(chamado.id, solicitante, 'Continua vazando.');
 

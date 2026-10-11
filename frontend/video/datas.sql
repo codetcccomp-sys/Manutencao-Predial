@@ -26,7 +26,12 @@ UPDATE chamado c SET
   priorizado_em   = CASE WHEN c.priorizado_em  IS NOT NULL THEN a.abertura + interval '1 hour'  END,
   inicio_execucao = CASE WHEN c.inicio_execucao IS NOT NULL THEN a.abertura + interval '3 hours' END,
   data_conclusao  = CASE WHEN c.data_conclusao IS NOT NULL
-                         THEN a.abertura + interval '1 hour' * a.horas_ate_concluir END
+                         THEN a.abertura + interval '1 hour' * a.horas_ate_concluir END,
+  -- A confirmação de EPI é feita na hora de concluir: acompanha a conclusão, e
+  -- não fica com a data da semeadura (o que apareceria na tela como EPI
+  -- confirmado depois de o chamado já estar encerrado).
+  epi_confirmado_em = CASE WHEN c.epi_confirmado_em IS NOT NULL
+                           THEN a.abertura + interval '1 hour' * a.horas_ate_concluir END
   FROM alvo a WHERE a.id = c.id;
 
 UPDATE chamado c SET

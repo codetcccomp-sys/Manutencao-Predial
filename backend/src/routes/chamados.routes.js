@@ -76,6 +76,8 @@ router.patch(
     // Obrigatório só na conclusão (RN07); a checagem condicional fica no
     // serviço, que é quem conhece o estado de destino.
     servico_realizado: { tipo: 'string', maxLength: 4000 },
+    // Idem: o EPI só é cobrado na conclusão.
+    epi_confirmado: { tipo: 'boolean' },
     observacao: { tipo: 'string', maxLength: 2000 },
   }),
   chamadosController.mudarEstado

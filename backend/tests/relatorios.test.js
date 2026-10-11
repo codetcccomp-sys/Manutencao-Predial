@@ -39,7 +39,7 @@ async function levarAteConcluido(id) {
   await request(app).patch(`/chamados/${id}/estado`).set(auth(gestor.token)).send({ estado: 'em_triagem' });
   await request(app).patch(`/chamados/${id}/atribuir`).set(auth(gestor.token)).send({ tecnico_id: tecnico.usuario.id });
   await request(app).patch(`/chamados/${id}/estado`).set(auth(gestor.token)).send({ estado: 'em_andamento' });
-  await request(app).patch(`/chamados/${id}/estado`).set(auth(gestor.token)).send({ estado: 'concluido', servico_realizado: 'Servico executado e registrado conforme o combinado.' });
+  await request(app).patch(`/chamados/${id}/estado`).set(auth(gestor.token)).send({ estado: 'concluido', servico_realizado: 'Servico executado e registrado conforme o combinado.', epi_confirmado: true });
 }
 
 beforeAll(async () => {
