@@ -12,6 +12,7 @@ import api, { EVENTO_2FA_OBRIGATORIO } from '../src/api/client';
 import { AuthProvider } from '../src/context/AuthContext';
 import RotaProtegida from '../src/components/RotaProtegida';
 import MinhaConta from '../src/pages/MinhaConta';
+import Layout from '../src/components/Layout';
 import ExigenciaDoisFatores from '../src/components/ExigenciaDoisFatores';
 
 /**
@@ -118,5 +119,142 @@ describe('A chave na tela de Usuários', () => {
     await u.click(caixa);
     expect(await screen.findByText(/antes de exigir da gestão/)).toBeInTheDocument();
     expect(caixa).not.toBeChecked();
+  });
+});
+
+describe('Texto da conta quando a verificação é exigida', () => {
+  const cenarios = [
+    ['exigida da gestão: diz "Obrigatória", não "Recomendada"', { ...GESTOR, dois_fatores_pendente: true }, /Obrigatória para o seu perfil/, /Recomendada/],
+    ['gestão sem exigência: segue "Recomendada"', GESTOR, /Recomendada para o seu perfil/, /Obrigatória/],
+    ['quem não é da gestão: "Opcional"', { ...GESTOR, perfil: 'solicitante' }, /Opcional para o seu perfil/, /Obrigatória|Recomendada/],
+  ];
+  it.each(cenarios)('%s', async (_, usuario, deve, nao) => {
+    localStorage.setItem('smp_usuario', JSON.stringify(usuario));
+    abrir('/conta');
+    expect(await screen.findByText(deve)).toBeInTheDocument();
+    expect(screen.queryByText(nao)).not.toBeInTheDocument();
+  });
+});
+
+describe('Foco acompanha a ativação da verificação', () => {
+  const SEGREDO = 'JBSWY3DPEHPK3PXP';
+
+  async function aberta() {
+    localStorage.setItem('smp_usuario', JSON.stringify({ ...GESTOR, dois_fatores_pendente: true }));
+    api.post.mockImplementation(async (caminho) =>
+      caminho === '/auth/2fa/iniciar'
+        ? { data: { segredo: SEGREDO, endereco: `otpauth://totp/Conserva%20Predial:bia?secret=${SEGREDO}` } }
+        : { data: { codigos_recuperacao: ['AAAAA-BBBBB', 'CCCCC-DDDDD'] } }
+    );
+    const u = userEvent.setup();
+    abrir('/conta');
+    await u.click(await screen.findByRole('button', { name: 'Ligar a verificação em duas etapas' }));
+    return u;
+  }
+
+  it('ao abrir os passos, o foco vai para o começo deles — não para o campo, que subiria o teclado do celular', async () => {
+    await aberta();
+    const passos = await screen.findByRole('form', { name: /Passos para ligar a verificação/ });
+    expect(passos).toHaveFocus();
+    expect(screen.getByLabelText('Código do aplicativo')).not.toHaveFocus();
+  });
+
+  it('ao cancelar, o foco volta para o botão que abriu os passos', async () => {
+    const u = await aberta();
+    await u.click(await screen.findByRole('button', { name: 'Cancelar' }));
+    expect(await screen.findByRole('button', { name: 'Ligar a verificação em duas etapas' })).toHaveFocus();
+  });
+
+  it('ao ligar, o foco vai para os códigos de recuperação, que aparecem uma vez só', async () => {
+    const u = await aberta();
+    await u.type(screen.getByLabelText('Código do aplicativo'), '123456');
+    await u.type(screen.getByLabelText('Senha'), 'senha123');
+    await u.click(screen.getByRole('button', { name: 'Ligar' }));
+    expect(await screen.findByRole('region', { name: 'Códigos de recuperação' })).toHaveFocus();
+  });
+});
+
+describe('Ativação num celular, onde o QR Code da própria tela não se lê', () => {
+  const SEGREDO = 'JBSWY3DPEHPK3PXP';
+  const ENDERECO = `otpauth://totp/Conserva%20Predial:bia?secret=${SEGREDO}`;
+
+  async function aberta() {
+    localStorage.setItem('smp_usuario', JSON.stringify(GESTOR));
+    api.post.mockResolvedValue({ data: { segredo: SEGREDO, endereco: ENDERECO } });
+    const u = userEvent.setup();
+    abrir('/conta');
+    await u.click(await screen.findByRole('button', { name: 'Ligar a verificação em duas etapas' }));
+    await screen.findByRole('form', { name: /Passos para ligar/ });
+    return u;
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('oferece abrir direto no aplicativo autenticador, com o endereço da conta', async () => {
+    await aberta();
+    expect(screen.getByRole('link', { name: 'Abrir no aplicativo autenticador' })).toHaveAttribute('href', ENDERECO);
+  });
+
+  it('mostra a chave em grupos de 4 e copia a chave inteira, sem os espaços', async () => {
+    const u = await aberta();
+    const escrever = vi.fn().mockResolvedValue();
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: escrever } });
+
+    expect(screen.getByText('JBSW Y3DP EHPK 3PXP')).toBeInTheDocument();
+    await u.click(screen.getByRole('button', { name: 'Copiar chave' }));
+
+    expect(escrever).toHaveBeenCalledWith(SEGREDO);
+    expect(await screen.findByText('Chave copiada.')).toBeInTheDocument();
+  });
+
+  it('se a cópia for recusada, diz o que fazer em vez de fingir que copiou', async () => {
+    const u = await aberta();
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: vi.fn().mockRejectedValue(new Error('negado')) } });
+
+    await u.click(screen.getByRole('button', { name: 'Copiar chave' }));
+
+    expect(await screen.findByText(/Não foi possível copiar/)).toBeInTheDocument();
+    expect(screen.queryByText('Chave copiada.')).not.toBeInTheDocument();
+  });
+
+  it('sem a API de área de transferência (conexão sem HTTPS), também cai no aviso', async () => {
+    const u = await aberta();
+    vi.stubGlobal('navigator', { ...navigator, clipboard: undefined });
+
+    await u.click(screen.getByRole('button', { name: 'Copiar chave' }));
+
+    expect(await screen.findByText(/Não foi possível copiar/)).toBeInTheDocument();
+  });
+});
+
+describe('O sino de avisos no estado restrito', () => {
+  function abrirLayout() {
+    api.get.mockResolvedValue({ data: { notificacoes: [] } });
+    return render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/conta']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/conta" element={<p>conteúdo</p>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    );
+  }
+
+  it('some enquanto a conta está restrita: a API recusa a rota, e o painel ficaria vazio', async () => {
+    localStorage.setItem('smp_usuario', JSON.stringify({ ...GESTOR, dois_fatores_pendente: true }));
+    abrirLayout();
+    expect(await screen.findByText('conteúdo')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Avisos/ })).not.toBeInTheDocument();
+    expect(api.get).not.toHaveBeenCalledWith('/notificacoes');
+  });
+
+  it('com a conta livre, o sino continua lá (o teste acima não passa por não haver sino nenhum)', async () => {
+    localStorage.setItem('smp_usuario', JSON.stringify(GESTOR));
+    abrirLayout();
+    expect(await screen.findByRole('button', { name: /Avisos/ })).toBeInTheDocument();
+    expect(api.get).toHaveBeenCalledWith('/notificacoes');
   });
 });

@@ -91,7 +91,10 @@ function Layout() {
             <Link to="/conta" className="truncate rounded hover:underline" title="Minha conta">
               {usuario?.nome} <span className="text-tinta-clara">({rotuloPerfil(usuario?.perfil)})</span>
             </Link>
-            <Avisos />
+            {/* O sino chama uma rota que a API recusa enquanto a verificação exigida
+                não está ligada: ficaria um controle morto, com painel vazio, e
+                uma requisição recusada a cada minuto. */}
+            {!restrito && <Avisos />}
             <button
               onClick={logout}
               className="bg-navy-2 rounded px-3 py-1 shrink-0 hover:opacity-90"

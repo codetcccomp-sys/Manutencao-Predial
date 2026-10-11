@@ -15,6 +15,7 @@
  *   node testes/mutacao.mjs              todas
  *   node testes/mutacao.mjs vitest       só as que rodam em jsdom (rápidas)
  *   node testes/mutacao.mjs playwright   só as de layout (reconstroem a build)
+ *   node testes/mutacao.mjs todas UX:    só as cuja descrição contém o texto
  */
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -793,6 +794,130 @@ const MUTACOES = [
     para: '&& !u.anonimizado_em',
     spec: 'testes/ExigenciaDoisFatores.test.jsx',
   },
+  {
+    descricao: 'UX: o botão do Google deixa de acompanhar o espaço (sem ResizeObserver)',
+    arquivo: 'src/components/BotaoGoogle.jsx',
+    de: "if (typeof ResizeObserver !== 'undefined') {",
+    para: 'if (false) {',
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'UX: o botão do Google redesenha a cada aviso, sem esperar a medida assentar',
+    arquivo: 'src/components/BotaoGoogle.jsx',
+    de: 'espera = setTimeout(desenhar, ESPERA_MS);',
+    para: 'desenhar();',
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'UX: o botão do Google redesenha mesmo sem a largura ter mudado',
+    arquivo: 'src/components/BotaoGoogle.jsx',
+    de: 'if (largura === ultimaLargura) return;',
+    para: '',
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'UX: o botão do Google empilha o novo ao lado do antigo',
+    arquivo: 'src/components/BotaoGoogle.jsx',
+    de: 'lugar.current.replaceChildren();',
+    para: '',
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'UX: o botão do Google deixa o observador ligado depois de sair da tela',
+    arquivo: 'src/components/BotaoGoogle.jsx',
+    de: 'observador?.disconnect();',
+    para: '',
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'UX: o formulário do login volta a esticar com o botão do Google (grade sem min-w-0)',
+    arquivo: 'src/components/BotaoGoogle.jsx',
+    de: '<div className="grid min-w-0 gap-3">',
+    para: '<div className="grid gap-3">',
+    spec: 'testes/LoginGoogle.test.jsx',
+  },
+  {
+    descricao: 'UX: o espaço do botão do Google volta a poder esticar a coluna',
+    arquivo: 'src/components/BotaoGoogle.jsx',
+    de: 'className="flex min-h-[44px] min-w-0 justify-center overflow-hidden"',
+    para: 'className="flex min-h-[44px] justify-center"',
+    // Quem estica a coluna é a medida mínima de um item de grade: só o
+    // navegador mede isso, com o celular girando de verdade.
+    motor: 'playwright',
+    spec: 'e2e/google.spec.js',
+  },
+  {
+    descricao: 'UX: abrir os passos da ativação deixa o foco no corpo da página',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: 'if (cadastro) blocoAtivacao.current?.focus();',
+    para: '',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'UX: os códigos de recuperação aparecem sem levar o foco até eles',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: 'if (codigos) blocoCodigos.current?.focus();',
+    para: '',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'UX: cancelar a ativação não devolve o foco ao botão que a abriu',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: 'voltarAoBotao.current = true;',
+    para: 'voltarAoBotao.current = false;',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'UX: "Copiar chave" copia a chave com os espaços de leitura',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: 'await navigator.clipboard.writeText(cadastro.segredo);',
+    para: "await navigator.clipboard.writeText(cadastro.segredo.replace(/(.{4})/g, '$1 '));",
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'UX: copiar a chave diz "copiada" mesmo quando a área de transferência recusa',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: "setCopia('falhou');",
+    para: "setCopia('copiada');",
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'UX: o atalho para o aplicativo autenticador não leva ao endereço otpauth',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: 'href={cadastro.endereco}',
+    para: 'href="#"',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'UX: o atalho para o aplicativo aparece também no computador',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: 'className="mt-1 hidden [@media(pointer:coarse)]:block"',
+    para: 'className="mt-1 block"',
+    // Depende de `@media (pointer: coarse)`, que o jsdom não avalia.
+    motor: 'playwright',
+    spec: 'e2e/google.spec.js',
+  },
+  {
+    descricao: 'UX: a chave sai de uma peça só, sem grupos de 4 para ler e digitar',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: "{cadastro.segredo.replace(/(.{4})/g, '$1 ').trim()}",
+    para: '{cadastro.segredo}',
+    spec: 'testes/DuasEtapas.test.jsx',
+  },
+  {
+    descricao: 'UX: conta restrita lê "Recomendada" onde a administração já exige',
+    arquivo: 'src/pages/MinhaConta.jsx',
+    de: '{usuario.dois_fatores_pendente\n                ?',
+    para: '{false\n                ?',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
+  {
+    descricao: 'UX: conta restrita volta a mostrar o sino (que só dá erro)',
+    arquivo: 'src/components/Layout.jsx',
+    de: '{!restrito && <Avisos />}',
+    para: '{<Avisos />}',
+    spec: 'testes/ExigenciaDoisFatores.test.jsx',
+  },
 ];
 
 /**
@@ -826,9 +951,11 @@ process.on('exit', restaurarTudo);
 let decoradas = 0;
 
 const filtro = process.argv[2];
+const busca = process.argv[3];
 
 for (const { descricao, arquivo, de, para, spec, motor = 'vitest' } of MUTACOES) {
-  if (filtro && motor !== filtro) continue;
+  if (filtro && filtro !== 'todas' && motor !== filtro) continue;
+  if (busca && !descricao.includes(busca)) continue;
   if (!fs.existsSync(spec)) {
     console.log(`sem spec   | ${descricao}`);
     continue;

@@ -24,8 +24,13 @@ const googleFalso = {
       initialize: vi.fn(({ callback }) => {
         devolverCredencial = callback;
       }),
+      // Como o do Google: acrescenta o botão ao contêiner, não o substitui. Um
+      // fake que sobrescrevesse o conteúdo esconderia o botão antigo ficando
+      // para trás, ao lado do novo.
       renderButton: vi.fn((lugar) => {
-        lugar.textContent = 'Fazer login com o Google';
+        const botao = document.createElement('div');
+        botao.textContent = 'Fazer login com o Google';
+        lugar.appendChild(botao);
       }),
     },
   },
@@ -122,5 +127,116 @@ describe('Botão do Google', () => {
 
     await act(async () => devolverCredencial({ credential: 'c' }));
     expect(await screen.findByText(/não confirma este e-mail/)).toBeInTheDocument();
+  });
+});
+
+describe('O botão do Google acompanha o espaço que tem', () => {
+  // O jsdom não mede layout: a largura do contêiner e o aviso de que ele mudou
+  // (ResizeObserver) são trocados por versões controladas. O que vale aqui é a
+  // decisão do componente; o layout de verdade está em e2e/google.spec.js.
+  let largura;
+  let avisarMudanca;
+
+  beforeEach(() => {
+    largura = 300;
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(() => largura);
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb) {
+          avisarMudanca = cb;
+        }
+        observe() {}
+        disconnect() {}
+      }
+    );
+    api.get.mockResolvedValue({ data: { client_id: 'abc' } });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const largurasDesenhadas = () => googleFalso.accounts.id.renderButton.mock.calls.map(([, opcoes]) => opcoes.width);
+  const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms));
+
+  it('desenha com a largura do contêiner', async () => {
+    abrir();
+    await screen.findByText('Fazer login com o Google');
+    expect(largurasDesenhadas()).toEqual([300]);
+  });
+
+  it('desenha de novo quando o contêiner muda (o celular girou), trocando o botão em vez de empilhar', async () => {
+    abrir();
+    await screen.findByText('Fazer login com o Google');
+
+    largura = 224;
+    avisarMudanca();
+    await waitFor(() => expect(largurasDesenhadas()).toEqual([300, 224]));
+    // O botão antigo saiu: um só no contêiner.
+    expect(screen.getAllByText('Fazer login com o Google')).toHaveLength(1);
+  });
+
+  it('muitas medições seguidas (arrastar a janela) viram um redesenho só, na largura final', async () => {
+    abrir();
+    await screen.findByText('Fazer login com o Google');
+
+    for (const l of [280, 260, 240, 224]) {
+      largura = l;
+      avisarMudanca();
+    }
+    await waitFor(() => expect(largurasDesenhadas()).toEqual([300, 224]));
+    await esperar(300);
+    expect(largurasDesenhadas()).toEqual([300, 224]);
+  });
+
+  it('largura que não mudou não recarrega o iframe do Google', async () => {
+    abrir();
+    await screen.findByText('Fazer login com o Google');
+    avisarMudanca();
+    await esperar(300);
+    expect(largurasDesenhadas()).toEqual([300]);
+  });
+
+  it.each([
+    [120, 200],
+    [999, 400],
+  ])('respeita os limites do Google: contêiner de %i px vira botão de %i px', async (medida, esperada) => {
+    largura = medida;
+    abrir();
+    await screen.findByText('Fazer login com o Google');
+    expect(largurasDesenhadas()).toEqual([esperada]);
+  });
+
+  it('o contêiner não deixa uma largura fixa esticar a coluna do formulário', async () => {
+    abrir();
+    const lugar = await screen.findByTestId('botao-google');
+    // Item de grade tem largura mínima igual ao conteúdo; o conteúdo é um
+    // iframe de largura fixa. Sem min-w-0 nos dois níveis, o botão alargava o
+    // formulário inteiro (campos e "Entrar" saíam do cartão). O jsdom não mede
+    // isso; o e2e mede.
+    expect(lugar).toHaveClass('min-w-0', 'overflow-hidden');
+    expect(lugar.parentElement).toHaveClass('min-w-0');
+  });
+
+  it('sai da tela sem deixar o observador de largura para trás', async () => {
+    const desconectar = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb) {
+          avisarMudanca = cb;
+        }
+        observe() {}
+        disconnect() {
+          desconectar();
+        }
+      }
+    );
+    const { unmount } = abrir();
+    await screen.findByText('Fazer login com o Google');
+    unmount();
+    expect(desconectar).toHaveBeenCalled();
   });
 });
