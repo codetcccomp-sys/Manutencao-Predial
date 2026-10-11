@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import Aviso from '../components/ui/Aviso';
@@ -14,7 +14,15 @@ import { rotuloPerfil } from '../dominio/rotulos';
  *
  * A verificação em duas etapas é de quem quiser, e recomendada para quem pode
  * mais (gestão e administração): com ela, a senha vazada não abre a conta
- * sozinha.
+ * sozinha. Se a administração exigir, ela deixa de ser opcional (e o resto do
+ * sistema fica fechado até a pessoa ligar: ver RotaProtegida).
+ *
+ * O foco acompanha o que muda na tela. Ao abrir os passos da ativação, o botão
+ * que foi clicado some, e o foco caía no corpo da página: quem usa teclado ou
+ * leitor de tela recomeçava do cabeçalho, no único passo que a conta restrita
+ * precisa dar. Por isso o foco vai ao começo do bloco novo — e não ao campo do
+ * código, porque no celular o teclado subiria e cobriria o QR Code e os passos
+ * antes de a pessoa lê-los.
  */
 function MinhaConta() {
   const { usuario, logout, concluirDoisFatores } = useAuth();
@@ -28,6 +36,29 @@ function MinhaConta() {
   const [desligando, setDesligando] = useState(false);
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
+  const [copia, setCopia] = useState(''); // '' | 'copiada' | 'falhou'
+
+  const blocoAtivacao = useRef(null);
+  const blocoCodigos = useRef(null);
+  const voltarAoBotao = useRef(false);
+
+  // Abriu os passos da ativação: o foco vai para o começo deles.
+  useEffect(() => {
+    if (cadastro) blocoAtivacao.current?.focus();
+  }, [cadastro]);
+
+  // Os códigos de recuperação aparecem uma vez só: o foco vai até eles.
+  useEffect(() => {
+    if (codigos) blocoCodigos.current?.focus();
+  }, [codigos]);
+
+  // Cancelou a ativação: o foco volta para o botão que a abriu.
+  useEffect(() => {
+    if (!cadastro && voltarAoBotao.current) {
+      voltarAoBotao.current = false;
+      document.getElementById('ligar-2fa')?.focus();
+    }
+  }, [cadastro]);
 
   const carregar = useCallback(() => {
     api
@@ -57,6 +88,19 @@ function MinhaConta() {
       setCadastro(r.data);
       setCodigos(null);
       setCodigo('');
+      setCopia('');
+    }
+  }
+
+  // Num celular não dá para ler o QR Code da própria tela: a chave copiada
+  // (sem os espaços de leitura) é o caminho que sobra. A API de área de
+  // transferência só existe em conexão segura e pode ser recusada.
+  async function copiarChave() {
+    try {
+      await navigator.clipboard.writeText(cadastro.segredo);
+      setCopia('copiada');
+    } catch {
+      setCopia('falhou');
     }
   }
 
@@ -193,18 +237,53 @@ function MinhaConta() {
             )}
           </div>
         ) : cadastro ? (
-          <form onSubmit={ativar} className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-start">
+          <form
+            ref={blocoAtivacao}
+            tabIndex={-1}
+            aria-label="Passos para ligar a verificação em duas etapas"
+            onSubmit={ativar}
+            className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-start"
+          >
             <CodigoQR
               texto={cadastro.endereco}
               tamanho={176}
               rotulo="QR Code para cadastrar a conta no aplicativo autenticador"
             />
             <div className="grid gap-3 text-sm min-w-0">
-              <ol className="list-decimal pl-5 grid gap-1">
-                <li>No aplicativo autenticador, adicione uma conta lendo o QR Code.</li>
+              <ol className="list-decimal pl-5 grid gap-2">
                 <li>
-                  Sem câmera? Digite a chave:{' '}
-                  <code className="break-all rounded bg-fundo px-1 font-mono">{cadastro.segredo}</code>
+                  No aplicativo autenticador, adicione uma conta lendo o QR Code.
+                  {/* Só em tela de toque: no computador o link não leva a lugar
+                      nenhum, e no celular é o caminho principal. */}
+                  <span className="mt-1 hidden [@media(pointer:coarse)]:block">
+                    Neste celular não dá para ler o QR Code da própria tela.{' '}
+                    <a
+                      href={cadastro.endereco}
+                      className="alvo-toque font-medium text-navy underline"
+                    >
+                      Abrir no aplicativo autenticador
+                    </a>
+                    , ou copie a chave abaixo.
+                  </span>
+                </li>
+                <li>
+                  Sem câmera? Copie a chave e cole no aplicativo:
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    <code className="select-all break-words rounded bg-fundo px-1 font-mono">
+                      {cadastro.segredo.replace(/(.{4})/g, '$1 ').trim()}
+                    </code>
+                    <Botao tamanho="sm" onClick={copiarChave}>
+                      Copiar chave
+                    </Botao>
+                  </span>
+                  <span role="status" className="mt-1 block text-xs">
+                    {copia === 'copiada' && <span className="text-sucesso">Chave copiada.</span>}
+                    {copia === 'falhou' && (
+                      <span className="text-erro">
+                        Não foi possível copiar. Toque na chave para selecioná-la e copie.
+                      </span>
+                    )}
+                  </span>
                 </li>
                 <li>Digite abaixo o código de 6 dígitos que o aplicativo mostrar, e a sua senha.</li>
               </ol>
@@ -232,6 +311,7 @@ function MinhaConta() {
                 <Botao
                   variante="discreta"
                   onClick={() => {
+                    voltarAoBotao.current = true;
                     setCadastro(null);
                     setSenha('');
                   }}
@@ -245,18 +325,31 @@ function MinhaConta() {
           <div className="grid gap-3 text-sm">
             <p>
               <strong>Desligada.</strong>{' '}
-              {recomendada
-                ? 'Recomendada para o seu perfil: a gestão pode distribuir, cancelar e configurar o sistema.'
-                : 'Opcional para o seu perfil.'}
+              {usuario.dois_fatores_pendente
+                ? 'Obrigatória para o seu perfil: a administração exige a verificação de quem é da gestão.'
+                : recomendada
+                  ? 'Recomendada para o seu perfil: a gestão pode distribuir, cancelar e configurar o sistema.'
+                  : 'Opcional para o seu perfil.'}
             </p>
-            <Botao variante="primaria" onClick={iniciar} className="justify-self-start">
+            <Botao
+              id="ligar-2fa"
+              variante="primaria"
+              onClick={iniciar}
+              className="justify-self-start"
+            >
               Ligar a verificação em duas etapas
             </Botao>
           </div>
         )}
 
         {codigos && (
-          <div className="mt-4 grid gap-3 rounded border border-atencao/40 bg-atencao-tenue p-4 text-sm">
+          <div
+            ref={blocoCodigos}
+            tabIndex={-1}
+            role="region"
+            aria-label="Códigos de recuperação"
+            className="mt-4 grid gap-3 rounded border border-atencao/40 bg-atencao-tenue p-4 text-sm"
+          >
             <p className="font-medium text-atencao">
               Guarde estes códigos agora: eles não aparecem de novo. Cada um entra uma vez, para quando
               o celular não estiver à mão.

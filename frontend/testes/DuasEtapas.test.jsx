@@ -142,7 +142,8 @@ describe('Minha conta', () => {
     await usuario.click(screen.getByRole('button', { name: 'Ligar a verificação em duas etapas' }));
 
     expect(await screen.findByRole('img', { name: /cadastrar a conta no aplicativo/ })).toBeInTheDocument();
-    expect(screen.getByText('JBSWY3DPEHPK3PXP')).toBeInTheDocument();
+    // A chave aparece em grupos de 4, para ler e digitar sem se perder.
+    expect(screen.getByText('JBSW Y3DP EHPK 3PXP')).toBeInTheDocument();
 
     api.get.mockResolvedValue({ data: { ativo: true, ativado_em: '2026-10-07T12:00:00Z', codigos_restantes: 2 } });
     await usuario.type(screen.getByLabelText('Código do aplicativo'), '123456');
