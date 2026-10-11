@@ -54,7 +54,7 @@ async function concluir(id) {
   await request(app)
     .patch(`/chamados/${id}/estado`)
     .set(auth(gestor))
-    .send({ estado: 'concluido', servico_realizado: SERVICO });
+    .send({ estado: 'concluido', servico_realizado: SERVICO, epi_confirmado: true });
   return id;
 }
 
@@ -204,7 +204,7 @@ describe('Reabertura (RN09)', () => {
     await request(app)
       .patch(`/chamados/${id}/estado`)
       .set(auth(gestor))
-      .send({ estado: 'concluido', servico_realizado: 'Segunda tentativa de correcao do defeito.' });
+      .send({ estado: 'concluido', servico_realizado: 'Segunda tentativa de correcao do defeito.', epi_confirmado: true });
 
     const resp = await request(app)
       .post(`/chamados/${id}/reabertura`)

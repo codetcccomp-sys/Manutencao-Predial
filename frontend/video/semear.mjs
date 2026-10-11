@@ -135,7 +135,7 @@ for (const [titulo, descricao, c, l, ate, f] of T) {
   await chamar(t.token, 'PATCH', `/chamados/${chamado.id}/execucao`, { diagnostico: 'Constatado no local; material separado e serviço iniciado.', tempo_empregado_minutos: 40 + (k * 7) % 120 });
   if (ate === 'em_andamento') continue;
 
-  await chamar(t.token, 'PATCH', `/chamados/${chamado.id}/estado`, { estado: 'concluido', servico_realizado: SERV[k % SERV.length] });
+  await chamar(t.token, 'PATCH', `/chamados/${chamado.id}/estado`, { estado: 'concluido', servico_realizado: SERV[k % SERV.length], epi_confirmado: true });
   if (k <= NOTAS.length) await chamar(s, 'POST', `/chamados/${chamado.id}/avaliacao`, { nota: NOTAS[k - 1] });
 }
 // ── Manutenção preventiva (NBR 5674): equipamentos com etiqueta e planos ──────────────

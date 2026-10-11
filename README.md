@@ -619,7 +619,8 @@ com que o chamado deve ser gerado e, opcionalmente, o técnico responsável.
 - O Vercel Cron (`backend/vercel.json`, uma vez por dia) chama
   `GET /tarefas/gerar-preventivas` com o `CRON_SECRET`, que gera um chamado por
   execução que entrou na janela de antecedência. O chamado é comum — mesma
-  máquina de estados, conclusão exige o serviço descrito (RN07) — com
+  máquina de estados, conclusão exige o serviço descrito (RN07) e a
+  confirmação de EPI — com
   `origem = 'preventiva'`, o plano de onde veio e a data prevista.
 - O prazo da preventiva é o fim do dia previsto (no fuso da instituição), e não
   o SLA por prioridade, que foi pensado para o imprevisto. Repriorizar não
@@ -734,6 +735,31 @@ cadastrada: sem regra, nada muda.
 - Categoria e alcance não se editam: os chamados guardam a regra que os
   distribuiu (`regra_distribuicao_id`). Para mudar o alcance, desliga-se uma
   regra e cria-se outra.
+
+## Conclusão do chamado e EPI
+
+Concluir exige duas declarações de quem conclui: a descrição do serviço
+executado (RN07) e a confirmação de que os EPIs exigidos para o serviço foram
+utilizados. A segunda é registro de responsabilidade, e não controle: o sistema
+não tem como saber se o EPI foi vestido, só guarda quem afirmou que sim e
+quando (`epi_confirmado_por` e `epi_confirmado_em`, migração 027) e repete a
+frase na linha do tempo. Vale para o corretivo e para o preventivo, que
+concluem pelo mesmo caminho.
+
+- A tela mostra uma caixa obrigatória, sempre desmarcada ao abrir. O servidor
+  exige `epi_confirmado: true` (estritamente booleano) em
+  `PATCH /chamados/:id/estado` na conclusão, depois de conferida a descrição
+  do serviço.
+- O banco também recusa, por escrita direta, um chamado concluído sem
+  confirmação. A exceção é o que foi concluído antes da migração: não se
+  inventa confirmação para registro histórico. O corte é o instante em que a
+  migração rodou em cada banco, gravado como constante dentro da restrição
+  (`chamado_conclusao_exige_epi`). Uma restrição `NOT VALID` travaria qualquer
+  alteração desses chamados antigos.
+- A reabertura zera a confirmação do chamado, e a do ciclo anterior continua na
+  linha do tempo. O novo ciclo declara de novo.
+- Quem passa a chamar a API de conclusão, como um script, precisa mandar
+  `epi_confirmado: true`; sem o campo a resposta é 422 (`EPI_OBRIGATORIO`).
 
 ## Ciclos de atendimento
 

@@ -195,7 +195,8 @@ describe('Distribuição automática na abertura do chamado', () => {
     // outro. Se o concluído ainda contasse, seriam dois contra um, e o
     // próximo iria para o outro técnico.
     await pool.query(
-      `UPDATE chamado SET estado = 'concluido', servico_realizado = 'Lâmpada trocada.', data_conclusao = now()
+      `UPDATE chamado SET estado = 'concluido', servico_realizado = 'Lâmpada trocada.', data_conclusao = now(),
+              epi_confirmado_em = now(), epi_confirmado_por = COALESCE(tecnico_id, solicitante_id)
         WHERE id = ANY($1::int[])`,
       [[c1.id, c3.id]]
     );

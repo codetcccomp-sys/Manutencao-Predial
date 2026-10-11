@@ -570,7 +570,8 @@ describe('GET /relatorios/preventiva', () => {
     // conclusão. Futura: prazo ainda por vir (não julgável).
     await pool.query(
       `UPDATE chamado SET estado = 'concluido', servico_realizado = 'Filtro limpo e recolocado.',
-              data_conclusao = prazo_estimado - interval '1 hour' WHERE id = $1`,
+              data_conclusao = prazo_estimado - interval '1 hour',
+              epi_confirmado_em = now(), epi_confirmado_por = COALESCE(tecnico_id, solicitante_id) WHERE id = $1`,
       [c1.id]
     );
     await pool.query("UPDATE chamado SET prazo_estimado = now() - interval '1 day' WHERE id = $1", [c2.id]);

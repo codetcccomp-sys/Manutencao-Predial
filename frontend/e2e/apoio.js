@@ -147,6 +147,7 @@ export async function montarCenario({ perfis = ['gestor', 'solicitante', 'tecnic
       await gestor.patch(`/chamados/${chamadoId}/estado`, {
         estado: 'concluido',
         servico_realizado: 'Serviço executado e conferido no local pela equipe.',
+        epi_confirmado: true,
       });
     },
 

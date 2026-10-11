@@ -380,6 +380,112 @@ describe('Hierarquia de cabeçalhos', () => {
   });
 });
 
+describe('Conclusão com confirmação de EPI', () => {
+  const SERVICO = 'Trocado o registro e testada a vedação.';
+
+  async function abrirConclusao() {
+    const usuario = userEvent.setup();
+    montar({ como: TECNICO, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+    await usuario.click(screen.getByRole('button', { name: 'Concluído' }));
+    return usuario;
+  }
+
+  const caixaEpi = () => screen.getByRole('checkbox', { name: /EPIs exigidos para este serviço/ });
+
+  it('pede a confirmação junto da descrição, desmarcada e com a explicação', async () => {
+    await abrirConclusao();
+
+    // Desmarcada de propósito: marcada de antemão deixaria de ser declaração.
+    expect(caixaEpi()).not.toBeChecked();
+    expect(caixaEpi()).toBeRequired();
+    expect(caixaEpi()).toHaveAccessibleDescription(
+      'Obrigatório para concluir. Fica registrado com o seu nome e a hora.'
+    );
+  });
+
+  it('sem marcar a caixa, o chamado não é concluído', async () => {
+    const usuario = await abrirConclusao();
+
+    await usuario.type(screen.getByLabelText(/Descrição do serviço executado/), SERVICO);
+    await usuario.click(screen.getByRole('button', { name: 'Concluir chamado' }));
+
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('marcada, envia a confirmação junto da descrição', async () => {
+    const usuario = await abrirConclusao();
+
+    await usuario.type(screen.getByLabelText(/Descrição do serviço executado/), `  ${SERVICO}  `);
+    await usuario.click(caixaEpi());
+    await usuario.click(screen.getByRole('button', { name: 'Concluir chamado' }));
+
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith('/chamados/7/estado', {
+        estado: 'concluido',
+        servico_realizado: SERVICO,
+        epi_confirmado: true,
+      })
+    );
+  });
+
+  it('desistir zera a caixa: a próxima conclusão começa desmarcada', async () => {
+    const usuario = await abrirConclusao();
+
+    await usuario.click(caixaEpi());
+    expect(caixaEpi()).toBeChecked();
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await usuario.click(screen.getByRole('button', { name: 'Concluído' }));
+    expect(caixaEpi()).not.toBeChecked();
+  });
+
+  it('a recusa do servidor aparece na tela, e a caixa segue marcada para outra tentativa', async () => {
+    const usuario = await abrirConclusao();
+    api.patch.mockRejectedValueOnce({
+      response: { data: { erro: { mensagem: 'A conclusão exige a confirmação do uso dos EPIs exigidos para o serviço.' } } },
+    });
+
+    await usuario.type(screen.getByLabelText(/Descrição do serviço executado/), SERVICO);
+    await usuario.click(caixaEpi());
+    await usuario.click(screen.getByRole('button', { name: 'Concluir chamado' }));
+
+    expect(await screen.findByText(/exige a confirmação do uso dos EPIs/)).toBeInTheDocument();
+    expect(caixaEpi()).toBeChecked();
+  });
+
+  it('o registro do atendimento diz quando o uso de EPI foi confirmado', async () => {
+    montar({
+      como: SOLICITANTE,
+      dados: chamado({
+        estado: 'concluido',
+        servico_realizado: SERVICO,
+        data_conclusao: '2026-10-11T15:30:00Z',
+        epi_confirmado_em: '2026-10-11T15:30:00Z',
+      }),
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    expect(screen.getByText(/Uso de EPI confirmado em/)).toBeInTheDocument();
+  });
+
+  it('chamado concluído antes da regra não inventa uma confirmação', async () => {
+    montar({
+      como: SOLICITANTE,
+      dados: chamado({
+        estado: 'concluido',
+        servico_realizado: SERVICO,
+        data_conclusao: '2026-07-10T15:30:00Z',
+        epi_confirmado_em: null,
+      }),
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    expect(screen.getByText(SERVICO)).toBeInTheDocument();
+    expect(screen.queryByText(/Uso de EPI confirmado/)).toBeNull();
+  });
+});
+
 describe('Confirmação antes do que não tem volta', () => {
   it('cancelar o chamado pergunta antes, e o botão sozinho não cancela nada', async () => {
     const usuario = userEvent.setup();

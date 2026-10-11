@@ -167,7 +167,7 @@ describe('RN07: conclusão exige descrição do serviço', () => {
     const resp = await request(app)
       .patch(`/chamados/${id}/estado`)
       .set(auth(tecnico))
-      .send({ estado: 'concluido', servico_realizado: 'ok' });
+      .send({ estado: 'concluido', servico_realizado: 'ok', epi_confirmado: true });
 
     expect(resp.status).toBe(422);
   });
@@ -180,6 +180,7 @@ describe('RN07: conclusão exige descrição do serviço', () => {
       .send({
         estado: 'concluido',
         servico_realizado: 'Substituído o disjuntor e reapertado o barramento do quadro B.',
+        epi_confirmado: true,
       });
 
     expect(resp.status).toBe(200);
@@ -190,8 +191,14 @@ describe('RN07: conclusão exige descrição do serviço', () => {
 
   it('o banco também recusa conclusão sem descrição, por escrita direta', async () => {
     const id = await levarAteAndamento();
+    // Com a confirmação de EPI já posta, para que só a descrição falte: o
+    // banco acusa as restrições em ordem de nome, e a do EPI vem antes.
     await expect(
-      pool.query("UPDATE chamado SET estado = 'concluido' WHERE id = $1", [id])
+      pool.query(
+        `UPDATE chamado SET estado = 'concluido', epi_confirmado_em = now(), epi_confirmado_por = tecnico_id
+          WHERE id = $1`,
+        [id]
+      )
     ).rejects.toThrow(/chamado_conclusao_exige_servico/);
   });
 
@@ -200,7 +207,7 @@ describe('RN07: conclusão exige descrição do serviço', () => {
     await request(app)
       .patch(`/chamados/${id}/estado`)
       .set(auth(tecnico))
-      .send({ estado: 'concluido', servico_realizado: 'Serviço concluído conforme o combinado.' });
+      .send({ estado: 'concluido', servico_realizado: 'Serviço concluído conforme o combinado.', epi_confirmado: true });
 
     const resp = await request(app)
       .patch(`/chamados/${id}/execucao`)

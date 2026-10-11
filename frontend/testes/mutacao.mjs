@@ -918,6 +918,57 @@ const MUTACOES = [
     para: '{<Avisos />}',
     spec: 'testes/ExigenciaDoisFatores.test.jsx',
   },
+  {
+    descricao: 'EPI: a caixa de confirmação deixa de ser obrigatória',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '                    required\n                    checked={epiConfirmado}',
+    para: '                    checked={epiConfirmado}',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'EPI: a conclusão segue sem mandar a confirmação',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '                  epi_confirmado: epiConfirmado,\n',
+    para: '',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'EPI: a caixa herda a marcação da vez anterior',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '      setEpiConfirmado(false);\n      setConcluindo(true);',
+    para: '      setConcluindo(true);',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'EPI: a caixa perde a explicação lida pelo leitor de tela',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'aria-describedby="epi-ajuda"',
+    para: '',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'EPI: o registro do atendimento esconde quando foi confirmado',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '{chamado.epi_confirmado_em && (',
+    para: '{false && (',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'EPI: chamado antigo ganha uma confirmação que nunca existiu',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '{chamado.epi_confirmado_em && (',
+    para: '{chamado.data_conclusao && (',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'EPI: o rótulo da caixa volta a ser menor que o alvo mínimo de 24 px',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'flex items-start gap-3 py-1 font-medium text-tinta',
+    para: 'flex items-start gap-3 font-medium text-tinta',
+    // Altura de elemento só o navegador mede.
+    motor: 'playwright',
+    spec: 'e2e/epi.spec.js',
+  },
 ];
 
 /**

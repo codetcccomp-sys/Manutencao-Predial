@@ -457,7 +457,7 @@ async function atribuir(id, { tecnico_id, equipe_id, justificativa }, usuario) {
   return chamado;
 }
 
-async function mudarEstado(id, { estado: novoEstado, observacao, servico_realizado }, usuario) {
+async function mudarEstado(id, { estado: novoEstado, observacao, servico_realizado, epi_confirmado }, usuario) {
   const { atualizado, notificacaoId } = await transacao(async (client) => {
     const chamado = await bloquearChamado(client, id);
 
@@ -523,6 +523,21 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
       params.push(servico_realizado.trim());
       campos.push(`servico_realizado = $${params.length}`);
       campos.push('data_conclusao = now()');
+
+      // Uso de EPI: quem conclui declara, e o sistema guarda quem e quando.
+      // Estritamente `true`: "true" (texto), 1 ou a ausência do campo não
+      // valem como declaração — um cliente antigo, ou um script que esqueceu
+      // o campo, não pode concluir por omissão.
+      if (epi_confirmado !== true) {
+        throw new AppError(
+          'A conclusão exige a confirmação do uso dos EPIs exigidos para o serviço.',
+          422,
+          'EPI_OBRIGATORIO'
+        );
+      }
+      campos.push('epi_confirmado_em = now()');
+      params.push(usuario.id);
+      campos.push(`epi_confirmado_por = $${params.length}`);
     }
 
     if (chamado.estado === 'aguardando_material' && novoEstado !== 'aguardando_material') {
@@ -557,7 +572,14 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
       params
     );
 
-    await registrarHistorico(client, id, usuario.id, chamado.estado, novoEstado, observacao);
+    // A confirmação também vai para a linha do tempo. As colunas do chamado
+    // voltam a nulo na reabertura (o novo ciclo precisa da sua própria), e sem
+    // este registro a do ciclo anterior sumiria junto.
+    const observacaoDoHistorico =
+      novoEstado === 'concluido'
+        ? [observacao?.trim(), 'Uso de EPI confirmado.'].filter(Boolean).join(' ')
+        : observacao;
+    await registrarHistorico(client, id, usuario.id, chamado.estado, novoEstado, observacaoDoHistorico);
 
     const notificacao = await client.query(
       `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
@@ -866,6 +888,10 @@ async function reabrir(id, { justificativa }, usuario) {
          -- novo ciclo precisa da sua própria, e mantê-la aqui deixaria a
          -- conclusão seguinte passar pela RN07 com texto do ciclo anterior.
          servico_realizado = NULL,
+         -- Idem a confirmação de EPI: é do ciclo, e a anterior fica na linha
+         -- do tempo.
+         epi_confirmado_em = NULL,
+         epi_confirmado_por = NULL,
          total_reaberturas = total_reaberturas + 1,
          reaberto_em = now(),
          inicio_execucao = NULL,
