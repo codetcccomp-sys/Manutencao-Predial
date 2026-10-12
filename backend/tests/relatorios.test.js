@@ -221,6 +221,41 @@ describe('GET /relatorios/serie (chamados por dia)', () => {
     expect(dia(resp.body, '1999-06-21').abertos).toBe(0);
   });
 
+  // Setembro de 1999, de propósito: o horário de verão de 1999 começou em outubro, e
+  // aqui Brasília ainda é UTC-3 sem exceção.
+  describe('o dia do período é o da instituição, não o do servidor', () => {
+    it('o último dia vai até a meia-noite de Brasília, e a noite entra', async () => {
+      // 02:30 UTC de 11/09 é 23:30 de 10/09 em Brasília. Com o recorte feito em UTC, "ate=10/09"
+      // cortava às 21h e o chamado da noite saía do gráfico e do resumo — justamente quando
+      // o gráfico já o contava no dia 10.
+      await chamadoEm('1999-09-11', '02:30:00Z');
+
+      const grafico = await serie('de=1999-09-10&ate=1999-09-10');
+      expect(dia(grafico.body, '1999-09-10').abertos).toBe(1);
+
+      const resumo = await comoGestor('/relatorios/resumo?de=1999-09-10&ate=1999-09-10');
+      expect(resumo.body.totais.total).toBe(1);
+    });
+
+    it('o primeiro dia começa à meia-noite de Brasília, e a noite anterior fica fora', async () => {
+      // 01:30 UTC de 20/09 é 22:30 de 19/09 em Brasília: pertence ao dia 19. Com o recorte em UTC,
+      // "de=20/09" a incluía.
+      await chamadoEm('1999-09-20', '01:30:00Z');
+      // 03:30 UTC de 20/09 é 00:30 do dia 20 em Brasília: este sim é do dia 20.
+      await chamadoEm('1999-09-20', '03:30:00Z');
+
+      const resumo = await comoGestor('/relatorios/resumo?de=1999-09-20&ate=1999-09-20');
+      expect(resumo.body.totais.total).toBe(1);
+    });
+
+    it('o gráfico e o resumo continuam fechando no mesmo recorte', async () => {
+      const consulta = 'de=1999-09-10&ate=1999-09-20';
+      const [grafico, resumo] = await Promise.all([serie(consulta), comoGestor(`/relatorios/resumo?${consulta}`)]);
+
+      expect(grafico.body.dias.reduce((acc, d) => acc + d.abertos, 0)).toBe(resumo.body.totais.total);
+    });
+  });
+
   it('conta o concluído no dia em que terminou, dentro do recorte de abertos', async () => {
     // Percorre o fluxo inteiro primeiro e só então recua o chamado todo (ver recuarPara).
     const id = await abrirChamado('Série concluída');

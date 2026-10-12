@@ -90,6 +90,12 @@ Dependem de decisão do dono do projeto antes de qualquer código:
 - As suítes do backend criam contas `@exemplo.com` e o teardown global as
   apaga. Teste que deixa chamado com data no passado **polui as médias** das
   suítes de relatório: apague o que criar, ou volte as datas juntas.
+- **Dia é dia de Brasília, não de UTC.** O servidor e o banco rodam em UTC, e das
+  21h à meia-noite em Brasília já é o dia seguinte lá (00h–03h UTC). Filtro por
+  dia em coluna de instante usa `AT TIME ZONE` com `config/fuso.js`, nunca
+  `::date` solto. Teste que depende de "hoje" só se prova num banco **vazio**
+  e nessa janela: o banco de desenvolvimento, cheio de dados antigos, esconde o
+  defeito, e o do CI, que nasce vazio, o mostra.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque
   pequeno e formulário vazando no celular que o jsdom não vê.
 

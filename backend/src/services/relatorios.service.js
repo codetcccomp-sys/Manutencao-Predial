@@ -1,13 +1,21 @@
 const pool = require('../config/db');
 const { AppError } = require('../middlewares/errorHandler');
+const { FUSO } = require('../config/fuso');
 
 /**
  * Recorte de período. Um intervalo aberto dos dois lados é o padrão ("desde
  * sempre"), e datas malformadas são recusadas em vez de silenciosamente
  * ignoradas: um relatório que devolve o período errado sem avisar é pior
  * que um erro.
+ *
+ * O dia do período é o dia NO FUSO DA INSTITUIÇÃO. Comparar o instante com
+ * `$1::date` usaria o fuso da sessão do banco (UTC): "até 11/10" cortaria às
+ * 21h de Brasília e os chamados da noite sumiriam do relatório — e do gráfico,
+ * que já conta o dia no fuso certo. Por isso, em coluna de instante, a
+ * meia-noite que delimita o dia é a do fuso. Coluna DATE (`tipo: 'dia'`) já é
+ * um dia, e compara dia com dia.
  */
-function recorte({ de, ate }, coluna = 'c.data_abertura') {
+function recorte({ de, ate }, coluna = 'c.data_abertura', { tipo = 'instante' } = {}) {
   const condicoes = [];
   const params = [];
 
@@ -22,12 +30,20 @@ function recorte({ de, ate }, coluna = 'c.data_abertura') {
     }
 
     params.push(valor);
+    const dia = `$${params.length}::date`;
     // "ate" usa < sobre o dia seguinte para incluir o dia inteiro informado,
     // e não parar à meia-noite dele.
+    if (tipo === 'dia') {
+      condicoes.push(operador === '<' ? `${coluna} < (${dia} + interval '1 day')` : `${coluna} >= ${dia}`);
+      continue;
+    }
+
+    params.push(FUSO);
+    const fuso = `$${params.length}`;
     condicoes.push(
       operador === '<'
-        ? `${coluna} < ($${params.length}::date + interval '1 day')`
-        : `${coluna} >= $${params.length}::date`
+        ? `${coluna} < ((${dia} + interval '1 day') AT TIME ZONE ${fuso})`
+        : `${coluna} >= (${dia}::timestamp AT TIME ZONE ${fuso})`
     );
   }
 
@@ -156,7 +172,7 @@ async function resumo(filtros = {}) {
  * o indicador de março oscilaria a cada dia de março.
  */
 async function preventiva(filtros = {}) {
-  const { where, params } = recorte(filtros, 'c.data_prevista');
+  const { where, params } = recorte(filtros, 'c.data_prevista', { tipo: 'dia' });
   const base = where ? `${where} AND c.origem = 'preventiva'` : "WHERE c.origem = 'preventiva'";
 
   return emSnapshot(async (client) => {
@@ -226,7 +242,6 @@ async function preventiva(filtros = {}) {
 // chamado aberto às 22h de segunda em Brasília nasce às 01h de terça em UTC, e
 // contá-lo na terça faria o gráfico discordar de quem abriu o chamado — justamente
 // as noites, que é quando a manutenção predial menos tem gente para conferir.
-const FUSO = process.env.FUSO_HORARIO || 'America/Sao_Paulo';
 
 // Um ano de pontos diários é o que um gráfico de linha aguenta sem virar borrão, e
 // também o que uma resposta aguenta sem virar peso: sem o teto, "desde sempre" numa

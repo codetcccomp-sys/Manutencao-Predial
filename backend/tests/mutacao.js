@@ -394,6 +394,22 @@ const MUTACOES = [
     spec: 'tests/epi.test.js',
     migrar: true,
   },
+  {
+    // O COALESCE mantém o parâmetro em uso e devolve UTC: é o defeito antigo, sem
+    // trocar o resto da consulta.
+    descricao: 'fuso: o fim do período volta a cortar à meia-noite de UTC (a noite some)',
+    arquivo: 'src/services/relatorios.service.js',
+    de: "? `${coluna} < ((${dia} + interval '1 day') AT TIME ZONE ${fuso})`",
+    para: "? `${coluna} < ((${dia} + interval '1 day') AT TIME ZONE COALESCE('UTC', ${fuso}))`",
+    spec: 'tests/relatorios.test.js',
+  },
+  {
+    descricao: 'fuso: o início do período volta a começar à meia-noite de UTC (a noite anterior entra)',
+    arquivo: 'src/services/relatorios.service.js',
+    de: ": `${coluna} >= (${dia}::timestamp AT TIME ZONE ${fuso})`",
+    para: ": `${coluna} >= (${dia}::timestamp AT TIME ZONE COALESCE('UTC', ${fuso}))`",
+    spec: 'tests/relatorios.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';
