@@ -33,6 +33,9 @@ homologação**. Este documento a define.
 > 2. O nome dessa instituição como controladora.
 >
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
+>
+> **Um terceiro ponto, para a instituição revisar** (seção 7): o banco fica em
+> São Paulo, mas as funções que executam o sistema rodam nos Estados Unidos.
 
 ---
 
@@ -54,6 +57,7 @@ pessoa indiretamente, como o endereço de rede.
 | `equipe_tecnico` | quem está em qual equipe | Distribuição |
 | `tentativa_login` | **e-mail e IP** de cada tentativa | Bloquear força bruta |
 | `recuperacao_senha` | **IP** de quem pediu, hash do token | Rastrear pedido de troca de senha |
+| `usuario`, `codigo_recuperacao_2fa` | chave do aplicativo autenticador e data de ativação; códigos de recuperação em hash | Verificação em duas etapas (só de quem liga) |
 
 Dois pontos que passam despercebidos:
 
@@ -392,3 +396,36 @@ Dados úteis para esse plano:
   os tokens JWT já emitidos: eles valem até expirar. Revogar de verdade exige
   trocar o `JWT_SECRET`, o que derruba todo mundo de uma vez — e é isso que se
   quer, num incidente.
+
+---
+
+## 7. O aviso ao titular, na tela
+
+A página pública `/privacidade` (`frontend/src/pages/Privacidade.jsx`) é o aviso
+que a pessoa lê. Aparece apontada no **cadastro**, na **tela de entrada** (por
+onde entra quem cria a conta pelo Google, sem nunca ver o cadastro) e em
+**Minha conta**. Nos três, abre em outra aba para quem já digitou o formulário
+não perdê-lo.
+
+Ela descreve o que o sistema faz, conferido nas seções 1, 2, 3 e 5 deste
+documento, e por isso **os dois andam juntos**: mudou um dado guardado, um
+prazo, a hospedagem ou o contato, muda aqui e na página. O teste
+`frontend/testes/Privacidade.test.jsx` guarda o que a página não pode prometer
+a mais.
+
+**O que a página diz de propósito, e não deve ser "melhorado" antes de a
+realidade mudar:**
+
+| Na página | Por quê |
+| --- | --- |
+| Não há controlador nomeado; diz que a instituição "ainda não foi formalizada" | É o 🔲 da seção 4. Inventar um nome é pior que a lacuna |
+| Não cita base legal | Depende de a instituição ser pública ou privada (seção 4) |
+| Os prazos de 5 e 2 anos aparecem como **previstos** | Nenhum dos dois é executado hoje (seção 2) |
+| Diz que os servidores que executam o sistema ficam nos Estados Unidos | É o que a Vercel faz (`iad1`); o banco, no Supabase, fica em São Paulo (`sa-east-1`) |
+| O contato é a caixa `code.tcc.comp@gmail.com`, sem nome de pessoa | É a caixa que recebe o pedido; a seção 4 nomeia quem responde |
+
+**Para a instituição revisar quando existir:** (a) o nome do controlador e a
+natureza, públicos ou privados, que preenchem a seção 4 e a página; (b) a
+transferência internacional, já que a execução do sistema fica fora do Brasil
+mesmo com o banco aqui; (c) trocar o e-mail do contato por um institucional.
+Nada disto foi revisado por quem responde juridicamente.

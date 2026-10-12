@@ -42,6 +42,7 @@ instituição alguma.
 | --- | --- |
 | Sistema | <https://conserva-predial.vercel.app> |
 | API | <https://manutencao-predial-backend-delta.vercel.app> |
+| Aviso de privacidade | <https://conserva-predial.vercel.app/privacidade> |
 
 O frontend responde também em `manutencao-predial-frontend.vercel.app`, o nome
 que a Vercel deu ao projeto. O endereço curto foi **acrescentado**, não

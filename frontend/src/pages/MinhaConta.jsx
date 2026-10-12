@@ -374,6 +374,20 @@ function MinhaConta() {
           Sair de todos os aparelhos
         </Botao>
       </Cartao>
+
+      <Cartao
+        titulo="Seus dados"
+        descricao="O que o sistema guarda sobre você, por quanto tempo, e como pedir acesso, correção ou a remoção da conta."
+      >
+        <a
+          href="/privacidade"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-medium text-navy underline"
+        >
+          Ler o aviso de privacidade{' '}<span className="sr-only">(abre em outra aba)</span>
+        </a>
+      </Cartao>
     </div>
   );
 }

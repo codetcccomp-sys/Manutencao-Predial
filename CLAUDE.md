@@ -96,6 +96,10 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   `::date` solto. Teste que depende de "hoje" só se prova num banco **vazio**
   e nessa janela: o banco de desenvolvimento, cheio de dados antigos, esconde o
   defeito, e o do CI, que nasce vazio, o mostra.
+- O aviso de privacidade (`frontend/src/pages/Privacidade.jsx`) e `docs/lgpd.md`
+  andam juntos: a página descreve o que o sistema faz. Mudou dado guardado, prazo,
+  hospedagem ou contato? Mude os dois. Não nomeia controlador nem cita base legal
+  enquanto a instituição não existir, e o teste impede que prometa o que não é feito.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque
   pequeno e formulário vazando no celular que o jsdom não vê.
 
@@ -103,8 +107,12 @@ Dependem de decisão do dono do projeto antes de qualquer código:
 
 - Senhas, `service_role` do Supabase, `CRON_SECRET` e `.env` nunca vão para chat,
   commit ou log. Quem administra digita direto no Supabase, GitHub ou Vercel.
-- O script `backend/database/limpar-demonstracao.sql` não roda em produção sem a
-  data do piloto e a lista de e-mails que ficam (`docs/piloto.md` §2.0).
+- **O script `backend/database/limpar-demonstracao.sql` já rodou em produção, em
+  12/10/2026. Não rode de novo lá: ele apaga todos os chamados, e desde então
+  são reais** (`docs/piloto.md` §2.0). Serve para banco de demonstração ou de
+  homologação.
+- O cadastro da produção (37 locais da "Sede", 8 planos preventivos) é de teste,
+  mantido para a apresentação. Os planos começam a gerar chamados em 31/10/2026.
 - `exigir_2fa_gestao` e `cadastro_exige_aprovacao` são chaves da tabela
   `configuracao`, ligadas pela tela de Usuários. Ligar muda quem consegue
   entrar: não é efeito colateral de deploy.

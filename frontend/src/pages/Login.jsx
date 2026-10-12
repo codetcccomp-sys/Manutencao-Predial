@@ -185,6 +185,18 @@ function Login() {
               Cadastre-se
             </Link>
           </p>
+          {/* Quem cria a conta pelo Google nunca passa pelo cadastro: o aviso
+              também tem de estar aqui. */}
+          <p>
+            <a
+              href="/privacidade"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="alvo-toque inline-block py-1 font-medium text-navy hover:underline"
+            >
+              Aviso de privacidade{' '}<span className="sr-only">(abre em outra aba)</span>
+            </a>
+          </p>
         </div>
       </form>
     </div>
