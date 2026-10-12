@@ -111,8 +111,12 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   12/10/2026. Não rode de novo lá: ele apaga todos os chamados, e desde então
   são reais** (`docs/piloto.md` §2.0). Serve para banco de demonstração ou de
   homologação.
-- O cadastro da produção (37 locais da "Sede", 8 planos preventivos) é de teste,
-  mantido para a apresentação. Os planos começam a gerar chamados em 31/10/2026.
+- O cadastro da produção (37 locais da "Sede", 9 planos preventivos) é de teste,
+  mantido para a apresentação, em dezembro de 2026. **Os planos estão desativados
+  desde 12/10/2026** para não gerarem chamados de teste no meio do piloto. Para
+  reativar, em cada plano ajuste a "Próxima execução" para uma data futura e só
+  então marque ativo: com a data antiga, o agendador geraria chamados já vencidos
+  (`docs/piloto.md` §2.0).
 - `exigir_2fa_gestao` e `cadastro_exige_aprovacao` são chaves da tabela
   `configuracao`, ligadas pela tela de Usuários. Ligar muda quem consegue
   entrar: não é efeito colateral de deploy.
