@@ -87,13 +87,22 @@ estiver preenchido.
 > apaga todos. O passo a passo abaixo fica como registro, e para limpar um banco
 > de demonstração ou de homologação.
 >
-> **O cadastro que ficou é de teste, mantido para a apresentação:** os 37 locais
-> da "Sede", 8 planos preventivos ativos, e um equipamento e um plano `[TESTE]`
-> inativos. Os planos geram chamados sozinhos a partir de **31/10/2026** (o
-> primeiro, o da iluminação de emergência, é para 03/11). Se a apresentação
-> ainda não tiver acontecido, desative os planos na tela *Preventiva* antes
-> dessa data e reative-os quando for mostrá-los; do contrário o piloto passa a
-> conter chamados preventivos de teste, misturados aos reais.
+> **O cadastro que ficou é de teste, mantido para a apresentação (dezembro de
+> 2026):** os 37 locais da "Sede", 9 planos preventivos (um deles `[TESTE]`) e
+> um equipamento `[TESTE]`.
+>
+> **Os 9 planos estão desativados desde 12/10/2026.** Ativos, eles gerariam
+> chamados sozinhos a partir de 31/10 (cerca de 11 até dezembro), todos sem
+> técnico e depois vencidos, misturados aos reais e puxando para baixo os
+> indicadores do piloto. Nada foi apagado.
+>
+> **Para reativar antes da apresentação,** em cada plano da tela *Preventiva*:
+> ajuste a *Próxima execução* para uma data futura (a edição reancora o
+> calendário) e só então marque como ativo. Reativar com a data antiga faria o
+> agendador gerar chamados já vencidos e, nos mensais, mais de um em dias
+> seguidos. Depois, *Gerar agora* mostra o recurso funcionando. Passada a
+> apresentação, desative de novo, a não ser que a instituição já tenha
+> cadastrado os planos reais.
 
 A produção guarda os chamados e as contas da demonstração. Misturados ao
 piloto, eles entram nos relatórios e estragam a comparação com a medida de
