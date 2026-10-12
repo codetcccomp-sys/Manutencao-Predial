@@ -1,3 +1,11 @@
+-- ATENÇÃO — JÁ RODOU EM PRODUÇÃO, EM 12/10/2026. NÃO RODE DE NOVO LÁ.
+--
+-- Este script apaga TODOS os chamados. Desde 12/10/2026 os chamados da produção
+-- são reais, e rodá-lo outra vez os apagaria junto com a demonstração que ele
+-- existia para tirar. Ele continua aqui como registro do que foi feito e para
+-- limpar um banco de demonstração ou de homologação. Antes de rodar em qualquer
+-- banco, confira em qual está conectado.
+--
 -- Limpeza dos dados de demonstração, antes do piloto (docs/piloto.md, §2.0).
 --
 -- Apaga todos os chamados, com histórico, comentários, anexos, avaliações,

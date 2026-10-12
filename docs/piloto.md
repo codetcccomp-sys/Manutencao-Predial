@@ -76,6 +76,25 @@ estiver preenchido.
 
 ### 2.0 Primeiro: limpar a demonstração
 
+> ## Já foi executada em produção, em 12/10/2026
+>
+> Saíram 77 chamados (com 318 registros de histórico, 40 comentários, 78 avisos
+> e 1 anexo) e 11 das 13 contas. Ficaram a conta da administração e uma conta
+> de gestão. O backup de antes é a execução `38191294165` do workflow *Backup do
+> banco*.
+>
+> **Não rode de novo na produção.** Desde então os chamados são reais, e o script
+> apaga todos. O passo a passo abaixo fica como registro, e para limpar um banco
+> de demonstração ou de homologação.
+>
+> **O cadastro que ficou é de teste, mantido para a apresentação:** os 37 locais
+> da "Sede", 8 planos preventivos ativos, e um equipamento e um plano `[TESTE]`
+> inativos. Os planos geram chamados sozinhos a partir de **31/10/2026** (o
+> primeiro, o da iluminação de emergência, é para 03/11). Se a apresentação
+> ainda não tiver acontecido, desative os planos na tela *Preventiva* antes
+> dessa data e reative-os quando for mostrá-los; do contrário o piloto passa a
+> conter chamados preventivos de teste, misturados aos reais.
+
 A produção guarda os chamados e as contas da demonstração. Misturados ao
 piloto, eles entram nos relatórios e estragam a comparação com a medida de
 antes. [`backend/database/limpar-demonstracao.sql`](../backend/database/limpar-demonstracao.sql)
@@ -605,6 +624,13 @@ própria; escreva, mesmo que em uma página:
 | Por quanto tempo | Chamado é registro de manutenção do patrimônio, costuma ter prazo próprio; conta de pessoa desligada, não |
 | Quem pode ver o quê | Já está no código: solicitante vê o seu; técnico, o que lhe foi designado; gestão, tudo |
 | Quem é o contato | Uma pessoa com nome, para pedido de acesso ou exclusão |
+
+O aviso que a pessoa lê é a página pública `/privacidade`, apontada no
+cadastro, na tela de entrada e em *Minha conta*. Ele descreve o que o sistema
+faz e **não nomeia controlador nem cita base legal**: esses dois campos
+continuam em branco em [lgpd.md](lgpd.md), seção 4, até a instituição ser
+definida. Quando for, preencha lá e atualize a página (ver [lgpd.md](lgpd.md),
+seção 7).
 
 Ponto prático: **desativar uma pessoa não apaga o que ela escreveu**, e isso é
 proposital — o histórico do chamado é registro de manutenção. Para o pedido de

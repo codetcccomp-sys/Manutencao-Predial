@@ -93,6 +93,21 @@ function Cadastro() {
           onChange={(e) => setSenha(e.target.value)}
         />
 
+        {/* Antes de a pessoa entregar os dados, o que será feito com eles. Abre
+            em outra aba para que quem já digitou o formulário não o perca. */}
+        <p className="text-xs text-tinta-2">
+          Guardamos seu nome, seu e-mail e o que você escrever nos chamados. Saiba como no{' '}
+          <a
+            href="/privacidade"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-navy underline"
+          >
+            aviso de privacidade{' '}<span className="sr-only">(abre em outra aba)</span>
+          </a>
+          .
+        </p>
+
         <Botao type="submit" variante="primaria" carregando={carregando} larguraTotal>
           {carregando ? 'Enviando...' : 'Cadastrar'}
         </Botao>
