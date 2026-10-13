@@ -71,13 +71,14 @@ export function AuthProvider({ children }) {
 
   /**
    * Primeira etapa. Com a verificação em duas etapas ligada, a senha certa
-   * ainda não abre nada: devolve `{ requer2fa, desafio }`, e a tela pede o
-   * código para `confirmarCodigo`.
+   * ainda não abre nada: devolve `{ requer2fa, desafio, email }`, e a tela pede
+   * o código para `confirmarCodigo`. O e-mail é o da conta que acabou de passar
+   * pela primeira etapa, para a tela dizer em qual conta se está digitando.
    */
   const login = useCallback(
     async (email, senha) => {
       const { data } = await api.post('/auth/login', { email, senha });
-      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio };
+      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio, email: data.email };
       return iniciarSessao(data);
     },
     [iniciarSessao]
@@ -97,7 +98,7 @@ export function AuthProvider({ children }) {
     async (credencial) => {
       const { data } = await api.post('/auth/google', { credencial });
       if (data.aguardando_aprovacao) return { aguardandoAprovacao: true };
-      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio };
+      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio, email: data.email };
       return iniciarSessao(data);
     },
     [iniciarSessao]

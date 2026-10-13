@@ -6,6 +6,7 @@ import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
 import Marca from '../components/ui/Marca';
 import BotaoGoogle from '../components/BotaoGoogle';
+import PedidoEnviado from '../components/PedidoEnviado';
 
 /**
  * Para onde voltar depois de entrar.
@@ -27,12 +28,19 @@ function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
-  const [aviso, setAviso] = useState('');
+  // Conta nova pelo Google com a aprovação ligada: a mesma tela do cadastro por
+  // e-mail, e não um aviso sobre um formulário que parece continuar valendo.
+  const [pedidoEnviado, setPedidoEnviado] = useState(false);
   const [carregando, setCarregando] = useState(false);
   // Com a verificação em duas etapas, a senha certa devolve um desafio, e a
   // tela passa a pedir o código. O desafio vale poucos minutos.
   const [desafio, setDesafio] = useState(null);
   const [codigo, setCodigo] = useState('');
+  // De quem é o desafio. Pela senha, a pessoa acabou de digitar o e-mail; pelo
+  // Google ela não digitou nada, e sem isto o passo do código não diria em qual
+  // conta ela está. Quem cria um desafio sempre grava a conta junto, então não
+  // há o que limpar ao voltar.
+  const [contaDoDesafio, setContaDoDesafio] = useState('');
   const { login, entrarComGoogle, confirmarCodigo, sessaoExpirada } = useAuth();
   const navigate = useNavigate();
   const local = useLocation();
@@ -52,6 +60,7 @@ function Login() {
       const resultado = await login(email, senha);
       if (resultado?.requer2fa) {
         setDesafio(resultado.desafio);
+        setContaDoDesafio(resultado.email || email);
         setSenha('');
         return;
       }
@@ -73,16 +82,16 @@ function Login() {
   // nova com a aprovação ligada, o aviso de que espera a gestão.
   async function entrarPeloGoogle(credencial) {
     setErro('');
-    setAviso('');
     setCarregando(true);
     try {
       const resultado = await entrarComGoogle(credencial);
       if (resultado?.aguardandoAprovacao) {
-        setAviso('Pedido de cadastro enviado. Ele aguarda a aprovação da gestão; você poderá entrar assim que for aprovado.');
+        setPedidoEnviado(true);
         return;
       }
       if (resultado?.requer2fa) {
         setDesafio(resultado.desafio);
+        setContaDoDesafio(resultado.email || '');
         return;
       }
       seguir();
@@ -93,8 +102,27 @@ function Login() {
     }
   }
 
+  if (pedidoEnviado) {
+    return (
+      <PedidoEnviado
+        acao={
+          <button
+            type="button"
+            onClick={() => setPedidoEnviado(false)}
+            className="alvo-toque py-1 text-center text-sm font-medium text-navy hover:underline"
+          >
+            Voltar para o login
+          </button>
+        }
+      >
+        Seu cadastro pelo Google foi recebido e aguarda a aprovação da gestão. Você poderá entrar com o
+        Google assim que ele for aprovado.
+      </PedidoEnviado>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
+    <main className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
       <form
         onSubmit={handleSubmit}
         className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4"
@@ -116,10 +144,14 @@ function Login() {
         )}
 
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
-        {aviso && <Aviso tipo="info">{aviso}</Aviso>}
 
         {desafio ? (
           <>
+            {contaDoDesafio && (
+              <p className="text-sm text-tinta-2">
+                Conta: <strong className="break-all font-medium text-tinta">{contaDoDesafio}</strong>
+              </p>
+            )}
             <p className="text-sm text-tinta">
               Digite o código de 6 dígitos do aplicativo autenticador. Sem o celular, use um dos
               códigos de recuperação.
@@ -199,7 +231,7 @@ function Login() {
           </p>
         </div>
       </form>
-    </div>
+    </main>
   );
 }
 

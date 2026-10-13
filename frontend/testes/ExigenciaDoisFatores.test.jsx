@@ -85,19 +85,40 @@ describe('Gestão com a verificação exigida e desligada', () => {
 describe('A chave na tela de Usuários', () => {
   const PESSOAS = [
     { id: 1, nome: 'Admin', perfil: 'administrador', ativo: true, dois_fatores: true },
-    { id: 2, nome: 'Bia', perfil: 'gestor', ativo: true, dois_fatores: false },
+    { id: 2, nome: 'Bia', email: 'bia@exemplo.com', perfil: 'gestor', ativo: true, dois_fatores: false },
     { id: 3, nome: 'Caio', perfil: 'gestor', ativo: false, dois_fatores: false },
     { id: 4, nome: 'Davi', perfil: 'tecnico', ativo: true, dois_fatores: false },
   ];
+
+  // O cartão tem um link para Minha conta, então precisa de um roteador.
+  const abrirCartao = (usuarios) =>
+    render(
+      <MemoryRouter>
+        <ExigenciaDoisFatores usuarios={usuarios} />
+      </MemoryRouter>
+    );
+
+  // Gestores ativos sem verificação, com e-mail próprio.
+  const gestores = (quantidade) =>
+    Array.from({ length: quantidade }, (_, i) => ({
+      id: 100 + i,
+      nome: `Gestor ${i + 1}`,
+      email: `gestor${i + 1}@exemplo.com`,
+      perfil: 'gestor',
+      ativo: true,
+      dois_fatores: false,
+    }));
 
   it('mostra quem da gestão ativa ainda não ligou, e liga a exigência', async () => {
     api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: false } } });
     api.patch.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: true } } });
     const u = userEvent.setup();
-    render(<ExigenciaDoisFatores usuarios={PESSOAS} />);
+    abrirCartao(PESSOAS);
 
     // Só Bia: Caio está desativado e Davi não é da gestão.
-    expect(screen.getByText(/Ainda sem a verificação: Bia\./)).toBeInTheDocument();
+    expect(screen.getByText('Ainda sem a verificação:')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByRole('listitem')).toHaveTextContent('Bia (bia@exemplo.com)');
 
     const caixa = await screen.findByRole('checkbox', { name: /Exigir a verificação em duas etapas/ });
     expect(caixa).not.toBeChecked();
@@ -107,18 +128,95 @@ describe('A chave na tela de Usuários', () => {
     expect(caixa).toBeChecked();
   });
 
-  it('a recusa do servidor aparece e a caixa não muda', async () => {
+  it('o rótulo da caixa diz quantas contas ela restringe, antes de alguém apertar', async () => {
+    api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: false } } });
+    abrirCartao(gestores(2));
+
+    const caixa = await screen.findByRole('checkbox', { name: /Exigir a verificação em duas etapas/ });
+    expect(caixa).toHaveAccessibleName(/Ao ligar, 2 contas ficam restritas a Minha conta até elas ligarem a verificação/);
+  });
+
+  it('no singular, a frase concorda', async () => {
+    api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: false } } });
+    abrirCartao(gestores(1));
+
+    const caixa = await screen.findByRole('checkbox', { name: /Exigir a verificação em duas etapas/ });
+    expect(caixa).toHaveAccessibleName(/Ao ligar, 1 conta fica restrita a Minha conta até ela ligar a verificação\. Ela continua entrando\./);
+  });
+
+  it('com a exigência ligada, diz quantas contas estão restritas agora', async () => {
+    api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: true } } });
+    abrirCartao(gestores(3));
+
+    const caixa = await screen.findByRole('checkbox', { name: /Exigir a verificação em duas etapas/ });
+    expect(caixa).toHaveAccessibleName(/3 contas estão restritas a Minha conta/);
+  });
+
+  it('sem ninguém faltando, não promete restrição nenhuma', async () => {
+    api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: false } } });
+    abrirCartao([PESSOAS[0]]);
+
+    const caixa = await screen.findByRole('checkbox', { name: /Exigir a verificação em duas etapas/ });
+    expect(caixa).not.toHaveAccessibleName(/Ao ligar/);
+    expect(screen.getByText('Toda a gestão ativa já tem a verificação ligada.')).toBeInTheDocument();
+  });
+
+  it('a lista para em cinco e diz quantas faltam ver', async () => {
+    api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: false } } });
+    abrirCartao(gestores(8));
+    await screen.findByRole('checkbox', { name: /Exigir a verificação/ });
+
+    expect(screen.getByText('8 contas ainda sem a verificação:')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.getByText('e mais 3.')).toBeInTheDocument();
+    expect(screen.queryByText(/Gestor 6/)).not.toBeInTheDocument();
+  });
+
+  it('homônimos se distinguem pelo e-mail', async () => {
+    api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: false } } });
+    abrirCartao([
+      { id: 10, nome: 'Ana', email: 'ana.a@exemplo.com', perfil: 'gestor', ativo: true, dois_fatores: false },
+      { id: 11, nome: 'Ana', email: 'ana.b@exemplo.com', perfil: 'gestor', ativo: true, dois_fatores: false },
+    ]);
+    await screen.findByRole('checkbox', { name: /Exigir a verificação/ });
+
+    expect(screen.getByText(/ana\.a@exemplo\.com/)).toBeInTheDocument();
+    expect(screen.getByText(/ana\.b@exemplo\.com/)).toBeInTheDocument();
+  });
+
+  it('a recusa do servidor aparece, a caixa não muda e há caminho para Minha conta', async () => {
     api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: false } } });
     api.patch.mockRejectedValue({
-      response: { data: { erro: { mensagem: 'Ligue a sua verificação em duas etapas em Minha conta antes de exigir da gestão.' } } },
+      response: {
+        data: {
+          erro: {
+            mensagem: 'Ligue a sua verificação em duas etapas em Minha conta antes de exigir da gestão.',
+            codigo: 'SEM_2FA_PROPRIO',
+          },
+        },
+      },
     });
     const u = userEvent.setup();
-    render(<ExigenciaDoisFatores usuarios={PESSOAS} />);
+    abrirCartao(PESSOAS);
 
     const caixa = await screen.findByRole('checkbox', { name: /Exigir a verificação/ });
     await u.click(caixa);
     expect(await screen.findByText(/antes de exigir da gestão/)).toBeInTheDocument();
     expect(caixa).not.toBeChecked();
+    expect(screen.getByRole('link', { name: 'Abrir Minha conta' })).toHaveAttribute('href', '/conta');
+  });
+
+  it('outra recusa não manda para Minha conta', async () => {
+    api.get.mockResolvedValue({ data: { configuracoes: { exigir_2fa_gestao: false } } });
+    api.patch.mockRejectedValue({
+      response: { data: { erro: { mensagem: 'Não foi possível salvar agora.', codigo: 'ERRO_INTERNO' } } },
+    });
+    const u = userEvent.setup();
+    abrirCartao(PESSOAS);
+
+    await u.click(await screen.findByRole('checkbox', { name: /Exigir a verificação/ }));
+    expect(await screen.findByText('Não foi possível salvar agora.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Abrir Minha conta' })).not.toBeInTheDocument();
   });
 });
 
@@ -171,6 +269,36 @@ describe('Foco acompanha a ativação da verificação', () => {
     await u.type(screen.getByLabelText('Senha'), 'senha123');
     await u.click(screen.getByRole('button', { name: 'Ligar' }));
     expect(await screen.findByRole('region', { name: 'Códigos de recuperação' })).toHaveFocus();
+  });
+});
+
+describe('Ajuda de quem entrou só pelo Google e não tem senha', () => {
+  async function aberta() {
+    localStorage.setItem('smp_usuario', JSON.stringify({ ...GESTOR, dois_fatores_pendente: true }));
+    api.post.mockResolvedValue({ data: { segredo: 'JBSWY3DPEHPK3PXP', endereco: 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXP' } });
+    const u = userEvent.setup();
+    abrir('/conta');
+    await u.click(await screen.findByRole('button', { name: 'Ligar a verificação em duas etapas' }));
+    await screen.findByRole('form', { name: /Passos para ligar/ });
+    return u;
+  }
+
+  it('fica recolhida: quem tem senha não lê um aviso que não é para si', async () => {
+    await aberta();
+
+    expect(screen.getByLabelText('Senha')).not.toHaveAccessibleDescription(/Google/);
+    expect(screen.getByText('Não tenho senha').closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByText(/Saia da conta e crie uma/)).not.toBeVisible();
+  });
+
+  it('aberta, diz o caminho inteiro, inclusive que é preciso sair da conta', async () => {
+    const u = await aberta();
+    await u.click(screen.getByText('Não tenho senha'));
+
+    const texto = screen.getByText(/Saia da conta e crie uma/);
+    expect(texto).toBeVisible();
+    expect(texto).toHaveTextContent('"Esqueci minha senha"');
+    expect(texto).toHaveTextContent('depois volte para ligar a verificação');
   });
 });
 

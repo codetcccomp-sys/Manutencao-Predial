@@ -67,7 +67,7 @@ const login = asyncHandler(async (req, res) => {
     // contador de falhas. Zerar aqui deixaria quem tem a senha roubada
     // recomeçar as tentativas de código a cada nova digitação da senha.
     if (resultado.requer2fa) {
-      return res.json({ requer_2fa: true, desafio: resultado.desafio });
+      return res.json({ requer_2fa: true, desafio: resultado.desafio, email: resultado.email });
     }
 
     await registrarTentativa(req.body.email, ip, true);
@@ -96,7 +96,7 @@ const entrarComGoogle = asyncHandler(async (req, res) => {
     return res.status(202).json({ aguardando_aprovacao: true });
   }
   if (resultado.requer2fa) {
-    return res.json({ requer_2fa: true, desafio: resultado.desafio });
+    return res.json({ requer_2fa: true, desafio: resultado.desafio, email: resultado.email });
   }
   const token = sessao.emitir(res, req, resultado.conta);
   res.json({ token, usuario: resultado.usuario });

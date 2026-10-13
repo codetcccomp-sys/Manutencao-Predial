@@ -88,8 +88,14 @@ function Layout() {
           </div>
 
           <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
-            <Link to="/conta" className="truncate rounded hover:underline" title="Minha conta">
-              {usuario?.nome} <span className="text-tinta-clara">({rotuloPerfil(usuario?.perfil)})</span>
+            {/* O truncamento fica no <span> de dentro, e não no link: o link
+                precisa de espaço para o alvo de toque (alvo-toque desenha uma
+                área maior por ::after, que o overflow do próprio link cortaria),
+                e o py-1 o leva de 20px a 28px de altura (WCAG 2.5.8, mínimo 24). */}
+            <Link to="/conta" className="alvo-toque min-w-0 rounded py-1 hover:underline" title="Minha conta">
+              <span className="block truncate">
+                {usuario?.nome} <span className="text-tinta-clara">({rotuloPerfil(usuario?.perfil)})</span>
+              </span>
             </Link>
             {/* O sino chama uma rota que a API recusa enquanto a verificação exigida
                 não está ligada: ficaria um controle morto, com painel vazio, e

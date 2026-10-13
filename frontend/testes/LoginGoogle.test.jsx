@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 
 vi.mock('../src/api/client', async () => {
@@ -94,26 +95,48 @@ describe('Botão do Google', () => {
     expect(JSON.parse(localStorage.getItem('smp_usuario'))).toEqual(USUARIO);
   });
 
-  it('conta nova com a aprovação ligada: avisa que espera a gestão e não entra', async () => {
+  it('conta nova com a aprovação ligada: mostra a tela "Pedido enviado" e não entra', async () => {
     api.get.mockResolvedValue({ data: { client_id: 'abc' } });
     api.post.mockResolvedValue({ data: { aguardando_aprovacao: true } });
     abrir();
     await screen.findByText('Fazer login com o Google');
 
     await act(async () => devolverCredencial({ credential: 'c' }));
-    expect(await screen.findByText(/aguarda a aprovação da gestão/)).toBeInTheDocument();
+    // A mesma tela do cadastro por e-mail, e não um aviso sobre um formulário
+    // que parece continuar valendo.
+    const titulo = await screen.findByRole('heading', { level: 1, name: 'Pedido enviado' });
+    expect(screen.getByText(/aguarda a aprovação da gestão/)).toBeInTheDocument();
+    expect(screen.getByText(/entrar com o Google assim que ele for aprovado/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('E-mail')).not.toBeInTheDocument();
     expect(screen.queryByText('Formulário')).not.toBeInTheDocument();
     expect(localStorage.getItem('smp_usuario')).toBeNull();
+    // O foco acompanha a troca de tela: o formulário que o tinha sumiu.
+    expect(titulo).toHaveFocus();
   });
 
-  it('com duas etapas ligadas, pede o código como no login por senha', async () => {
+  it('"Voltar para o login" devolve o formulário', async () => {
     api.get.mockResolvedValue({ data: { client_id: 'abc' } });
-    api.post.mockResolvedValue({ data: { requer_2fa: true, desafio: 'd-1' } });
+    api.post.mockResolvedValue({ data: { aguardando_aprovacao: true } });
+    abrir();
+    await screen.findByText('Fazer login com o Google');
+    await act(async () => devolverCredencial({ credential: 'c' }));
+    await screen.findByRole('heading', { level: 1, name: 'Pedido enviado' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar para o login' }));
+    expect(await screen.findByLabelText('E-mail')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Pedido enviado' })).not.toBeInTheDocument();
+  });
+
+  it('com duas etapas ligadas, pede o código como no login por senha e diz de qual conta', async () => {
+    api.get.mockResolvedValue({ data: { client_id: 'abc' } });
+    api.post.mockResolvedValue({ data: { requer_2fa: true, desafio: 'd-1', email: 'bia@exemplo.com' } });
     abrir();
     await screen.findByText('Fazer login com o Google');
 
     await act(async () => devolverCredencial({ credential: 'c' }));
     expect(await screen.findByLabelText('Código')).toBeInTheDocument();
+    // Pelo Google ninguém digitou o e-mail: a tela é quem diz em qual conta se está.
+    expect(screen.getByText('bia@exemplo.com')).toBeInTheDocument();
     expect(localStorage.getItem('smp_usuario')).toBeNull();
   });
 

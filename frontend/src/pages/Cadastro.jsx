@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Campo } from '../components/ui/Campo';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
+import PedidoEnviado from '../components/PedidoEnviado';
 
 function Cadastro() {
   const [nome, setNome] = useState('');
@@ -39,23 +40,21 @@ function Cadastro() {
 
   if (aguardando) {
     return (
-      <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
-        <div className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4">
-          <h1 className="text-xl font-bold text-navy">Pedido enviado</h1>
-          <Aviso tipo="sucesso">
-            Seu cadastro foi recebido e aguarda a aprovação da gestão. Você poderá entrar com este e-mail e
-            senha assim que ele for aprovado.
-          </Aviso>
-          <Link to="/login" className="text-sm font-medium text-navy hover:underline text-center">
+      <PedidoEnviado
+        acao={
+          <Link to="/login" className="alvo-toque inline-block py-1 text-center text-sm font-medium text-navy hover:underline">
             Voltar para o login
           </Link>
-        </div>
-      </div>
+        }
+      >
+        Seu cadastro foi recebido e aguarda a aprovação da gestão. Você poderá entrar com este e-mail e
+        senha assim que ele for aprovado.
+      </PedidoEnviado>
     );
   }
 
   return (
-    <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
+    <main className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
       <form
         onSubmit={handleSubmit}
         className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4"
@@ -119,7 +118,7 @@ function Cadastro() {
           </Link>
         </p>
       </form>
-    </div>
+    </main>
   );
 }
 

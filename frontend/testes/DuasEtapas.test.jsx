@@ -96,6 +96,34 @@ describe('Login com verificação em duas etapas', () => {
     expect(screen.getByLabelText('Código')).toBeInTheDocument();
   });
 
+  it('o passo do código diz de qual conta se trata, pelo e-mail que o servidor confirmou', async () => {
+    const usuario = userEvent.setup();
+    api.post.mockResolvedValueOnce({ data: { requer_2fa: true, desafio: 'desafio-1', email: 'ana@exemplo.com' } });
+    abrirLogin();
+
+    // Digitado com outra caixa: a conta é a que o servidor devolveu.
+    await usuario.type(screen.getByLabelText('E-mail'), 'ANA@Exemplo.com');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByLabelText('Código')).toBeInTheDocument();
+    expect(screen.getByText('ana@exemplo.com')).toBeInTheDocument();
+    expect(screen.queryByText('ANA@Exemplo.com')).not.toBeInTheDocument();
+  });
+
+  it('se o servidor não mandar o e-mail, mostra o que a pessoa digitou', async () => {
+    const usuario = userEvent.setup();
+    api.post.mockResolvedValueOnce({ data: { requer_2fa: true, desafio: 'desafio-1' } });
+    abrirLogin();
+
+    await usuario.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByLabelText('Código')).toBeInTheDocument();
+    expect(screen.getByText('ana@exemplo.com')).toBeInTheDocument();
+  });
+
   it('desafio vencido volta para o e-mail e a senha', async () => {
     const usuario = userEvent.setup();
     api.post

@@ -231,3 +231,16 @@ test('ordenar a tabela reordena e anuncia a direção', async ({ page }, info) =
   await cabecalho.getByRole('button').click();
   await expect(cabecalho).toHaveAttribute('aria-sort', 'descending');
 });
+
+test('o link da conta, no cabeçalho, é um alvo de ao menos 24px e o nome comprido não o quebra', async ({ page }) => {
+  await entrar(page, cenario.pessoas.gestor);
+  const link = page.getByTitle('Minha conta');
+
+  // WCAG 2.5.8: alvo de ao menos 24 px. O texto sozinho dava 20.
+  const caixa = await link.boundingBox();
+  expect(caixa.height).toBeGreaterThanOrEqual(24);
+
+  // O nome comprido é cortado com reticências dentro do link, sem estourar a tela.
+  await expect(link).toBeVisible();
+  await conferirQueCabeNaTela(page, expect);
+});
