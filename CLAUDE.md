@@ -104,6 +104,12 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   banco em `sa-east-1`: sem isso a Vercel usa `iad1` e cada consulta cruza o
   continente (117 ms contra 2 ms, medido). O aviso afirma São Paulo, e um teste lê
   o `vercel.json` para que as duas coisas não se separem.
+- As telas da gestão (Relatórios, Cadastros, Preventiva, Usuários, Etiquetas e o
+  painel do Início) carregam sob demanda (`lazy` em `App.jsx` e `Inicio.jsx`, com o
+  `Suspense` e a tela de falha no `Layout`). O que o técnico usa sem conexão (fila,
+  chamado, equipamento) e a Minha conta ficam no pacote principal: o service worker
+  só guarda o arquivo de uma tela depois de ela ser aberta uma vez. Tela nova que
+  alguém use offline não entra com `lazy`.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque
   pequeno e formulário vazando no celular que o jsdom não vê.
 

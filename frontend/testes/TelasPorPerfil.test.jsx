@@ -13,6 +13,7 @@ vi.mock('../src/context/AuthContext', () => ({
 
 import api from '../src/api/client';
 import Inicio from '../src/pages/Inicio';
+import CarregamentoDeTela from '../src/components/CarregamentoDeTela';
 import { prazoEmPalavras } from '../src/dominio/prazo';
 
 /**
@@ -109,9 +110,14 @@ function servidor(url, config = {}) {
 function montarComo(perfil) {
   usuarioAtual.valor = { id: 9, nome: 'Fulano', perfil };
   api.get.mockImplementation(servidor);
+  // O painel da gestão carrega sob demanda; em produção o Suspense vem do
+  // Layout, e aqui o mesmo envoltório faz esse papel. Os testes já esperam a
+  // tela com findBy*.
   return render(
     <MemoryRouter>
-      <Inicio />
+      <CarregamentoDeTela>
+        <Inicio />
+      </CarregamentoDeTela>
     </MemoryRouter>
   );
 }

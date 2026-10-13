@@ -1076,6 +1076,75 @@ const MUTACOES = [
     motor: 'playwright',
     spec: 'e2e/privacidade.spec.js',
   },
+  // Telas sob demanda. As duas primeiras desfazem o `lazy`: com a importação
+  // estática o pedaço deixa de existir, e é o teste da gestão (que exige o
+  // arquivo) que acusa, não o do técnico (que passaria com ou sem o arquivo).
+  {
+    descricao: 'sob demanda: Relatórios volta ao pacote principal',
+    arquivo: 'src/App.jsx',
+    de: "const Relatorios = lazy(() => import('./pages/Relatorios'));",
+    para: "import Relatorios from './pages/Relatorios';",
+    motor: 'playwright',
+    spec: 'e2e/carregamento.spec.js',
+  },
+  {
+    descricao: 'sob demanda: o painel da gestão volta ao pacote principal (e o técnico o baixa)',
+    arquivo: 'src/pages/Inicio.jsx',
+    de: "const Dashboard = lazy(() => import('./Dashboard'));",
+    para: "import Dashboard from './Dashboard';",
+    motor: 'playwright',
+    spec: 'e2e/carregamento.spec.js',
+  },
+  {
+    descricao: 'sob demanda: o Layout deixa de envolver as telas no Suspense e na tela de falha',
+    arquivo: 'src/components/Layout.jsx',
+    de: '<CarregamentoDeTela>\n            <Outlet />\n          </CarregamentoDeTela>',
+    para: '<Outlet />',
+    motor: 'playwright',
+    spec: 'e2e/carregamento.spec.js',
+  },
+  {
+    descricao: 'sob demanda: "Recarregar a página" não recarrega nada',
+    arquivo: 'src/components/CarregamentoDeTela.jsx',
+    de: 'onClick={() => window.location.reload()}',
+    para: 'onClick={() => {}}',
+    spec: 'testes/CarregamentoDeTela.test.jsx',
+  },
+  {
+    descricao: 'sob demanda: a tela de falha engole qualquer erro de renderização',
+    arquivo: 'src/components/CarregamentoDeTela.jsx',
+    de: 'if (!ehFalhaDeCarregamento(erro)) throw erro;',
+    para: '',
+    spec: 'testes/CarregamentoDeTela.test.jsx',
+  },
+  {
+    descricao: 'sob demanda: a espera deixa de anunciar o carregamento ao leitor de tela',
+    arquivo: 'src/components/CarregamentoDeTela.jsx',
+    de: '<Regiao carregando rotuloCarregando="Carregando a tela...">',
+    para: '<Regiao carregando={false} rotuloCarregando="Carregando a tela...">',
+    spec: 'testes/CarregamentoDeTela.test.jsx',
+  },
+  {
+    descricao: 'sob demanda: sem conexão, a tela de falha manda recarregar em vez de conectar',
+    arquivo: 'src/components/CarregamentoDeTela.jsx',
+    de: 'navigator.onLine === false',
+    para: "navigator.onLine === 'nunca'",
+    spec: 'testes/CarregamentoDeTela.test.jsx',
+  },
+  {
+    descricao: 'sob demanda: a falha de carregamento deixa de ser reconhecida no Chrome',
+    arquivo: 'src/components/CarregamentoDeTela.jsx',
+    de: '/dynamically imported module|Importing a module script failed|Unable to preload|ChunkLoadError/i',
+    para: '/ChunkLoadError/i',
+    spec: 'testes/CarregamentoDeTela.test.jsx',
+  },
+  {
+    descricao: 'sob demanda: o service worker volta a guardar o index.html no lugar de um arquivo que sumiu',
+    arquivo: 'public/sw.js',
+    de: 'if (resposta.ok && !ehPaginaHtml) {',
+    para: 'if (resposta.ok) {',
+    spec: 'testes/serviceWorker.test.js',
+  },
 ];
 
 /**

@@ -77,7 +77,13 @@ async function arquivoImutavel(requisicao) {
   const guardado = await caches.match(requisicao);
   if (guardado) return guardado;
   const resposta = await fetch(requisicao);
-  if (resposta.ok) {
+  // Um arquivo de /assets que deixou de existir (o sistema foi atualizado e o
+  // nome com o hash mudou) não volta 404: o rewrite do Vercel responde 200 com
+  // o index.html. Guardar isso como se fosse o JavaScript pedido fixaria o erro
+  // para sempre, porque este cache nunca é reconferido. Com as telas da gestão
+  // carregando sob demanda, esse pedido passa a acontecer de verdade.
+  const ehPaginaHtml = (resposta.headers.get('content-type') || '').includes('text/html');
+  if (resposta.ok && !ehPaginaHtml) {
     const cache = await caches.open(CASCA);
     await cache.put(requisicao, resposta.clone());
   }

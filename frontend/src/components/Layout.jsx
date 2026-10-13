@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import AvisoDeConexao from './AvisoDeConexao';
+import CarregamentoDeTela from './CarregamentoDeTela';
 import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
 import Marca from './ui/Marca';
@@ -119,7 +120,11 @@ function Layout() {
             (de desfocado para nítido) roda de novo. Trocar só os filtros da
             mesma tela não muda o caminho, então não pisca. */}
         <div key={localizacao.pathname} className="animate-pagina-in">
-          <Outlet />
+          {/* Dentro do div com a chave do caminho: uma tela que falhou ao
+              carregar deixa de estar em erro assim que a pessoa vai para outra. */}
+          <CarregamentoDeTela>
+            <Outlet />
+          </CarregamentoDeTela>
         </div>
       </main>
     </div>

@@ -1,7 +1,11 @@
+import { lazy } from 'react';
 import { useAuth } from '../context/AuthContext';
-import Dashboard from './Dashboard';
 import MeusPedidos from './MeusPedidos';
 import MinhaFila from './MinhaFila';
+
+// O painel é só da gestão: quem pede e quem executa não precisa do código dele
+// (nem dos gráficos) para ver a própria tela. O Suspense está no Layout.
+const Dashboard = lazy(() => import('./Dashboard'));
 
 /**
  * Qual tela inicial cada perfil recebe.

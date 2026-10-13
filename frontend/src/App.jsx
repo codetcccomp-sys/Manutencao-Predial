@@ -1,3 +1,4 @@
+import { lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { AuthProvider } from './context/AuthContext';
 import RotaProtegida from './components/RotaProtegida';
@@ -10,13 +11,24 @@ import Privacidade from './pages/Privacidade';
 import Inicio from './pages/Inicio';
 import NovoChamado from './pages/NovoChamado';
 import ChamadoDetalhe from './pages/ChamadoDetalhe';
-import Relatorios from './pages/Relatorios';
-import Usuarios from './pages/Usuarios';
-import Cadastros from './pages/Cadastros';
-import Preventiva from './pages/Preventiva';
 import Equipamento from './pages/Equipamento';
-import Etiquetas from './pages/Etiquetas';
 import MinhaConta from './pages/MinhaConta';
+
+// As telas da gestão carregam sob demanda: quem pede e quem executa nunca as
+// abre, e baixar o código delas num celular simples é tempo de tela parada para
+// nada. O que fica no pacote principal é o caminho do técnico sem conexão (fila,
+// chamado, equipamento) e a Minha conta, para onde o 2FA pendente redireciona.
+// A tela de gestão não tem leitura guardada para o uso offline (sw.js), então
+// perder o pedaço sem conexão não tira nada que ela oferecesse antes.
+//
+// Uma declaração por linha, no formato `const X = lazy(() => import(...))`: é o
+// que a mutação em testes/mutacao.mjs desfaz para provar que o pedaço some do
+// pacote principal.
+const Relatorios = lazy(() => import('./pages/Relatorios'));
+const Usuarios = lazy(() => import('./pages/Usuarios'));
+const Cadastros = lazy(() => import('./pages/Cadastros'));
+const Preventiva = lazy(() => import('./pages/Preventiva'));
+const Etiquetas = lazy(() => import('./pages/Etiquetas'));
 
 function App() {
   return (
