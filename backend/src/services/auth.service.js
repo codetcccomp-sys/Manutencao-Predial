@@ -133,7 +133,7 @@ async function login({ email, senha }) {
   }
 
   if (usuario.totp_segredo) {
-    return { requer2fa: true, desafio: desafioDe(usuario) };
+    return { requer2fa: true, desafio: desafioDe(usuario), email: usuario.email };
   }
 
   return { conta: usuario, usuario: await publico(usuario) };
@@ -188,7 +188,7 @@ async function entrarComGoogle({ credencial }) {
     throw new AppError('Esta conta está desativada. Fale com a gestão.', 403, 'CONTA_DESATIVADA');
   }
   if (usuario.totp_segredo) {
-    return { requer2fa: true, desafio: desafioDe(usuario) };
+    return { requer2fa: true, desafio: desafioDe(usuario), email: usuario.email };
   }
   return { conta: usuario, usuario: await publico(usuario) };
 }

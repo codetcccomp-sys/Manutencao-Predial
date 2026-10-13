@@ -26,7 +26,7 @@ function RecuperarSenha() {
   }
 
   return (
-    <div className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
+    <main className="min-h-screen bg-fundo flex items-center justify-center px-4 py-8">
       <div className="bg-superficie rounded-lg border border-borda shadow-sm p-8 w-full max-w-sm grid gap-4">
         <h1 className="text-xl font-bold text-navy">Recuperar senha</h1>
 
@@ -71,7 +71,7 @@ function RecuperarSenha() {
           </form>
         )}
       </div>
-    </div>
+    </main>
   );
 }
 

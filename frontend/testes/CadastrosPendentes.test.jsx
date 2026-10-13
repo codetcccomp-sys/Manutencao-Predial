@@ -126,8 +126,11 @@ describe('Tela de cadastro', () => {
   it('com aprovação, diz que o pedido espera a gestão em vez de mandar ao login', async () => {
     registrar.mockResolvedValue({ aguardando_aprovacao: true });
     await cadastrar();
-    expect(await screen.findByRole('heading', { name: 'Pedido enviado' })).toBeInTheDocument();
+    const titulo = await screen.findByRole('heading', { name: 'Pedido enviado' });
     expect(screen.getByText(/aguarda a aprovação da gestão/)).toBeInTheDocument();
+    // O formulário que tinha o foco saiu da tela: o título o recebe.
+    expect(titulo).toHaveFocus();
+    expect(screen.getByRole('main')).toBeInTheDocument();
   });
 
   it('sem aprovação, segue como antes: conta criada', async () => {

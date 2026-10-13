@@ -508,7 +508,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | Método | Rota | Quem |
 | --- | --- | --- |
 | `POST` | `/auth/registrar` | público (cria `solicitante`) |
-| `POST` | `/auth/login` | público (limitado por tentativa). Com duas etapas ligadas, responde `{ requer_2fa, desafio }` em vez da sessão |
+| `POST` | `/auth/login` | público (limitado por tentativa). Com duas etapas ligadas, responde `{ requer_2fa, desafio, email }` em vez da sessão (o e-mail é o da conta que passou pela primeira etapa, para a tela do código dizer em qual conta se está; o login com Google devolve o mesmo) |
 | `POST` | `/auth/login/2fa` | público: `{ desafio, codigo }` — código do aplicativo ou de recuperação; mesmo limite do login |
 | `GET POST` | `/auth/google` | público: `GET` diz se o login com Google está ligado (`{ client_id }`); `POST { credencial }` entra como o login, ou responde `202 { aguardando_aprovacao }` |
 | `POST` | `/auth/sair` | público (apaga o cookie) |

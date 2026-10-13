@@ -302,8 +302,20 @@ function MinhaConta() {
                 autoComplete="current-password"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
-                ajuda='Entrou só pelo Google e não tem senha? Crie uma em "Esqueci minha senha", na tela de login.'
               />
+              {/* Quase todo mundo tem senha; a ajuda de quem entrou só pelo
+                  Google fica recolhida, para não ser lida (e estranhada) por
+                  todos. A saída passa por sair da conta, e o texto diz isso:
+                  em conta restrita pela exigência, é a única tela alcançável. */}
+              <details className="text-xs text-tinta-2">
+                <summary className="alvo-toque cursor-pointer py-1 font-medium text-navy">
+                  Não tenho senha
+                </summary>
+                <p className="mt-1">
+                  Quem entrou só pelo Google ainda não tem senha. Saia da conta e crie uma em "Esqueci
+                  minha senha", na tela de login; depois volte para ligar a verificação.
+                </p>
+              </details>
               <div className="flex flex-wrap gap-2">
                 <Botao type="submit" variante="primaria">
                   Ligar

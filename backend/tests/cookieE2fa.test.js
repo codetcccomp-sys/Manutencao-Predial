@@ -213,7 +213,9 @@ describe('Verificação em duas etapas', () => {
 
     const resp = await entrar(email);
     expect(resp.status).toBe(200);
-    expect(resp.body).toEqual({ requer_2fa: true, desafio: expect.any(String) });
+    // O e-mail é da conta cuja senha acabou de ser conferida: a tela do código
+    // o mostra para a pessoa saber em qual conta está digitando.
+    expect(resp.body).toEqual({ requer_2fa: true, desafio: expect.any(String), email });
     expect(cookieDa(resp)).toBeUndefined();
 
     // O desafio não é sessão.

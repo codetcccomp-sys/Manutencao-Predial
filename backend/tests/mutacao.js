@@ -62,8 +62,8 @@ const MUTACOES = [
   {
     descricao: 'senha certa com 2FA zera o contador de falhas',
     arquivo: 'src/controllers/auth.controller.js',
-    de: "    if (resultado.requer2fa) {\n      return res.json({ requer_2fa: true, desafio: resultado.desafio });\n    }\n\n    await registrarTentativa(req.body.email, ip, true);",
-    para: "    await registrarTentativa(req.body.email, ip, true);\n    if (resultado.requer2fa) {\n      return res.json({ requer_2fa: true, desafio: resultado.desafio });\n    }",
+    de: "    if (resultado.requer2fa) {\n      return res.json({ requer_2fa: true, desafio: resultado.desafio, email: resultado.email });\n    }\n\n    await registrarTentativa(req.body.email, ip, true);",
+    para: "    await registrarTentativa(req.body.email, ip, true);\n    if (resultado.requer2fa) {\n      return res.json({ requer_2fa: true, desafio: resultado.desafio, email: resultado.email });\n    }",
     spec: 'tests/cookieE2fa.test.js',
   },
   {
@@ -409,6 +409,28 @@ const MUTACOES = [
     de: ": `${coluna} >= (${dia}::timestamp AT TIME ZONE ${fuso})`",
     para: ": `${coluna} >= (${dia}::timestamp AT TIME ZONE COALESCE('UTC', ${fuso}))`",
     spec: 'tests/relatorios.test.js',
+  },  // O passo do código mostra a conta: o e-mail vem junto do desafio, nos dois
+  // caminhos. No Google ele não foi digitado, então sem isto a tela não saberia.
+  {
+    descricao: '2fa: a senha certa deixa de devolver o e-mail da conta com o desafio',
+    arquivo: 'src/controllers/auth.controller.js',
+    de: "      return res.json({ requer_2fa: true, desafio: resultado.desafio, email: resultado.email });\n    }\n\n    await registrarTentativa(req.body.email, ip, true);",
+    para: "      return res.json({ requer_2fa: true, desafio: resultado.desafio });\n    }\n\n    await registrarTentativa(req.body.email, ip, true);",
+    spec: 'tests/cookieE2fa.test.js',
+  },
+  {
+    descricao: '2fa: o Google deixa de devolver o e-mail da conta com o desafio',
+    arquivo: 'src/controllers/auth.controller.js',
+    de: "    return res.json({ requer_2fa: true, desafio: resultado.desafio, email: resultado.email });\n  }\n  const token = sessao.emitir(res, req, resultado.conta);",
+    para: "    return res.json({ requer_2fa: true, desafio: resultado.desafio });\n  }\n  const token = sessao.emitir(res, req, resultado.conta);",
+    spec: 'tests/loginGoogle.test.js',
+  },
+  {
+    descricao: '2fa: o serviço deixa de entregar o e-mail da conta ao controlador',
+    arquivo: 'src/services/auth.service.js',
+    de: 'return { requer2fa: true, desafio: desafioDe(usuario), email: usuario.email };',
+    para: 'return { requer2fa: true, desafio: desafioDe(usuario) };',
+    spec: 'tests/cookieE2fa.test.js',
   },
 ];
 

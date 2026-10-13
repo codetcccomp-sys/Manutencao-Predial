@@ -146,6 +146,9 @@ describe('Conta que já existe', () => {
     const resp = await entrarGoogle(credencial({ email }));
     expect(resp.status).toBe(200);
     expect(resp.body.requer_2fa).toBe(true);
+    // No Google o e-mail não foi digitado: sem isto, o passo do código não
+    // diria de qual conta se trata.
+    expect(resp.body.email).toBe(email);
     expect(resp.body.token).toBeUndefined();
     expect(resp.headers['set-cookie']).toBeUndefined();
 
