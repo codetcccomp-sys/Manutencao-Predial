@@ -582,3 +582,38 @@ describe('Confirmação antes do que não tem volta', () => {
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/chamados/7/anexos/3'));
   });
 });
+
+describe('Crítico sem atendimento', () => {
+  const parado = (extra = {}) =>
+    chamado({
+      prioridade: 'critica',
+      sem_atendimento_critico: true,
+      data_abertura: new Date(Date.now() - 23 * 60_000).toISOString(),
+      ...extra,
+    });
+
+  it('a gestão vê o aviso, com o tempo e o que fazer', async () => {
+    montar({ como: GESTOR, dados: parado() });
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent('Chamado crítico sem atendimento há 23 min.');
+    expect(aviso).toHaveTextContent('Faça a triagem ou atribua um técnico.');
+  });
+
+  it.each([
+    ['quem abriu', SOLICITANTE],
+    ['o técnico', TECNICO],
+  ])('%s não vê o aviso, que é para quem pode agir', async (_quem, pessoa) => {
+    montar({ como: pessoa, dados: parado({ tecnico_id: TECNICO.id }) });
+    await screen.findByRole('heading', { name: 'Infiltração no auditório' });
+
+    expect(screen.queryByText(/Chamado crítico sem atendimento/)).not.toBeInTheDocument();
+  });
+
+  it('sem o alerta do servidor, nem a gestão vê o aviso', async () => {
+    montar({ como: GESTOR, dados: parado({ sem_atendimento_critico: false }) });
+    await screen.findByRole('heading', { name: 'Infiltração no auditório' });
+
+    expect(screen.queryByText(/Chamado crítico sem atendimento/)).not.toBeInTheDocument();
+  });
+});

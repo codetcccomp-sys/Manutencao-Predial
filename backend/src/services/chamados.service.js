@@ -8,6 +8,7 @@ const { rotuloSql } = require('./locais.service');
 const equipamentosService = require('./equipamentos.service');
 const distribuicaoService = require('./distribuicao.service');
 const { FUSO } = require('../config/fuso');
+const { MINUTOS_ATE_ATENDER_CRITICO } = require('../config/atendimento');
 
 // "Em atraso" não é um estado da máquina, é uma leitura do relógio sobre o
 // estado atual: vira e desvira sozinho quando o prazo passa ou quando o
@@ -19,6 +20,30 @@ const EM_ATRASO = `(
   AND prazo_estimado IS NOT NULL
   AND now() > prazo_estimado
 )`;
+
+// Chamado crítico parado em `aberto` além do tempo de primeiro atendimento
+// (config/atendimento.js). Também é leitura do relógio, e não estado: some
+// sozinho quando alguém faz a triagem, e por isso não precisa de transição.
+//
+// Só corretiva: a preventiva é trabalho planejado, gerado pelo agendador com
+// meses de antecedência. Uma preventiva de prioridade crítica esperando na
+// fila não é uma emergência esquecida, e alertar nela ensinaria a gestão a
+// ignorar o alerta que existe para a emergência de verdade.
+//
+// O número entra na consulta por interpolação, e não por parâmetro: é uma
+// constante inteira do código (conferida abaixo), nunca valor da requisição.
+if (!Number.isInteger(MINUTOS_ATE_ATENDER_CRITICO) || MINUTOS_ATE_ATENDER_CRITICO < 1) {
+  throw new Error('MINUTOS_ATE_ATENDER_CRITICO deve ser um inteiro positivo.');
+}
+const SEM_ATENDIMENTO_CRITICO = `(
+  prioridade = 'critica'
+  AND origem = 'corretiva'
+  AND estado = 'aberto'
+  AND now() > data_abertura + interval '${MINUTOS_ATE_ATENDER_CRITICO} minutes'
+)`;
+
+// As duas leituras do relógio que acompanham todo chamado devolvido pela API.
+const CALCULADOS = `${EM_ATRASO} AS em_atraso, ${SEM_ATENDIMENTO_CRITICO} AS sem_atendimento_critico`;
 
 /**
  * Ordenações que a lista aceita.
@@ -113,7 +138,7 @@ async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id
                             solicitante_id, prioridade, prazo_estimado)
        VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::prioridade_chamado, 'baixa'),
                prazo_sla(COALESCE($8::prioridade_chamado, 'baixa'), now(), '0 seconds', '0 seconds', $9))
-       RETURNING *, ${EM_ATRASO} AS em_atraso`,
+       RETURNING *, ${CALCULADOS}`,
       [
         protocolo,
         titulo,
@@ -159,7 +184,7 @@ async function distribuir(client, chamado, regra) {
     `UPDATE chamado
         SET estado = 'atribuido', tecnico_id = $1, equipe_id = $2, regra_distribuicao_id = $3
       WHERE id = $4
-      RETURNING *, ${EM_ATRASO} AS em_atraso`,
+      RETURNING *, ${CALCULADOS}`,
     [tecnico.id, regra.equipe_id, regra.id, chamado.id]
   );
 
@@ -240,6 +265,10 @@ async function listar(usuario, filtros = {}) {
   if (filtros.atrasados === 'true') {
     condicoes.push(EM_ATRASO);
   }
+  // Crítico parado sem atendimento: o recorte que o alerta da gestão abre.
+  if (filtros.sem_atendimento === 'true') {
+    condicoes.push(SEM_ATENDIMENTO_CRITICO);
+  }
 
   // Chamado em aberto sem técnico designado.
   //
@@ -283,7 +312,7 @@ async function listar(usuario, filtros = {}) {
   // vez de repetir o mesmo WHERE num SELECT count separado.
   params.push(limite, offset);
   const { rows } = await pool.query(
-    `SELECT *, ${EM_ATRASO} AS em_atraso, count(*) OVER () AS total_registros
+    `SELECT *, ${CALCULADOS}, count(*) OVER () AS total_registros
        FROM chamado
        ${where}
       ORDER BY ${ordem}
@@ -310,6 +339,9 @@ async function listar(usuario, filtros = {}) {
   return {
     chamados,
     paginacao: { pagina, limite, total, paginas: Math.ceil(total / limite) },
+    // O alerta de crítico sem atendimento diz o tempo na tela; vir daqui evita
+    // um segundo número, copiado no navegador, que divergiria do usado na consulta.
+    atendimento_critico_minutos: MINUTOS_ATE_ATENDER_CRITICO,
   };
 }
 
@@ -422,7 +454,7 @@ async function atribuir(id, { tecnico_id, equipe_id, justificativa }, usuario) {
 
     const { rows } = await client.query(
       `UPDATE chamado SET tecnico_id = $1, equipe_id = $2, estado = $3::estado_chamado
-       WHERE id = $4 RETURNING *, ${EM_ATRASO} AS em_atraso`,
+       WHERE id = $4 RETURNING *, ${CALCULADOS}`,
       [tecnico_id || null, equipe_id || null, novoEstado, id]
     );
 
@@ -568,7 +600,7 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
 
     params.push(id);
     const { rows } = await client.query(
-      `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length} RETURNING *, ${EM_ATRASO} AS em_atraso`,
+      `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length} RETURNING *, ${CALCULADOS}`,
       params
     );
 
@@ -658,7 +690,7 @@ async function priorizar(id, { urgencia, impacto, risco, prioridade, justificati
            )
          END
        WHERE id = $10
-       RETURNING *, ${EM_ATRASO} AS em_atraso`,
+       RETURNING *, ${CALCULADOS}`,
       [
         urgencia,
         impacto,
@@ -768,7 +800,7 @@ async function editar(id, dados, usuario) {
     params.push(id);
     const { rows } = await client.query(
       `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length}
-       RETURNING *, ${EM_ATRASO} AS em_atraso`,
+       RETURNING *, ${CALCULADOS}`,
       params
     );
 
@@ -825,7 +857,7 @@ async function registrarExecucao(id, { diagnostico, tempo_empregado_minutos }, u
   params.push(id);
   const { rows } = await pool.query(
     `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length}
-     RETURNING *, ${EM_ATRASO} AS em_atraso`,
+     RETURNING *, ${CALCULADOS}`,
     params
   );
 
@@ -898,7 +930,7 @@ async function reabrir(id, { justificativa }, usuario) {
          tempo_suspenso_util = '0 seconds',
          prazo_estimado = prazo_sla(prioridade, now(), '0 seconds', '0 seconds', $1)
        WHERE id = $2
-       RETURNING *, ${EM_ATRASO} AS em_atraso`,
+       RETURNING *, ${CALCULADOS}`,
       [FUSO, id]
     );
 
@@ -986,7 +1018,7 @@ async function bloquearChamado(client, id) {
 
 async function buscarChamadoBruto(id) {
   const { rows } = await pool.query(
-    `SELECT *, ${EM_ATRASO} AS em_atraso FROM chamado WHERE id = $1`,
+    `SELECT *, ${CALCULADOS} FROM chamado WHERE id = $1`,
     [id]
   );
   if (!rows[0]) {

@@ -432,6 +432,70 @@ const MUTACOES = [
     para: 'return { requer2fa: true, desafio: desafioDe(usuario) };',
     spec: 'tests/cookieE2fa.test.js',
   },
+  // Alerta de crítico sem atendimento (relógio de primeiro atendimento).
+  {
+    descricao: 'alerta crítico: qualquer prioridade passa a contar, não só a crítica',
+    arquivo: 'src/services/chamados.service.js',
+    de: "  prioridade = 'critica'\n  AND origem = 'corretiva'",
+    para: "  true\n  AND origem = 'corretiva'",
+    spec: 'tests/atendimentoCritico.test.js',
+  },
+  {
+    descricao: 'alerta crítico: a preventiva crítica na fila passa a alertar',
+    arquivo: 'src/services/chamados.service.js',
+    de: "  AND origem = 'corretiva'\n  AND estado = 'aberto'",
+    para: "  AND estado = 'aberto'",
+    spec: 'tests/atendimentoCritico.test.js',
+  },
+  {
+    descricao: 'alerta crítico: sair de "aberto" deixa de desligar o alerta',
+    arquivo: 'src/services/chamados.service.js',
+    de: "  AND estado = 'aberto'\n  AND now() > data_abertura",
+    para: "  AND estado NOT IN ('concluido')\n  AND now() > data_abertura",
+    spec: 'tests/atendimentoCritico.test.js',
+  },
+  {
+    descricao: 'alerta crítico: o alerta dispara antes de os 15 minutos passarem',
+    arquivo: 'src/services/chamados.service.js',
+    de: "AND now() > data_abertura + interval '${MINUTOS_ATE_ATENDER_CRITICO} minutes'",
+    para: "AND now() > data_abertura + interval '1 minutes'",
+    spec: 'tests/atendimentoCritico.test.js',
+  },
+  {
+    descricao: 'alerta crítico: o relógio deixa de contar (nunca alerta)',
+    arquivo: 'src/services/chamados.service.js',
+    de: "AND now() > data_abertura + interval '${MINUTOS_ATE_ATENDER_CRITICO} minutes'",
+    para: "AND now() < data_abertura",
+    spec: 'tests/atendimentoCritico.test.js',
+  },
+  {
+    descricao: 'alerta crítico: o filtro sem_atendimento deixa de filtrar',
+    arquivo: 'src/services/chamados.service.js',
+    de: 'condicoes.push(SEM_ATENDIMENTO_CRITICO);',
+    para: '',
+    spec: 'tests/atendimentoCritico.test.js',
+  },
+  {
+    descricao: 'alerta crítico: o controlador deixa de repassar o filtro',
+    arquivo: 'src/controllers/chamados.controller.js',
+    de: '    sem_atendimento,\n    situacao,\n    busca,\n    ordenar,\n    pagina,\n    limite,\n  });',
+    para: '    situacao,\n    busca,\n    ordenar,\n    pagina,\n    limite,\n  });',
+    spec: 'tests/atendimentoCritico.test.js',
+  },
+  {
+    descricao: 'alerta crítico: a lista deixa de dizer quantos minutos valem',
+    arquivo: 'src/services/chamados.service.js',
+    de: 'atendimento_critico_minutos: MINUTOS_ATE_ATENDER_CRITICO,',
+    para: '',
+    spec: 'tests/atendimentoCritico.test.js',
+  },
+  {
+    descricao: 'alerta crítico: a mudança de estado devolve o chamado sem o campo calculado',
+    arquivo: 'src/services/chamados.service.js',
+    de: "      `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length} RETURNING *, ${CALCULADOS}`,",
+    para: "      `UPDATE chamado SET ${campos.join(', ')} WHERE id = $${params.length} RETURNING *`,",
+    spec: 'tests/atendimentoCritico.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';

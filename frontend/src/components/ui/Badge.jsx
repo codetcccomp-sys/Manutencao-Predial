@@ -65,3 +65,17 @@ export function BadgeAtraso({ className = '' }) {
     </span>
   );
 }
+
+/**
+ * Chamado crítico que passou do tempo de primeiro atendimento sem sair de
+ * "aberto". É outra coisa que "Em atraso": o atraso é do prazo de resolução, e
+ * este é de um chamado que ninguém pegou ainda. Os dois podem aparecer juntos.
+ */
+export function BadgeSemAtendimento({ tempo, className = '' }) {
+  return (
+    <span className={`${BASE} bg-erro-tenue text-erro ${className}`}>
+      <Icone nome="alerta" classe="h-3.5 w-3.5" />
+      {tempo ? `Sem atendimento há ${tempo}` : 'Sem atendimento'}
+    </span>
+  );
+}

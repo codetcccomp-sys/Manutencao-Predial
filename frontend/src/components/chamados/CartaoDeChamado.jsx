@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import Icone from '../ui/Icone';
 import PainelDeResumo from './PainelDeResumo';
-import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../ui/Badge';
+import { BadgeAtraso, BadgeEstado, BadgePrioridade, BadgeSemAtendimento } from '../ui/Badge';
 import { prazoEmPalavras } from '../../dominio/prazo';
+import { minutosSemAtendimento, tempoEmPalavras } from '../../dominio/atendimento';
 
 /**
  * Um chamado numa lista.
@@ -18,8 +19,12 @@ import { prazoEmPalavras } from '../../dominio/prazo';
  * que seja texto pronto vindo de fora, e não um `tipo="solicitante"` aqui
  * dentro: assim o cartão não precisa saber quem está olhando, e acrescentar
  * uma quarta tela não significa abrir este arquivo.
+ *
+ * `alertarSemAtendimento` é do mesmo tipo: o alerta de crítico sem atendimento
+ * é para quem distribui. Quem pediu o chamado e quem executa não podem agir
+ * sobre ele, e um selo vermelho na lista de quem abriu só aumentaria a ansiedade.
  */
-function CartaoDeChamado({ chamado, linhaExtra, mostrarPrazo = false }) {
+function CartaoDeChamado({ chamado, linhaExtra, mostrarPrazo = false, alertarSemAtendimento = false }) {
   const prazo = mostrarPrazo ? prazoEmPalavras(chamado.prazo_estimado) : null;
   const [resumoAberto, setResumoAberto] = useState(false);
 
@@ -52,6 +57,9 @@ function CartaoDeChamado({ chamado, linhaExtra, mostrarPrazo = false }) {
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {alertarSemAtendimento && chamado.sem_atendimento_critico && (
+            <BadgeSemAtendimento tempo={tempoEmPalavras(minutosSemAtendimento(chamado.data_abertura))} />
+          )}
           {chamado.em_atraso && <BadgeAtraso />}
           <BadgeEstado estado={chamado.estado} />
         </div>
