@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import Privacidade from '../src/pages/Privacidade';
+import configuracaoDoBackend from '../../backend/vercel.json';
 import { conferirCabecalhos } from './apoio/cabecalhos';
 
 /**
@@ -53,13 +54,21 @@ describe('Aviso de privacidade', () => {
     expect(within(dados).getByText(/não coletamos dado sensível/)).toBeInTheDocument();
   });
 
-  it('diz onde os dados ficam, com o que a hospedagem tem de menos confortável', () => {
+  it('diz onde os dados ficam, inclusive o e-mail, que sai por um serviço de fora', () => {
     abrir();
     const onde = screen.getByRole('heading', { name: 'Onde os dados ficam' }).closest('section');
 
     expect(within(onde).getByText(/banco de dados fica em São Paulo/)).toBeInTheDocument();
-    expect(within(onde).getByText(/servidores que executam o sistema ficam nos Estados Unidos/)).toBeInTheDocument();
+    expect(within(onde).getByText(/servidores que executam o sistema também ficam em São Paulo/)).toBeInTheDocument();
     expect(within(onde).getByText(/Gmail/)).toBeInTheDocument();
+  });
+
+  // O aviso afirma "São Paulo" para os servidores. A afirmação é verdadeira
+  // porque o backend/vercel.json fixa a região das funções em gru1; sem isso a
+  // Vercel usa iad1 (Estados Unidos), e o aviso passaria a mentir em silêncio
+  // no dia em que alguém mexesse na configuração sem lembrar dele.
+  it('só afirma que os servidores ficam em São Paulo enquanto o backend está fixado em gru1', () => {
+    expect(configuracaoDoBackend.regions).toEqual(['gru1']);
   });
 
   it('dá os prazos que o sistema cumpre, e diz que os outros ainda não são automáticos', () => {

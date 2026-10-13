@@ -110,7 +110,7 @@ function Privacidade() {
         <Secao titulo="Onde os dados ficam">
           <p>
             O banco de dados fica em São Paulo (Supabase). O aplicativo é hospedado na Vercel, e os
-            servidores que executam o sistema ficam nos Estados Unidos. Os e-mails de aviso e de troca
+            servidores que executam o sistema também ficam em São Paulo. Os e-mails de aviso e de troca
             de senha saem por uma conta do Gmail. Fora esses serviços, não enviamos seus dados a
             terceiros.
           </p>

@@ -34,8 +34,10 @@ homologação**. Este documento a define.
 >
 > O resto é descrição do que o sistema já faz, e pode ser conferido no código.
 >
-> **Um terceiro ponto, para a instituição revisar** (seção 7): o banco fica em
-> São Paulo, mas as funções que executam o sistema rodam nos Estados Unidos.
+> **Um terceiro ponto, para a instituição revisar** (seção 7): o banco e as
+> funções que executam o sistema ficam em São Paulo (desde 13/10/2026; antes,
+> as funções rodavam nos Estados Unidos), mas os provedores (Vercel, Supabase e
+> Google, este no envio de e-mail) são empresas estrangeiras.
 
 ---
 
@@ -421,11 +423,13 @@ realidade mudar:**
 | Não há controlador nomeado; diz que a instituição "ainda não foi formalizada" | É o 🔲 da seção 4. Inventar um nome é pior que a lacuna |
 | Não cita base legal | Depende de a instituição ser pública ou privada (seção 4) |
 | Os prazos de 5 e 2 anos aparecem como **previstos** | Nenhum dos dois é executado hoje (seção 2) |
-| Diz que os servidores que executam o sistema ficam nos Estados Unidos | É o que a Vercel faz (`iad1`); o banco, no Supabase, fica em São Paulo (`sa-east-1`) |
+| Diz que os servidores que executam o sistema também ficam em São Paulo | É o que o `backend/vercel.json` fixa (`"regions": ["gru1"]`); sem isso a Vercel usa `iad1`, nos Estados Unidos. O banco, no Supabase, fica em São Paulo (`sa-east-1`). O teste lê o `vercel.json` e falha se a região mudar sem o aviso |
 | O contato é a caixa `code.tcc.comp@gmail.com`, sem nome de pessoa | É a caixa que recebe o pedido; a seção 4 nomeia quem responde |
 
 **Para a instituição revisar quando existir:** (a) o nome do controlador e a
 natureza, públicos ou privados, que preenchem a seção 4 e a página; (b) a
-transferência internacional, já que a execução do sistema fica fora do Brasil
-mesmo com o banco aqui; (c) trocar o e-mail do contato por um institucional.
+transferência internacional: a execução e o banco ficam em São Paulo, mas os
+provedores são empresas estrangeiras, e o envio de e-mail passa pelo Gmail, cujos
+servidores não controlamos. Se isso configura transferência, é decisão de quem
+responde juridicamente; (c) trocar o e-mail do contato por um institucional.
 Nada disto foi revisado por quem responde juridicamente.

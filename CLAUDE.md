@@ -100,6 +100,10 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   andam juntos: a página descreve o que o sistema faz. Mudou dado guardado, prazo,
   hospedagem ou contato? Mude os dois. Não nomeia controlador nem cita base legal
   enquanto a instituição não existir, e o teste impede que prometa o que não é feito.
+  As funções do backend na Vercel ficam em `gru1` (`backend/vercel.json`), junto do
+  banco em `sa-east-1`: sem isso a Vercel usa `iad1` e cada consulta cruza o
+  continente (117 ms contra 2 ms, medido). O aviso afirma São Paulo, e um teste lê
+  o `vercel.json` para que as duas coisas não se separem.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque
   pequeno e formulário vazando no celular que o jsdom não vê.
 
