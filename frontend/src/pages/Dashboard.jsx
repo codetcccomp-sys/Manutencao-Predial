@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import api from '../api/client';
 import { useEntrada } from '../animacao/useEntrada';
 import { useListaAnimada } from '../animacao/useListaAnimada';
@@ -43,6 +43,7 @@ function Dashboard() {
   const [estado, setEstado] = useState('');
   const [somenteAtrasados, setSomenteAtrasados] = useState(false);
   const [semTecnico, setSemTecnico] = useState(false);
+  const [semAtendimento, setSemAtendimento] = useState(false);
   const [busca, setBusca] = useState('');
   const [buscaAplicada, setBuscaAplicada] = useState('');
   const [pagina, setPagina] = useState(1);
@@ -76,6 +77,7 @@ function Dashboard() {
           ...(estado ? { estado } : {}),
           ...(somenteAtrasados ? { atrasados: 'true' } : {}),
           ...(semTecnico ? { sem_tecnico: 'true' } : {}),
+          ...(semAtendimento ? { sem_atendimento: 'true' } : {}),
           ...(buscaAplicada ? { busca: buscaAplicada } : {}),
         },
       })
@@ -85,7 +87,7 @@ function Dashboard() {
       })
       .catch(() => setErro('Não foi possível carregar os chamados.'))
       .finally(() => setCarregando(false));
-  }, [pagina, estado, somenteAtrasados, semTecnico, buscaAplicada]);
+  }, [pagina, estado, somenteAtrasados, semTecnico, semAtendimento, buscaAplicada]);
 
   useEffect(() => {
     carregar();
@@ -134,11 +136,17 @@ function Dashboard() {
     setPagina(1);
   }
 
+  function alternarSemAtendimento(ligado) {
+    setSemAtendimento(ligado);
+    setPagina(1);
+  }
+
   function limparFiltros() {
     setBusca('');
     setEstado('');
     setSomenteAtrasados(false);
     setSemTecnico(false);
+    setSemAtendimento(false);
     setPagina(1);
   }
 
@@ -150,10 +158,25 @@ function Dashboard() {
     setEstado('');
     setSomenteAtrasados(recorte === 'atrasados');
     setSemTecnico(recorte === 'semDono');
+    setSemAtendimento(false);
     setPagina(1);
   }
 
-  const temFiltro = Boolean(buscaAplicada || estado || somenteAtrasados || semTecnico);
+  // A faixa de alerta do Layout traz para cá com `?recorte=criticos`. Depende
+  // da chave da navegação, e não só do endereço: clicar na faixa de novo com a
+  // lista já filtrada (e depois desmarcada) volta ao mesmo endereço, e só a
+  // chave muda.
+  const local = useLocation();
+  useEffect(() => {
+    if (new URLSearchParams(local.search).get('recorte') !== 'criticos') return;
+    setEstado('');
+    setSomenteAtrasados(false);
+    setSemTecnico(false);
+    setSemAtendimento(true);
+    setPagina(1);
+  }, [local.key, local.search]);
+
+  const temFiltro = Boolean(buscaAplicada || estado || somenteAtrasados || semTecnico || semAtendimento);
   const primeiro = paginacao.total === 0 ? 0 : (paginacao.pagina - 1) * paginacao.limite + 1;
   const ultimo = Math.min(paginacao.pagina * paginacao.limite, paginacao.total);
 
@@ -301,6 +324,16 @@ function Dashboard() {
           Somente atrasados
         </label>
 
+        <label className="flex items-center gap-2 py-2 text-sm text-tinta-2">
+          <input
+            type="checkbox"
+            checked={semAtendimento}
+            onChange={(e) => alternarSemAtendimento(e.target.checked)}
+            className="h-4 w-4 rounded border-borda-forte"
+          />
+          Críticos sem atendimento
+        </label>
+
         {temFiltro && (
           <Botao variante="discreta" tamanho="sm" onClick={limparFiltros}>
             Limpar filtros
@@ -352,7 +385,7 @@ function Dashboard() {
         {!carregando && chamados.length > 0 && (
           <ul className="grid gap-3">
             {chamados.map((c) => (
-              <CartaoDeChamado key={c.id} chamado={c} mostrarPrazo />
+              <CartaoDeChamado key={c.id} chamado={c} mostrarPrazo alertarSemAtendimento />
             ))}
           </ul>
         )}

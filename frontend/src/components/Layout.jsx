@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import AlertaDeCriticos from './AlertaDeCriticos';
 import AvisoDeConexao from './AvisoDeConexao';
 import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
@@ -112,6 +113,11 @@ function Layout() {
       </header>
 
       <AvisoDeConexao />
+
+      {/* Só quem distribui: os outros perfis não podem agir sobre chamado sem
+          técnico, e a API de listagem de quem executa nem o devolveria. Fora
+          do estado restrito, em que a API recusa tudo menos Minha conta. */}
+      {podeVerRelatorios && <AlertaDeCriticos />}
 
       {/*
         A largura saiu de 896px para 1280px.

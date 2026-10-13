@@ -12,6 +12,7 @@ import {
 } from '../dominio/rotulos';
 import { LIMITE_BYTES, formatarTamanho, prepararAnexo } from '../dominio/prepararAnexo';
 import { formatarDia } from '../dominio/preventiva';
+import { minutosSemAtendimento, tempoEmPalavras } from '../dominio/atendimento';
 
 // Escalas e perguntas orientadoras conforme o §2.5 do Termo de Abertura. As
 // perguntas ficam visíveis de propósito: são elas que tornam a nota menos
@@ -586,6 +587,18 @@ function ChamadoDetalhe() {
             </span>
           )}
         </div>
+
+        {/* Para quem pode agir: a triagem ou a atribuição tira o chamado de
+            "aberto" e o aviso some. O texto diz o que fazer, e não só o que houve. */}
+        {podeGerenciar && chamado.sem_atendimento_critico && (
+          <Aviso tipo="erro" className="mb-3">
+            <strong>
+              Chamado crítico sem atendimento há{' '}
+              {tempoEmPalavras(minutosSemAtendimento(chamado.data_abertura))}.
+            </strong>{' '}
+            Faça a triagem ou atribua um técnico.
+          </Aviso>
+        )}
 
         <div className="text-sm grid grid-cols-2 gap-2 text-tinta-2">
           {/* Onde e de que tipo: é a primeira coisa que o técnico designado

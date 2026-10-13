@@ -60,6 +60,11 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
 - **Conclusão** exige a descrição do serviço (RN07) **e a confirmação de uso de
   EPI** (`epi_confirmado: true`, gravada com quem e quando). Vale também para a
   preventiva. A reabertura zera a do chamado; a anterior fica na linha do tempo.
+- **Alerta de primeiro atendimento**: chamado `critica`, `corretiva` e ainda em
+  `aberto` há mais de 15 min aparece como alerta para a gestão (`sem_atendimento_critico`,
+  calculado na consulta como `em_atraso`; faixa no Layout, selo no cartão, aviso
+  no chamado). "Atendido" é sair de `aberto`. O 15 é a constante de
+  `backend/src/config/atendimento.js`, não uma coluna de `sla`.
 - **Equipamento**: tem só `ativo BOOLEAN`.
 - **Sem conexão**: o service worker guarda as *leituras* (fila e chamado). Escrita
   falha na hora e a tela diz que nada foi registrado. É decisão deliberada
@@ -70,9 +75,6 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
 
 Dependem de decisão do dono do projeto antes de qualquer código:
 
-- Alerta visual quando uma OS `CRÍTICA` passa de 15 min sem atendimento (é um
-  relógio de primeiro atendimento, separado do prazo de resolução; falta
-  definir o que conta como "atendida").
 - Enum de ciclo de vida do ativo (`ATIVO`, `EM_MANUTENCAO`, `DEPRECIADO`,
   `DESCARTADO`) no lugar de `ativo BOOLEAN`. Sugestão: `EM_MANUTENCAO` derivado
   dos chamados abertos, não gravado.

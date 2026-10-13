@@ -174,6 +174,30 @@ Rotas: `PATCH /sla/:prioridade` (`prazo_horas` e/ou `contagem`),
 `GET PUT /sla/expediente` (a semana inteira de uma vez),
 `GET POST /sla/feriados`, `DELETE /sla/feriados/:data`.
 
+## Alerta de primeiro atendimento
+
+Um relógio à parte do prazo de resolução: o chamado **crítico** que fica **15
+minutos** em `aberto`, sem que ninguém tenha feito a triagem, aparece como alerta
+para a gestão. "Atendido" é o chamado sair de `aberto` (triagem, ou nascer já
+atribuído pela distribuição automática); cancelado e concluído também deixam de
+alertar.
+
+- É leitura do relógio, como "em atraso": `sem_atendimento_critico` é calculado na
+  consulta (`prioridade = 'critica'`, `origem = 'corretiva'`, `estado = 'aberto'`
+  e `data_abertura` há mais de 15 minutos), sem estado novo na máquina. Só
+  corretiva: preventiva crítica na fila é trabalho planejado, e alertar nela
+  tiraria o crédito do alerta de emergência.
+- O valor (15) é a constante `MINUTOS_ATE_ATENDER_CRITICO` em
+  `backend/src/config/atendimento.js`, e a lista de chamados o devolve em
+  `atendimento_critico_minutos` para a tela não repetir o número. Ainda não há
+  tela para ajustá-lo; se a instituição pedir um valor por prioridade, o caminho
+  é uma coluna em `sla` (migração aditiva).
+- Na tela, só para gestor e administrador: uma faixa vermelha no topo de todas as
+  páginas (refeita a cada minuto e a cada navegação) com a contagem e o link para
+  o painel já filtrado (`/?recorte=criticos`, o filtro "Críticos sem
+  atendimento"); um selo "Sem atendimento há N min" no cartão; e um aviso no
+  chamado, com o que fazer. Solicitante e técnico não recebem nada disso.
+
 ## Segurança
 
 O que o código faz, e onde procurar:
@@ -515,7 +539,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `POST` | `/auth/sair-de-todos` | autenticado: derruba todas as sessões da própria conta |
 | `GET POST` | `/auth/2fa`, `/auth/2fa/iniciar`, `/auth/2fa/ativar` e `/auth/2fa/desativar` (senha + código), `/auth/2fa/codigos` | autenticado, na própria conta; senha e código errados contam no limite do login |
 | `POST` | `/auth/recuperar-senha`, `/auth/redefinir-senha` | público (token de uso único, 60 min; pedidos limitados por IP) |
-| `GET` | `/chamados?pagina=&limite=&estado=&situacao=&categoria_id=&equipamento_id=&origem=&atrasados=&sem_tecnico=&busca=&ordenar=` | autenticado, escopo conforme o perfil. `situacao` = `abertos` ou `encerrados`; `origem` = `corretiva` ou `preventiva`; `ordenar` = `recentes` ou `prazo`; `busca` casa protocolo ou título |
+| `GET` | `/chamados?pagina=&limite=&estado=&situacao=&categoria_id=&equipamento_id=&origem=&atrasados=&sem_tecnico=&sem_atendimento=&busca=&ordenar=` | autenticado, escopo conforme o perfil. `situacao` = `abertos` ou `encerrados`; `origem` = `corretiva` ou `preventiva`; `ordenar` = `recentes` ou `prazo`; `busca` casa protocolo ou título; `sem_atendimento=true` devolve só os críticos parados (ver "Alerta de primeiro atendimento"). Cada chamado traz `em_atraso` e `sem_atendimento_critico`, e a lista traz `atendimento_critico_minutos` |
 | `POST` | `/chamados` | solicitante, gestor, administrador. Com `equipamento_id`, local e categoria podem ser omitidos (vêm do equipamento) |
 | `GET` | `/chamados/:id` | quem tem acesso ao chamado |
 | `PATCH` | `/chamados/:id` | solicitante do chamado, até a atribuição (RN03); gestão, até o chamado encerrar |
