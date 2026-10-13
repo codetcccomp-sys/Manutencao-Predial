@@ -1019,10 +1019,17 @@ const MUTACOES = [
     spec: 'testes/Privacidade.test.jsx',
   },
   {
-    descricao: 'LGPD: o aviso esconde que a hospedagem roda nos Estados Unidos',
+    descricao: 'LGPD: o aviso deixa de dizer onde os servidores que executam o sistema ficam',
     arquivo: 'src/pages/Privacidade.jsx',
-    de: 'servidores que executam o sistema ficam nos Estados Unidos',
-    para: 'servidores que executam o sistema ficam no Brasil',
+    de: 'servidores que executam o sistema também ficam em São Paulo',
+    para: 'servidores que executam o sistema ficam em local não informado',
+    spec: 'testes/Privacidade.test.jsx',
+  },
+  {
+    descricao: 'LGPD: o backend volta à região padrão da Vercel (EUA) e o aviso segue dizendo São Paulo',
+    arquivo: '../backend/vercel.json',
+    de: '"regions": ["gru1"]',
+    para: '"regions": ["iad1"]',
     spec: 'testes/Privacidade.test.jsx',
   },
   {
