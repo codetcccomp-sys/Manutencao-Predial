@@ -97,20 +97,9 @@ app.get('/health', (req, res) => {
 // falha que este endpoint existe para revelar.
 app.get('/health/db', async (req, res) => {
   try {
-    // MEDIÇÃO TEMPORÁRIA (será revertida no mesmo PR): três consultas em
-    // sequência, com o tempo de cada uma no Server-Timing, para comparar a ida
-    // e volta até o banco entre as regiões da Vercel.
-    const db = require('./config/db');
-    const tempos = [];
-    let rows;
-    for (let i = 0; i < 3; i += 1) {
-      const ini = process.hrtime.bigint();
-      ({ rows } = await db.query(
-        'SELECT now() AS agora, (SELECT count(*) FROM categoria) AS categorias'
-      ));
-      tempos.push(`q${i + 1};dur=${(Number(process.hrtime.bigint() - ini) / 1e6).toFixed(1)}`);
-    }
-    res.set('Server-Timing', tempos.join(', '));
+    const { rows } = await require('./config/db').query(
+      'SELECT now() AS agora, (SELECT count(*) FROM categoria) AS categorias'
+    );
     res.json({
       status: 'ok',
       banco: 'conectado',
