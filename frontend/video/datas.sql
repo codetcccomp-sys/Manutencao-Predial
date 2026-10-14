@@ -3,7 +3,10 @@
 --
 -- A semente pelo semear.mjs cria tudo "agora", e a API não deixa escolher a data de
 -- abertura: sem este passo o gráfico de chamados por dia seria um pico num único dia.
--- Rodado por rodar.sh, só contra o banco smp_video.
+-- Rodado por rodar.sh, só contra o banco smp_video, e pelo workflow "Demonstração publicada"
+-- (.github/workflows/demonstracao.yml), contra o banco da demonstração, depois da trava
+-- backend/database/guarda-demonstracao.js. Nunca contra um banco com chamados de verdade:
+-- ele reescreve a data de todo chamado corretivo.
 SELECT setseed(0.42);
 
 CREATE TEMP TABLE alvo AS

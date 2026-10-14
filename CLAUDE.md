@@ -106,6 +106,17 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   banco em `sa-east-1`: sem isso a Vercel usa `iad1` e cada consulta cruza o
   continente (117 ms contra 2 ms, medido). O aviso afirma São Paulo, e um teste lê
   o `vercel.json` para que as duas coisas não se separem.
+- **Há uma demonstração publicada** (`docs/demonstracao-publicada.md`): site, API e
+  banco próprios, com dados fictícios. Os dois projetos da Vercel dela
+  (`conserva-predial-demo`, pasta `demo/frontend`; `conserva-predial-demo-api`, pasta
+  `backend`) seguem a `main`. Regras: nada é compartilhado com a produção, e
+  `JWT_SECRET` e `CRON_SECRET` da demo são **valores novos**, nunca os da produção
+  (o token é só `{id, sv}`: a mesma chave faria o token da demo valer na produção).
+  O semeador (`frontend/video/semear.mjs`) e o workflow `demonstracao.yml` só escrevem
+  num banco marcado como de demonstração (`backend/database/guarda-demonstracao.js`)
+  e numa API que o confirma em `/health/db`; endereço novo do site da demo entra em
+  `ORIGENS_EXTRAS` da API e em `demo/frontend/vercel.json`, nunca em `DOMINIOS_FIXOS`.
+  `reiniciar-demonstracao.sql` apaga o schema inteiro e só roda no banco marcado.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque
   pequeno e formulário vazando no celular que o jsdom não vê.
 

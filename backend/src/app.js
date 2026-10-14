@@ -45,12 +45,25 @@ const DOMINIOS_FIXOS = [
 const PREVIEW_VERCEL =
   /^https:\/\/manutencao-predial-frontend-[a-z0-9-]+-tec-code\.vercel\.app$/;
 
+// Origens que quem opera a instalação acrescenta pelo ambiente, sem tocar no
+// código: a demonstração publicada tem site próprio, e o endereço dela não deve
+// entrar na lista que vale para a produção. Uma origem por item, separadas por
+// vírgula, e o casamento é exato — não há padrão nem curinga aqui, de propósito.
+// Lida a cada chamada, e não ao carregar o módulo, para o teste poder ligá-la.
+function origensExtras() {
+  return String(process.env.ORIGENS_EXTRAS || '')
+    .split(',')
+    .map((origem) => origem.trim());
+}
+
 function origemPermitida(origin) {
   // Sem `Origin` é chamada que não veio de navegador — o agendador do RF08,
   // um curl, um teste. O CORS não é o controle de acesso dessas: quem manda
   // nelas é o token, e é assim que o cron funciona.
   if (!origin) return true;
-  return DOMINIOS_FIXOS.includes(origin) || PREVIEW_VERCEL.test(origin);
+  return (
+    DOMINIOS_FIXOS.includes(origin) || PREVIEW_VERCEL.test(origin) || origensExtras().includes(origin)
+  );
 }
 
 // Cabeçalhos de segurança (nosniff, HSTS, frame-ancestors, sem X-Powered-By…).
@@ -75,7 +88,8 @@ app.use(
       // endpoint público não é lugar de contá-los. Quem precisa da instrução
       // é quem opera o servidor, e essa pessoa lê o log.
       console.error(
-        `[cors] origem recusada: ${origin}. Cadastre-a em DOMINIOS_FIXOS, em backend/src/app.js.`
+        `[cors] origem recusada: ${origin}. Cadastre-a em DOMINIOS_FIXOS, em backend/src/app.js ` +
+          '(ou, numa instalação à parte, em ORIGENS_EXTRAS).'
       );
       callback(new AppError('Origem não permitida.', 403, 'ORIGEM_NAO_PERMITIDA'));
     },
@@ -97,14 +111,23 @@ app.get('/health', (req, res) => {
 // falha que este endpoint existe para revelar.
 app.get('/health/db', async (req, res) => {
   try {
+    // `demonstracao` sai do BANCO que esta API de fato usa, e não de uma
+    // variável de ambiente: quem semeia dados de demonstração pela API confere
+    // aqui, antes de escrever, que ela está ligada ao banco marcado como
+    // descartável (database/guarda-demonstracao.js). Uma variável diria "demo"
+    // mesmo com a URL do banco de produção colada por engano.
     const { rows } = await require('./config/db').query(
-      'SELECT now() AS agora, (SELECT count(*) FROM categoria) AS categorias'
+      `SELECT now() AS agora,
+              (SELECT count(*) FROM categoria) AS categorias,
+              coalesce((SELECT valor = 'true'::jsonb FROM configuracao WHERE chave = 'ambiente_demonstracao'), FALSE)
+                AS demonstracao`
     );
     res.json({
       status: 'ok',
       banco: 'conectado',
       agora: rows[0].agora,
       categorias: Number(rows[0].categorias),
+      demonstracao: rows[0].demonstracao,
     });
   } catch (err) {
     // O motivo vai para o log, não para a resposta. Esta rota é pública, e a
