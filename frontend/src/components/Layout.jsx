@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import AlertaDeCriticos from './AlertaDeCriticos';
 import AvisoDeConexao from './AvisoDeConexao';
+import FaixaDeDemonstracao from './FaixaDeDemonstracao';
 import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
 import Marca from './ui/Marca';
@@ -111,6 +112,8 @@ function Layout() {
           </div>
         </div>
       </header>
+
+      <FaixaDeDemonstracao />
 
       <AvisoDeConexao />
 

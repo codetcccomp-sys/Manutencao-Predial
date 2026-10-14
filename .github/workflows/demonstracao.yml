@@ -1,0 +1,105 @@
+name: Demonstração publicada
+
+# Prepara o banco da demonstração publicada e, se pedido, o semeia com contas e
+# chamados de exemplo, pela API dela. Só roda quando alguém aciona (Actions →
+# Demonstração publicada → Run workflow): nada aqui é automático, porque semear
+# cria contas.
+#
+# Precisa de três segredos do repositório (Settings → Secrets and variables →
+# Actions), que ninguém além de quem os cadastra chega a ver:
+#   DEMO_DATABASE_URL  string do Session pooler (porta 5432) do projeto Supabase
+#                      DA DEMONSTRAÇÃO, nunca o da produção
+#   DEMO_ADMIN_SENHA   senha do administrador da demonstração (só você a usa)
+#   DEMO_SENHA         senha das contas de exemplo (a que você entrega a quem for
+#                      experimentar)
+# O passo a passo está em docs/demonstracao-publicada.md.
+#
+# A trava do banco (backend/database/guarda-demonstracao.js) roda antes e depois
+# da migração e recusa o banco da produção e qualquer banco com dados que não
+# tenha sido marcado como de demonstração. E o semeador só escreve numa API que
+# confirme, pelo próprio banco, ser de demonstração (/health/db).
+on:
+  workflow_dispatch:
+    inputs:
+      semear:
+        description: 'Semear contas e chamados de exemplo (só funciona numa demonstração ainda vazia)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demonstracao
+  cancel-in-progress: false
+
+jobs:
+  preparar:
+    name: Trava, migração e semente
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+
+    steps:
+      - name: Conferir os segredos
+        run: |
+          faltando=""
+          [ -n "$DATABASE_URL" ] || faltando="$faltando DEMO_DATABASE_URL"
+          [ -n "$ADMIN_SENHA" ] || faltando="$faltando DEMO_ADMIN_SENHA"
+          [ -n "$SENHA" ] || faltando="$faltando DEMO_SENHA"
+          if [ -n "$faltando" ]; then
+            echo "::error::Cadastre os segredos que faltam:$faltando (docs/demonstracao-publicada.md)."
+            exit 1
+          fi
+        env:
+          ADMIN_SENHA: ${{ secrets.DEMO_ADMIN_SENHA }}
+          SENHA: ${{ secrets.DEMO_SENHA }}
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+        working-directory: backend
+
+      - name: Trava do banco (antes de migrar)
+        working-directory: backend
+        run: node database/guarda-demonstracao.js
+
+      - name: Aplicar migrações
+        working-directory: backend
+        run: npm run migrate
+
+      - name: Marcar o banco como de demonstração
+        working-directory: backend
+        run: node database/guarda-demonstracao.js --marcar
+
+      - name: Administrador da demonstração
+        working-directory: backend
+        env:
+          E2E_ADMIN_EMAIL: admin@conserva.demo
+          E2E_ADMIN_SENHA: ${{ secrets.DEMO_ADMIN_SENHA }}
+        run: node database/semear-admin.js
+
+      - name: Semear contas e chamados de exemplo
+        if: ${{ inputs.semear }}
+        env:
+          API: https://conserva-predial-demo-api.vercel.app
+          SEMEAR_ADMIN_EMAIL: admin@conserva.demo
+          SEMEAR_ADMIN_SENHA: ${{ secrets.DEMO_ADMIN_SENHA }}
+          SEMEAR_SENHA: ${{ secrets.DEMO_SENHA }}
+        run: node frontend/video/semear.mjs
+
+      # A API cria tudo "agora" e não deixa escolher a data de abertura: sem este
+      # passo o gráfico de chamados por dia seria um pico num único dia. O arquivo
+      # só mexe em chamados, no banco da DEMO_DATABASE_URL, que a trava acima já
+      # aprovou como de demonstração.
+      - name: Espalhar as datas dos chamados
+        if: ${{ inputs.semear }}
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f frontend/video/datas.sql

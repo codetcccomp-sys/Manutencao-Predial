@@ -43,6 +43,12 @@ instituição alguma.
 | Sistema | <https://conserva-predial.vercel.app> |
 | API | <https://manutencao-predial-backend-delta.vercel.app> |
 | Aviso de privacidade | <https://conserva-predial.vercel.app/privacidade> |
+| Demonstração (dados fictícios) | <https://conserva-predial-demo.vercel.app> |
+| API da demonstração | <https://conserva-predial-demo-api.vercel.app> |
+
+A demonstração é uma cópia à parte, com banco próprio, para apresentar sem tocar na
+produção: como é montada, o que só o dono do projeto cadastra e como refazê-la na
+véspera da apresentação estão em [docs/demonstracao-publicada.md](docs/demonstracao-publicada.md).
 
 O frontend responde também em `manutencao-predial-frontend.vercel.app`, o nome
 que a Vercel deu ao projeto. O endereço curto foi **acrescentado**, não
@@ -522,6 +528,11 @@ vermelha qualquer PR sem relação com a falha.
 origem**, e só então o arquivo cifrado vira artefato (30 dias). Precisa dos
 segredos `BACKUP_DATABASE_URL` e `BACKUP_PASSPHRASE`; como cadastrar e como
 restaurar estão em [docs/piloto.md](docs/piloto.md), §2.3.
+
+`.github/workflows/demonstracao.yml` prepara o banco da demonstração publicada (só
+sob demanda): trava, migração, administrador e semente. A trava
+(`backend/database/guarda-demonstracao.js`) recusa o banco da produção e qualquer banco
+com dados que não esteja marcado como de demonstração.
 
 ## Rotas
 

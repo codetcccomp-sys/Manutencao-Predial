@@ -103,3 +103,59 @@ describe('Origens recusadas', () => {
     expect(resp.headers['access-control-allow-origin']).toBeUndefined();
   });
 });
+
+/**
+ * Origens acrescentadas pelo ambiente (ORIGENS_EXTRAS).
+ *
+ * A demonstração publicada é uma instalação à parte, com site próprio. O
+ * endereço dele precisa ser aceito pela API dela e NÃO pela da produção, e é
+ * por isso que não entra em DOMINIOS_FIXOS: a lista do código vale para quem
+ * roda este código em qualquer lugar, a variável vale só onde foi posta.
+ */
+describe('ORIGENS_EXTRAS', () => {
+  const SITE_DA_DEMO = 'https://site-da-demonstracao.vercel.app';
+  const original = process.env.ORIGENS_EXTRAS;
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.ORIGENS_EXTRAS;
+    else process.env.ORIGENS_EXTRAS = original;
+  });
+
+  it('sem a variável, o site da demonstração não é aceito', async () => {
+    delete process.env.ORIGENS_EXTRAS;
+    const registro = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const resp = await request(app).get('/health').set('Origin', SITE_DA_DEMO);
+
+    registro.mockRestore();
+    expect(resp.status).toBe(403);
+    expect(resp.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('com a variável, aceita a origem listada — e só ela', async () => {
+    process.env.ORIGENS_EXTRAS = ` ${SITE_DA_DEMO} , https://outro-site.example `;
+    const registro = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const aceita = await request(app).get('/health').set('Origin', SITE_DA_DEMO);
+    const outra = await request(app).get('/health').set('Origin', 'https://outro-site.example');
+    const fora = await request(app).get('/health').set('Origin', 'https://terceiro.example');
+
+    registro.mockRestore();
+    expect(aceita.status).toBe(200);
+    expect(aceita.headers['access-control-allow-origin']).toBe(SITE_DA_DEMO);
+    expect(outra.status).toBe(200);
+    expect(fora.status).toBe(403);
+  });
+
+  it('o casamento é exato: nem prefixo, nem barra no fim, nem curinga', async () => {
+    process.env.ORIGENS_EXTRAS = `${SITE_DA_DEMO},*`;
+    const registro = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    for (const origem of [`${SITE_DA_DEMO}/`, `${SITE_DA_DEMO}.invasor.com`, 'https://qualquer.example']) {
+      const resp = await request(app).get('/health').set('Origin', origem);
+      expect(resp.status).toBe(403);
+    }
+
+    registro.mockRestore();
+  });
+});

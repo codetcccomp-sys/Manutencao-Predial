@@ -1,7 +1,13 @@
-// Semente do banco DESCARTÁVEL de vídeo: pela API (como o e2e), com nomes e dados realistas.
-// Nunca aponte para um backend de verdade: ele cria contas, e o admin é o do banco de vídeo.
-const API = process.env.API ?? 'http://localhost:3333';
-const SENHA = 'senha123';
+// Semente de um banco DESCARTÁVEL — o do vídeo, ou o da demonstração publicada: pela API (como o
+// e2e), com nomes e dados realistas. Nunca aponte para um backend de verdade: ele cria contas.
+// O destino e as credenciais saem de ./destino.mjs, que recusa a produção e só semeia uma API
+// publicada se ela disser, pelo banco, que é de demonstração.
+import { conferirDemonstracao, resolverDestino } from './destino.mjs';
+
+const destino = resolverDestino();
+const API = destino.api;
+const SENHA = destino.senha;
+if (!destino.local) await conferirDemonstracao(API);
 
 async function chamar(token, metodo, caminho, corpo) {
   const r = await fetch(API + caminho, {
@@ -15,7 +21,7 @@ async function chamar(token, metodo, caminho, corpo) {
 }
 const entrar = async (email, senha = SENHA) => (await chamar(null, 'POST', '/auth/login', { email, senha })).token;
 
-const admin = await entrar('admin_video@exemplo.com', 'senha_video_local');
+const admin = await entrar(destino.adminEmail, destino.adminSenha);
 
 const PESSOAS = {
   gestor: [['Ana Ribeiro', 'ana.ribeiro@conserva.demo']],
@@ -165,10 +171,12 @@ for (const p of PLANOS) await chamar(ana, 'POST', '/planos-preventivos', p);
 
 // As duas tarefas automáticas passam uma vez, como faria o agendador: a preventiva gera
 // o chamado do split, e o painel da gestão mostra as duas em dia.
-const agendador = { Authorization: 'Bearer video', 'Content-Type': 'application/json' };
-for (const tarefa of ['gerar-preventivas', 'notificar-atrasos']) {
-  const r = await fetch(`${API}/tarefas/${tarefa}`, { method: 'POST', headers: agendador });
-  if (!r.ok) throw new Error(`tarefa ${tarefa} -> ${r.status}`);
+if (destino.cron) {
+  const agendador = { Authorization: `Bearer ${destino.cron}`, 'Content-Type': 'application/json' };
+  for (const tarefa of ['gerar-preventivas', 'notificar-atrasos']) {
+    const r = await fetch(`${API}/tarefas/${tarefa}`, { method: 'POST', headers: agendador });
+    if (!r.ok) throw new Error(`tarefa ${tarefa} -> ${r.status}`);
+  }
 }
 
 console.log(JSON.stringify({ chamados: ids.length, por_estado: ids.reduce((a, x) => ((a[x.ate] = (a[x.ate] ?? 0) + 1), a), {}) }));

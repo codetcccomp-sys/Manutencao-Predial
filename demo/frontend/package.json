@@ -1,0 +1,8 @@
+{
+  "name": "conserva-predial-demo-frontend",
+  "private": true,
+  "description": "Projeto da Vercel que publica a demonstração. Só existe para trazer o vercel.json próprio: a build é a do ../../frontend.",
+  "scripts": {
+    "build": "npm --prefix ../../frontend ci && npm --prefix ../../frontend run build && rm -rf dist && cp -r ../../frontend/dist dist"
+  }
+}
