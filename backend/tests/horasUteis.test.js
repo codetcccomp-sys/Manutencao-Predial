@@ -162,6 +162,44 @@ describe('O prazo do chamado segue a régua da prioridade', () => {
     expect(rows[0]).toEqual({ confere: true, contou: true });
   });
 
+  it('a reabertura dá o prazo do ciclo novo na mesma régua, em horas úteis, e começa sem a espera do ciclo anterior', async () => {
+    await request(app).patch('/sla/media').set(como(gestor)).send({ prazo_horas: 20, contagem: 'uteis' });
+    const { body } = await request(app)
+      .post('/chamados')
+      .set(como(gestor))
+      .send({ titulo: 'Bebedouro vazando', descricao: 'Vazamento no bebedouro.', categoria_id: categoria, local_id: local, prioridade: 'media' });
+    const id = body.chamado.id;
+
+    await request(app).patch(`/chamados/${id}/estado`).set(como(gestor)).send({ estado: 'em_triagem' });
+    await request(app).patch(`/chamados/${id}/atribuir`).set(como(gestor)).send({ tecnico_id: tecnicoId });
+    await request(app).patch(`/chamados/${id}/estado`).set(como(tecnico)).send({ estado: 'em_andamento' });
+    const conclusao = await request(app)
+      .patch(`/chamados/${id}/estado`)
+      .set(como(tecnico))
+      .send({ estado: 'concluido', servico_realizado: 'Troca do registro e teste de vazamento sem ocorrência.', epi_confirmado: true });
+    expect(conclusao.status).toBe(200);
+
+    // O ciclo anterior deixou uma espera por material contada em expediente. O
+    // prazo do ciclo novo não pode herdá-la: a reabertura recomeça do zero.
+    await pool.query("UPDATE chamado SET tempo_suspenso_util = interval '3 hours' WHERE id = $1", [id]);
+
+    const reabertura = await request(app)
+      .post(`/chamados/${id}/reabertura`)
+      .set(como(gestor))
+      .send({ justificativa: 'O vazamento voltou no mesmo dia da conclusão.' });
+    expect(reabertura.status).toBe(200);
+
+    const { rows } = await pool.query(
+      `SELECT prazo_estimado = prazo_sla(prioridade, reaberto_em, interval '0', interval '0', $2) AS confere,
+              prazo_estimado > reaberto_em + interval '20 hours' AS passa_das_corridas,
+              tempo_suspenso_util = interval '0' AS zerada
+         FROM chamado WHERE id = $1`,
+      [id, FUSO]
+    );
+    // 20h úteis são dois dias de expediente: sempre mais que 20h de relógio.
+    expect(rows[0]).toEqual({ confere: true, passa_das_corridas: true, zerada: true });
+  });
+
   it('repriorizar recalcula desde a abertura, na régua nova, com a espera útil devolvida', async () => {
     await request(app).patch('/sla/alta').set(como(gestor)).send({ prazo_horas: 8, contagem: 'uteis' });
     const { body } = await request(app)

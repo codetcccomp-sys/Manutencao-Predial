@@ -1425,6 +1425,20 @@ const MUTACOES = [
     para: '',
     spec: 'testes/FaixaDeDemonstracao.test.jsx',
   },
+  {
+    descricao: 'sessão vencida: deixa de apagar as leituras guardadas para uso sem conexão',
+    arquivo: 'src/context/AuthContext.jsx',
+    de: "    function aoExpirar() {\n      limparDadosOffline();\n",
+    para: "    function aoExpirar() {\n",
+    spec: 'testes/ExpiracaoLimpaCache.test.jsx',
+  },
+  {
+    descricao: 'sessão vencida: deixa de avisar que a sessão expirou',
+    arquivo: 'src/context/AuthContext.jsx',
+    de: "      setSessaoExpirada(true);\n    }\n\n    window.addEventListener(EVENTO_SESSAO_EXPIRADA",
+    para: "    }\n\n    window.addEventListener(EVENTO_SESSAO_EXPIRADA",
+    spec: 'testes/ExpiracaoLimpaCache.test.jsx',
+  },
 ];
 
 /**
