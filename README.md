@@ -32,9 +32,11 @@ e é a primeira coisa a fechar se ele passar a atender um prédio real.
 | [docs/dados-demonstracao.md](docs/dados-demonstracao.md) | O que é fictício, como reconhecer e como apagar antes do uso real |
 | [docs/lgpd.md](docs/lgpd.md) | Dados pessoais, retenção e o procedimento de remoção sob pedido |
 | [docs/apresentacao.md](docs/apresentacao.md) | Roteiro da demonstração ao vivo e checklist dos pitches de dezembro |
+| [docs/demonstracao-publicada.md](docs/demonstracao-publicada.md) | A demonstração no ar: o que só o dono do projeto cadastra, as travas e a rotina da véspera |
+| [docs/matriz-de-testes.md](docs/matriz-de-testes.md) | Cada regra ligada ao teste que a prova, o roteiro do ensaio com pessoas e as lacunas conhecidas |
 
-Os quatro são artefatos acadêmicos. Nenhum foi adotado ou assinado por
-instituição alguma.
+Os documentos de piloto, dados, privacidade e apresentação são artefatos acadêmicos.
+Nenhum foi adotado ou assinado por instituição alguma.
 
 ## Endereços
 
@@ -292,7 +294,7 @@ O que o código faz, e onde procurar:
 
 ## Como rodar
 
-Requisitos: Node 22+ e PostgreSQL 16+.
+Requisitos: Node 22+ e PostgreSQL 16+ (o CI e a produção rodam a 17).
 
 ```bash
 # Banco

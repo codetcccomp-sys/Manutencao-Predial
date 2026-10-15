@@ -573,6 +573,41 @@ const MUTACOES = [
     para: "chave = 'ambiente_demonstracao'",
     spec: 'tests/reiniciarDemonstracao.test.js',
   },
+  {
+    descricao: 'reabertura: o prazo do ciclo novo deixa de contar a partir da reabertura',
+    arquivo: 'src/services/chamados.service.js',
+    de: "prazo_estimado = prazo_sla(prioridade, now(), '0 seconds', '0 seconds', $1)",
+    para: "prazo_estimado = prazo_sla(prioridade, now() - interval '100 hours', '0 seconds', '0 seconds', $1)",
+    spec: 'tests/horasUteis.test.js',
+  },
+  {
+    descricao: 'reabertura: o ciclo novo herda a espera útil do ciclo anterior',
+    arquivo: 'src/services/chamados.service.js',
+    de: "         tempo_suspenso_util = '0 seconds',\n         prazo_estimado",
+    para: "         tempo_suspenso_util = tempo_suspenso_util,\n         prazo_estimado",
+    spec: 'tests/horasUteis.test.js',
+  },
+  {
+    descricao: 'matriz de testes: um título citado deixa de existir no arquivo',
+    arquivo: '../docs/matriz-de-testes.md',
+    de: '`backend/tests/auth.test.js` | rejeita senha incorreta |',
+    para: '`backend/tests/auth.test.js` | rejeita a senha incorreta |',
+    spec: 'tests/matrizDeTestes.test.js',
+  },
+  {
+    descricao: 'matriz de testes: um arquivo citado deixa de existir',
+    arquivo: '../docs/matriz-de-testes.md',
+    de: '`backend/tests/auth.test.js` | rejeita senha incorreta |',
+    para: '`backend/tests/auth.testes.js` | rejeita senha incorreta |',
+    spec: 'tests/matrizDeTestes.test.js',
+  },
+  {
+    descricao: 'matriz de testes: um arquivo de teste fica de fora da matriz',
+    arquivo: '../docs/matriz-de-testes.md',
+    de: '`backend/tests/tls.test.js`',
+    para: '`backend/tests/tls-sumiu`',
+    spec: 'tests/matrizDeTestes.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';

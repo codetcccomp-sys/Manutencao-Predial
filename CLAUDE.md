@@ -89,6 +89,10 @@ Dependem de decisão do dono do projeto antes de qualquer código:
 - Migração nova é aditiva e roda inteira numa transação. Em produção aplica-se
   pelo mesmo `migrate`, nunca colando SQL sem registrar em `migracao`; faça antes
   um ensaio com `BEGIN … ROLLBACK`.
+- Teste novo entra em `docs/matriz-de-testes.md`, numa linha da seção da regra que ele
+  prova (arquivo e título exato) ou na tabela "Outras suítes". O
+  `backend/tests/matrizDeTestes.test.js` falha se a matriz citar o que não existe ou
+  deixar um arquivo de teste de fora.
 - As suítes do backend criam contas `@exemplo.com` e o teardown global as
   apaga. Teste que deixa chamado com data no passado **polui as médias** das
   suítes de relatório: apague o que criar, ou volte as datas juntas.
