@@ -204,13 +204,16 @@ function Preventiva() {
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {aviso && <Aviso tipo="sucesso">{aviso}</Aviso>}
 
-      <div role="tablist" aria-label="Seções da manutenção preventiva" className="flex gap-2 border-b">
+      {/* Grupo de botões com `aria-pressed`, e não um `tablist`: aba promete ao
+          leitor de tela as setas do teclado, o painel ligado por `aria-controls` e
+          o Tab que pula para o painel, e nada disso existia. O mesmo caminho que
+          MeusPedidos já tinha tomado. */}
+      <div role="group" aria-label="Seções da manutenção preventiva" className="flex gap-2 border-b">
         {ABAS.map((a) => (
           <button
             key={a.id}
             type="button"
-            role="tab"
-            aria-selected={aba === a.id}
+            aria-pressed={aba === a.id}
             onClick={() => setAba(a.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
               aba === a.id ? 'border-navy text-navy' : 'border-transparent text-tinta-2'

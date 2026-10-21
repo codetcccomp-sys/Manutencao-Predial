@@ -186,10 +186,14 @@ function Cadastros() {
 
       {/* Rola por dentro no celular: desde a quarta aba, a fileira passa dos
           393px e levaria a página inteira junto para o lado. */}
-      <div className="flex gap-2 border-b overflow-x-auto">
+      {/* `aria-pressed` diz qual seção está aberta: a borda azul só diz isso a
+          quem enxerga (WCAG 1.4.1). */}
+      <div role="group" aria-label="Seções dos cadastros" className="flex gap-2 border-b overflow-x-auto">
         {ABAS.map((a) => (
           <button
             key={a.id}
+            type="button"
+            aria-pressed={aba === a.id}
             onClick={() => setAba(a.id)}
             className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
               aba === a.id ? 'border-navy text-navy' : 'border-transparent text-tinta-2'
@@ -220,7 +224,10 @@ function Cadastros() {
                 <label key={n.campo} className="grid gap-1 text-sm">
                   <span className="text-tinta-2">
                     {n.rotulo}
-                    {!n.obrigatorio && <span className="text-gray-400"> (opcional)</span>}
+                    {/* Herda o `text-tinta-2` do rótulo. O cinza 400 cru do Tailwind que havia
+                        aqui dava cerca de 2,5:1, contra os 4,5:1 do WCAG AA: cor fora dos
+                        tokens escapa da garantia que eles têm, e só o axe viu. */}
+                    {!n.obrigatorio && <span> (opcional)</span>}
                   </span>
                   <input
                     type="text"

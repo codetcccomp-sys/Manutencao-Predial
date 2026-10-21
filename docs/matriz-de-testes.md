@@ -201,7 +201,7 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Materiais | O técnico designado lança o consumo | `backend/tests/equipesMateriais.test.js` | técnico designado lança consumo no chamado |
 | RF09 | Nota fora de 1 a 5 volta 422, não erro do banco | `backend/tests/equipesMateriais.test.js` | avaliação com nota fora de 1..5 volta 422, e não erro do banco |
 
-## 10. Segurança da aplicação e privacidade
+## 10. Segurança, privacidade e acessibilidade
 
 | Regra | O que se prova | Arquivo | Teste |
 | --- | --- | --- | --- |
@@ -212,6 +212,17 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Privacidade | O aviso abre sem login e cabe na tela | `frontend/e2e/privacidade.spec.js` | abre sem login e cabe na tela |
 | Privacidade | Abrir o aviso a partir do cadastro não perde o formulário | `frontend/e2e/privacidade.spec.js` | do cadastro, abre em outra aba e o formulário continua preenchido |
 | LGPD | O IP do pedido de recuperação não fica para sempre | `backend/tests/recuperacaoSenha.test.js` | apaga pedidos velhos, junto com o IP que eles guardam |
+| Acessibilidade | O detalhe do chamado passa no axe (WCAG 2.2 AA e boas práticas); as demais telas, públicas e internas, passam no mesmo arquivo, nos dois projetos | `frontend/e2e/acessibilidade.spec.js` | o detalhe do chamado não tem violação de acessibilidade |
+| Acessibilidade | O diálogo de confirmação aberto também passa no axe | `frontend/e2e/acessibilidade.spec.js` | o diálogo de confirmação aberto não tem violação de acessibilidade |
+| Acessibilidade | Ao trocar de tela, o título da aba muda e o foco vai ao h1, num navegador de verdade | `frontend/e2e/acessibilidade.spec.js` | o título da aba acompanha a tela e o foco vai para o título da página |
+| Acessibilidade | O atalho para o conteúdo leva o foco para dentro do main | `frontend/e2e/acessibilidade.spec.js` | o atalho "Pular para o conteúdo" leva o foco para dentro do conteúdo |
+| Acessibilidade | Toda rota do App.jsx tem título próprio | `frontend/testes/AnuncioDeRota.test.jsx` | toda rota do App.jsx tem título próprio, e as desconhecidas ficam com o nome do sistema |
+| Acessibilidade | Trocar de caminho leva o foco ao h1 | `frontend/testes/AnuncioDeRota.test.jsx` | ao trocar de caminho, leva o foco ao h1 da tela nova |
+| Acessibilidade | Trocar só a query não tira o foco de onde a pessoa estava | `frontend/testes/AnuncioDeRota.test.jsx` | trocar só a query (?aba=) na mesma tela não tira o foco de onde a pessoa estava |
+| Acessibilidade | As seções da preventiva dizem qual está aberta, sem prometer setas | `frontend/testes/Preventiva.test.jsx` | as seções são botões com estado, e não um tablist que promete setas que não existem |
+| Acessibilidade | As seções dos cadastros dizem qual está aberta | `frontend/testes/Cadastros.test.jsx` | a seção aberta é dita por aria-pressed, não só pela borda azul |
+| Acessibilidade | O select de técnico tem nome acessível | `frontend/testes/ChamadoDetalhe.test.jsx` | o select de técnico da atribuição se chama "Técnico responsável" |
+| Acessibilidade | Nenhum texto usa cinza cru do Tailwind, que escapa dos tokens medidos | `frontend/testes/contraste.test.js` | nenhum texto da tela usa gray de 100 a 400 |
 
 ## 11. Demonstração publicada
 
@@ -319,5 +330,10 @@ protocolo do chamado, horário).
 - **Backup do Storage:** o backup é o `pg_dump` do schema `public`; objetos do Supabase
   Storage não entram. Enquanto `ANEXOS_ARMAZENAMENTO` não for ligado, os anexos estão no
   banco e estão cobertos.
+- **Acessibilidade além do axe:** o axe pega cerca de um terço dos problemas de WCAG. Não
+  cobrem: leitor de tela de verdade (NVDA, VoiceOver), zoom de 200%, o gráfico de linhas dos
+  relatórios, a impressão das etiquetas e telas com muitos dados. É revisão de gente, a
+  fazer antes de a instituição adotar (obrigatória se for pública: Lei Brasileira de
+  Inclusão, art. 63).
 - **Execuções locais de `pwa.spec.js`:** falham no ambiente em que a matriz foi montada e
   passam no CI; a causa exata não foi encontrada.

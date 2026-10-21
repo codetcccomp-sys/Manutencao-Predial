@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 
@@ -265,5 +265,30 @@ describe('Hierarquia de cabeçalhos', () => {
       niveis.filter((h) => h.nivel > 2),
       'nenhum painel de cadastro é subdivisão de outro: todos ficam em h2'
     ).toEqual([]);
+  });
+});
+
+describe('Seções dos cadastros', () => {
+  it('a seção aberta é dita por aria-pressed, não só pela borda azul', async () => {
+    const usuario = userEvent.setup();
+    preparar();
+
+    const grupo = screen.getByRole('group', { name: 'Seções dos cadastros' });
+    const locais = within(grupo).getByRole('button', { name: 'Locais' });
+    const categorias = within(grupo).getByRole('button', { name: 'Categorias' });
+    expect(locais).toHaveAttribute('aria-pressed', 'true');
+    expect(categorias).toHaveAttribute('aria-pressed', 'false');
+
+    await usuario.click(categorias);
+
+    expect(categorias).toHaveAttribute('aria-pressed', 'true');
+    expect(locais).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('o "(opcional)" do formulário de local herda a cor do rótulo, sem cinza cru', async () => {
+    preparar();
+
+    const opcional = (await screen.findAllByText('(opcional)'))[0];
+    expect(opcional.className).not.toMatch(/gray/);
   });
 });

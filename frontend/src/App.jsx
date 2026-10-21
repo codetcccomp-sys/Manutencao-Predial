@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { AuthProvider } from './context/AuthContext';
+import AnuncioDeRota from './components/AnuncioDeRota';
 import RotaProtegida from './components/RotaProtegida';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -21,6 +22,7 @@ import MinhaConta from './pages/MinhaConta';
 function App() {
   return (
     <BrowserRouter>
+      <AnuncioDeRota />
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />

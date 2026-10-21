@@ -121,6 +121,11 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   e numa API que o confirma em `/health/db`; endereço novo do site da demo entra em
   `ORIGENS_EXTRAS` da API e em `demo/frontend/vercel.json`, nunca em `DOMINIOS_FIXOS`.
   `reiniciar-demonstracao.sql` apaga o schema inteiro e só roda no banco marcado.
+- Tela nova entra na lista de `frontend/e2e/acessibilidade.spec.js`: o axe falha o e2e com
+  violação de WCAG 2.2 AA. Texto não usa cinza cru do Tailwind (use os tokens: `contraste.test.js`
+  barra), `<select>` e `<input>` levam rótulo, link dentro de frase leva `underline`, e rota nova
+  ganha título em `frontend/src/dominio/titulosDeRota.js` (o teste confere cada rota do `App.jsx`).
+  Não use `role="tab"` sem setas, `tabpanel` e `aria-controls`: grupo de botões com `aria-pressed`.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque
   pequeno e formulário vazando no celular que o jsdom não vê.
 

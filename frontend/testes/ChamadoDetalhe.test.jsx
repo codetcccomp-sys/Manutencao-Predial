@@ -48,14 +48,14 @@ function chamado(extra = {}) {
   };
 }
 
-function montar({ como, dados = chamado(), comentarios = [] } = {}) {
+function montar({ como, dados = chamado(), comentarios = [], tecnicos = [] } = {}) {
   usuarioAtual.valor = como;
 
   api.get.mockImplementation(async (caminho) => {
     if (caminho === '/chamados/7') return { data: { chamado: dados } };
     if (caminho === '/chamados/7/anexos') return { data: { anexos: [] } };
     if (caminho === '/chamados/7/comentarios') return { data: { comentarios } };
-    if (caminho === '/usuarios') return { data: { usuarios: [] } };
+    if (caminho === '/usuarios') return { data: { usuarios: tecnicos } };
     if (caminho === '/categorias') return { data: { categorias: [{ id: 1, nome: 'Hidráulica' }] } };
     if (caminho === '/locais') return { data: { locais: [{ id: 1, unidade: 'Bloco A' }] } };
     return { data: {} };
@@ -615,5 +615,25 @@ describe('Crítico sem atendimento', () => {
     await screen.findByRole('heading', { name: 'Infiltração no auditório' });
 
     expect(screen.queryByText(/Chamado crítico sem atendimento/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Campos de escolha com nome acessível', () => {
+  // Um <select> sem rótulo é lido como "caixa de combinação" e nada mais: o texto
+  // da primeira opção não é o nome do campo. O axe do e2e acusou os dois (WCAG 4.1.2).
+  it('o select de técnico da atribuição se chama "Técnico responsável"', async () => {
+    montar({
+      como: GESTOR,
+      dados: chamado({ estado: 'em_triagem' }),
+      tecnicos: [{ id: 21, nome: 'Paulo', email: 'paulo@exemplo.com', perfil: 'tecnico' }],
+    });
+
+    expect(await screen.findByRole('combobox', { name: 'Técnico responsável' })).toBeInTheDocument();
+  });
+
+  it('o select da nota de avaliação se chama "Nota do atendimento"', async () => {
+    montar({ como: SOLICITANTE, dados: chamado({ estado: 'concluido', solicitante_id: SOLICITANTE.id }) });
+
+    expect(await screen.findByRole('combobox', { name: 'Nota do atendimento' })).toBeInTheDocument();
   });
 });

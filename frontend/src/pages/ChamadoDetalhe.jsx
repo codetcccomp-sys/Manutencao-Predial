@@ -827,6 +827,9 @@ function ChamadoDetalhe() {
             <>
               <select
                 required
+                // Sem rótulo, o leitor de tela dizia só "caixa de combinação": o
+                // texto "Selecione o técnico" é uma opção, não o nome do campo.
+                aria-label="Técnico responsável"
                 value={tecnicoId}
                 onChange={(e) => setTecnicoId(e.target.value)}
                 /* w-full e min-w-0: a largura natural de um select é a da
@@ -977,7 +980,7 @@ function ChamadoDetalhe() {
       {podeAvaliar && (
         <form onSubmit={avaliar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
           <h2 className="font-medium text-navy">Avaliar atendimento</h2>
-          <select value={nota} onChange={(e) => setNota(e.target.value)} className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm">
+          <select aria-label="Nota do atendimento" value={nota} onChange={(e) => setNota(e.target.value)} className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm">
             {[5, 4, 3, 2, 1].map((n) => (
               <option key={n} value={n}>{n} estrela(s)</option>
             ))}
