@@ -26,7 +26,7 @@ test('gestão cadastra equipamento e plano, gera a execução, e o técnico a re
   await expect(page.getByRole('heading', { name: 'Manutenção preventiva' })).toBeVisible();
 
   // Equipamento.
-  await page.getByRole('tab', { name: 'Equipamentos' }).click();
+  await page.getByRole('button', { name: 'Equipamentos' }).click();
   await page.getByLabel('Código').fill(codigo.toLowerCase());
   await page.getByLabel('Nome').fill('Split 12.000 BTU');
   await page.getByLabel('Local').selectOption({ label: `Unidade E2E ${cenario.marca} / A` });
@@ -36,7 +36,7 @@ test('gestão cadastra equipamento e plano, gera a execução, e o técnico a re
   await expect(page.getByRole('link', { name: `${codigo} — Split 12.000 BTU` })).toBeVisible();
 
   // Plano, com o técnico como responsável.
-  await page.getByRole('tab', { name: 'Planos' }).click();
+  await page.getByRole('button', { name: 'Planos' }).click();
   await page.getByLabel('Serviço').fill(servico);
   await page.getByLabel('Roteiro').fill('Desligar, lavar o filtro, secar e recolocar.');
   await page

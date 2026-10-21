@@ -238,7 +238,7 @@ describe('Tela de manutenção preventiva', () => {
     const usuario = userEvent.setup();
     abrirPreventiva();
     await screen.findByText('Limpeza do filtro');
-    await usuario.click(screen.getByRole('tab', { name: 'Equipamentos' }));
+    await usuario.click(screen.getByRole('button', { name: 'Equipamentos', pressed: false }));
 
     api.post.mockRejectedValueOnce({
       response: { data: { erro: { mensagem: 'Já existe um equipamento com este código.' } } },
@@ -253,6 +253,27 @@ describe('Tela de manutenção preventiva', () => {
     expect(api.post.mock.calls[0][1]).toMatchObject({ codigo: 'ac-204', local_id: 1, categoria_id: 10 });
     // O que a pessoa digitou fica, para corrigir só o código.
     expect(screen.getByLabelText('Nome')).toHaveValue('Outro split');
+  });
+
+  it('as seções são botões com estado, e não um tablist que promete setas que não existem', async () => {
+    const usuario = userEvent.setup();
+    abrirPreventiva();
+    await screen.findByText('Limpeza do filtro');
+
+    // Aba exige setas do teclado, tabpanel e aria-controls; nada disso existia.
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByRole('tab')).toBeNull();
+
+    const grupo = screen.getByRole('group', { name: 'Seções da manutenção preventiva' });
+    const planos = within(grupo).getByRole('button', { name: 'Planos' });
+    const equipamentos = within(grupo).getByRole('button', { name: 'Equipamentos' });
+    expect(planos).toHaveAttribute('aria-pressed', 'true');
+    expect(equipamentos).toHaveAttribute('aria-pressed', 'false');
+
+    await usuario.click(equipamentos);
+
+    expect(equipamentos).toHaveAttribute('aria-pressed', 'true');
+    expect(planos).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('não é tela de solicitante', () => {

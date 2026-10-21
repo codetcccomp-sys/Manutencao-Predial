@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /**
@@ -107,5 +107,33 @@ describe('A cor da barra do navegador acompanha o cabeçalho', () => {
     const esperado = `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
 
     expect(declarado?.toLowerCase()).toBe(esperado);
+  });
+});
+
+describe('Texto não usa cinza cru do Tailwind', () => {
+  // `text-gray-400` (#9ca3af) dá cerca de 2,5:1 sobre branco, contra os 4,5:1 do
+  // WCAG AA. Os tokens (`tinta-2` e companhia) foram medidos; a paleta crua do
+  // Tailwind não. O "(opcional)" de Cadastros usava `text-gray-400` e só o axe do
+  // e2e acusou — este teste fecha a porta antes de chegar lá. Cinza de 500 em
+  // diante passa sobre branco, e por isso não entra.
+  function arquivos(pasta) {
+    return readdirSync(pasta).flatMap((nome) => {
+      const caminho = resolve(pasta, nome);
+      if (statSync(caminho).isDirectory()) return arquivos(caminho);
+      return /\.jsx?$/.test(nome) ? [caminho] : [];
+    });
+  }
+
+  it('nenhum texto da tela usa gray de 100 a 400', () => {
+    const achados = [];
+    for (const arquivo of arquivos(resolve(process.cwd(), 'src'))) {
+      const linhas = readFileSync(arquivo, 'utf8').split('\n');
+      linhas.forEach((linha, i) => {
+        if (/\btext-(gray|slate|zinc|neutral)-[1-4]00\b/.test(linha)) {
+          achados.push(`${arquivo.replace(process.cwd() + '/', '')}:${i + 1}`);
+        }
+      });
+    }
+    expect(achados, 'use um token (tinta-2) em vez do cinza cru').toEqual([]);
   });
 });

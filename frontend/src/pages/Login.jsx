@@ -213,7 +213,7 @@ function Login() {
           </p>
           <p>
             Não tem conta?{' '}
-            <Link to="/cadastro" className="font-medium text-navy hover:underline">
+            <Link to="/cadastro" className="font-medium text-navy underline">
               Cadastre-se
             </Link>
           </p>

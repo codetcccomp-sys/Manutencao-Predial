@@ -484,6 +484,15 @@ o select de técnico crescendo com o e-mail mais longo — passaram por build
 verde e por teste de componente. O jsdom devolve zero em
 `getBoundingClientRect`: não existe como medi-los fora de um navegador.
 
+**Acessibilidade.** `e2e/acessibilidade.spec.js` roda o axe-core (WCAG 2.2 AA e
+boas práticas) nas telas públicas, nas internas e no diálogo aberto, e confere o que
+uma SPA não faz sozinha: o título da aba muda a cada tela e o foco vai para o `h1`
+(`components/AnuncioDeRota.jsx`, com os títulos em `dominio/titulosDeRota.js`). Foi ele
+que achou um "(opcional)" com 2,5:1 de contraste, um link só distinguível pela cor e
+dois `<select>` sem nome. O axe pega cerca de um terço dos problemas de WCAG: leitor de
+tela real, zoom e ordem de leitura seguem sendo revisão de gente (ver a seção 14 de
+`docs/matriz-de-testes.md`). Tela nova entra na lista do spec.
+
 O cenário de cada execução é semeado pela própria API, não por SQL. Inserir
 direto no banco criaria estados que a aplicação nunca produz — um chamado sem
 histórico, uma senha sem hash — e o teste passaria a verificar uma realidade

@@ -477,7 +477,7 @@ function Relatorios() {
               <p className="text-xs text-tinta-2 mt-2">
                 Alterar o prazo vale para chamados abertos daqui em diante; os já existentes mantêm o
                 prazo com que nasceram. Horas úteis contam só o expediente, fora dos feriados —{' '}
-                <Link to="/cadastros?aba=expediente" className="text-navy hover:underline">
+                <Link to="/cadastros?aba=expediente" className="text-navy underline">
                   ajustar expediente e feriados
                 </Link>
                 .
