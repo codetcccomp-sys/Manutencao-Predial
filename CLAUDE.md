@@ -7,7 +7,7 @@ sem ler tudo, e o que **não** existe.
 
 ## Stack (a de verdade)
 
-- **Backend**: Node 22, Express, `pg` com SQL cru. **Não há ORM nem Prisma.**
+- **Backend**: Node 22 e 24 (`engines`; o CI testa as duas, e a Vercel roda 24), Express, `pg` com SQL cru. **Não há ORM nem Prisma.**
   O schema vive em `backend/database/migrations/NNN_*.sql`, aplicado por
   `database/migrate.js`.
 - **Frontend**: React, Vite, Tailwind, React Router. **É PWA, não React

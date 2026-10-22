@@ -81,6 +81,7 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RN01 | Ninguém lê a conversa de chamado alheio | `backend/tests/comentarios.test.js` | solicitante não lê a conversa de chamado alheio |
 | RF08 | Comentar avisa o técnico designado | `backend/tests/comentarios.test.js` | avisa o técnico designado quando o solicitante comenta |
 | RF03 | Busca pelo protocolo | `backend/tests/cadastrosEBusca.test.js` | encontra pelo protocolo completo |
+| RF03 | O protocolo leva a data de Brasília, não a de UTC (22h de 31/12 não vira o ano novo) | `backend/tests/protocoloEErrosDeCorpo.test.js` | leva a data de Brasília, não a de UTC |
 | RF03 | A busca não fura o escopo do perfil | `backend/tests/cadastrosEBusca.test.js` | a busca não fura o escopo do perfil |
 | RF03 | Busca pelo protocolo, na tela | `frontend/e2e/fluxo.spec.js` | buscar pelo protocolo encontra o chamado (RF03) |
 | Fila | A fila traz primeiro o que vence antes | `backend/tests/filaEDistribuicao.test.js` | traz primeiro o que vence antes, mesmo sendo o mais antigo |
@@ -136,6 +137,14 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RN09 | O técnico não reabre | `backend/tests/reabertura.test.js` | técnico e terceiros não reabrem |
 | RN09 | O ciclo reaberto ganha prazo novo | `backend/tests/reabertura.test.js` | dá prazo novo ao ciclo reaberto |
 | RF05 | Reatribuir exige justificativa, atribuir pela primeira vez não | `backend/tests/reabertura.test.js` | exige justificativa na reatribuição, mas não na primeira atribuição |
+| RF05 | Sem técnico e sem equipe, a atribuição é recusada e o chamado fica em triagem | `backend/tests/atribuicaoDestino.test.js` | sem técnico e sem equipe, recusa e deixa o chamado em triagem |
+| RF05 | Quem não é técnico (um solicitante) não recebe chamado | `backend/tests/atribuicaoDestino.test.js` | recusa quem não é técnico (um solicitante) |
+| RF05 | Técnico inativo não recebe chamado | `backend/tests/atribuicaoDestino.test.js` | recusa técnico inativo |
+| RF05 | Técnico que não existe é recusado | `backend/tests/atribuicaoDestino.test.js` | recusa técnico que não existe |
+| RF05 | Equipe que não existe ou está desativada é recusada | `backend/tests/atribuicaoDestino.test.js` | recusa equipe que não existe e equipe desativada |
+| RF05 | Com técnico e equipe, o técnico precisa fazer parte da equipe | `backend/tests/atribuicaoDestino.test.js` | com técnico e equipe, o técnico precisa fazer parte da equipe |
+| RF05 | Só técnico ativo, ou só equipe ativa, continuam atribuindo | `backend/tests/atribuicaoDestino.test.js` | só técnico ativo, ou só equipe ativa, continuam atribuindo |
+| RF05 | A reatribuição passa pela mesma conferência | `backend/tests/atribuicaoDestino.test.js` | a reatribuição passa pela mesma conferência |
 | RN05 | O técnico designado não cancela | `backend/tests/reabertura.test.js` | o técnico designado não cancela, nem com justificativa (RN05) |
 | §2.4 | Cancelar serviço em execução exige justificativa | `backend/tests/reabertura.test.js` | exige justificativa para cancelar serviço já em execução |
 | RN05 | O técnico não atribui chamados | `backend/tests/chamados.test.js` | técnico não pode atribuir chamados (apenas gestor/administrador) |
@@ -258,6 +267,7 @@ com o que cobre.
 | `backend/tests/tls.test.js` | Certificado da autoridade do banco |
 | `backend/tests/totp.test.js` | TOTP conferido contra os vetores do RFC 6238 |
 | `backend/tests/transacao.test.js` | O auxiliar de transação |
+| `backend/tests/versaoDoNode.test.js` | O CI testa cada versão do Node declarada em `engines` (a Vercel roda 24, o CI testava só 22) |
 | `frontend/e2e/animacao.spec.js` | Animações de entrada, lista e gráfico |
 | `frontend/e2e/google.spec.js` | Botão do Google no celular e foco na ativação do 2FA |
 | `frontend/e2e/layout.spec.js` | Telas cabem em todas as larguras e são acessíveis por teclado |

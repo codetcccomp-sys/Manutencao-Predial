@@ -1,4 +1,24 @@
 /**
+ * Erros que o `express.json()` levanta antes de a rota existir.
+ *
+ * Chegam com a mensagem crua da biblioteca, em inglês ("request entity too large",
+ * "Unexpected token ..."), sem dizer à pessoa o que fazer. Uma importação de
+ * locais com 3.000 linhas (136 kB) passava do limite do corpo e voltava assim,
+ * enquanto a de 1.500 linhas recebia a mensagem em português da própria rota.
+ */
+function traduzirErroDeCorpo(err) {
+  if (err.type === 'entity.too.large') {
+    err.message = 'O envio é maior do que o sistema aceita de uma vez. Divida o arquivo em partes menores.';
+    err.code = 'CORPO_GRANDE';
+    err.expose = true;
+  } else if (err.type === 'entity.parse.failed') {
+    err.message = 'O conteúdo enviado não é um JSON válido.';
+    err.code = 'JSON_INVALIDO';
+    err.expose = true;
+  }
+}
+
+/**
  * Onde cada desfecho é registrado, e por quê.
  *
  * Tudo aqui saía como `console.error`, inclusive o que é funcionamento
@@ -19,6 +39,7 @@
  *   de menos no inesperado.
  */
 function errorHandler(err, req, res, next) {
+  traduzirErroDeCorpo(err);
   const status = err.status || 500;
   const isProd = process.env.NODE_ENV === 'production';
   const onde = `${req.method} ${req.originalUrl}`;
