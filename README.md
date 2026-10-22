@@ -48,6 +48,28 @@ Nenhum foi adotado ou assinado por instituição alguma.
 | Demonstração (dados fictícios) | <https://conserva-predial-demo.vercel.app> |
 | API da demonstração | <https://conserva-predial-demo-api.vercel.app> |
 
+### Projetos na Vercel
+
+A conta (`tec-code`) tem cinco projetos deste repositório. Cada um aponta para uma **pasta**
+(*Root Directory*) e lê o `vercel.json` dela:
+
+| Projeto | Pasta | Para que serve |
+| --- | --- | --- |
+| `manutencao-predial-frontend` | `frontend` | O sistema (`conserva-predial.vercel.app`) |
+| `manutencao-predial-backend` | `backend` | A API e o agendador de preventivas; é o único com `DATABASE_URL` e `JWT_SECRET` de produção, e só no ambiente Production |
+| `conserva-predial-demo` | `demo/frontend` | O site da demonstração |
+| `conserva-predial-demo-api` | `backend` | A API da demonstração, com banco e segredos próprios |
+| `manutencao-predial` | *(a raiz)* | **Legado, sem função.** É o primeiro projeto, de antes de o repositório ser dividido em `frontend` e `backend` |
+
+O `manutencao-predial` não tem framework, variável de ambiente nem comando de build, e cada
+push (e cada pull request do Dependabot) gerava uma implantação que publicava os arquivos do
+repositório como estáticos (`/CLAUDE.md` e `/backend/package.json` respondiam 200), protegida
+só pelo login da Vercel. Não há segredo no repositório, mas o código-fonte e os documentos de
+operação não precisam estar publicados. O `vercel.json` da **raiz** (`"git": {"deploymentEnabled": false}`)
+desliga as implantações dele; como os outros quatro projetos têm pasta própria, não o leem. As
+implantações antigas continuam sob o login da Vercel até o dono apagar o projeto no painel
+(Settings → Advanced → Delete Project), que é o fim certo para ele.
+
 A demonstração é uma cópia à parte, com banco próprio, para apresentar sem tocar na
 produção: como é montada, o que só o dono do projeto cadastra e como refazê-la na
 véspera da apresentação estão em [docs/demonstracao-publicada.md](docs/demonstracao-publicada.md).

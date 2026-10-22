@@ -320,6 +320,7 @@ com o que cobre.
 | `backend/tests/tls.test.js` | Certificado da autoridade do banco |
 | `backend/tests/totp.test.js` | TOTP conferido contra os vetores do RFC 6238 |
 | `backend/tests/transacao.test.js` | O auxiliar de transação |
+| `backend/tests/projetosVercel.test.js` | O `vercel.json` da raiz desliga o projeto legado da Vercel, e os das pastas dos projetos reais não se desligam |
 | `backend/tests/versaoDoNode.test.js` | O CI testa cada versão do Node declarada em `engines` (a Vercel roda 24, o CI testava só 22) |
 | `frontend/e2e/animacao.spec.js` | Animações de entrada, lista e gráfico |
 | `frontend/e2e/google.spec.js` | Botão do Google no celular e foco na ativação do 2FA |
