@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const atrasosService = require('../services/atrasos.service');
+const criticosService = require('../services/criticos.service');
 const preventivaService = require('../services/preventiva.service');
 const execucoes = require('../services/execucoes.service');
 const { autenticarAgendador } = require('../middlewares/cron');
@@ -12,7 +13,8 @@ const router = Router();
 router.use(autenticarAgendador);
 
 /**
- * RF08: avisa quem precisa saber que um chamado passou do prazo.
+ * RF08: avisa quem precisa saber que um chamado passou do prazo, e a gestão de que um
+ * crítico está há mais de 15 minutos sem ninguém.
  *
  * POST, e não GET, porque a chamada muda estado. Alguns agendadores só fazem
  * GET; o de escolha faz POST, e manter o método honesto evita que um
@@ -21,7 +23,15 @@ router.use(autenticarAgendador);
 router.post(
   '/notificar-atrasos',
   asyncHandler(async (req, res) => {
-    res.json(await execucoes.registrar('notificar-atrasos', () => atrasosService.notificarAtrasados()));
+    // A mesma passagem de 15 minutos também procura os críticos que ninguém atendeu (achado 3):
+    // um agendador só, e o painel de saúde das tarefas cobre os dois. O aviso de atraso vai
+    // primeiro, e uma falha do segundo aparece como falha da tarefa, em vez de passar calada.
+    res.json(
+      await execucoes.registrar('notificar-atrasos', async () => ({
+        ...(await atrasosService.notificarAtrasados()),
+        ...(await criticosService.notificarCriticosSemAtendimento()),
+      }))
+    );
   })
 );
 

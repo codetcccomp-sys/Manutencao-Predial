@@ -205,6 +205,15 @@ alertar.
   o painel já filtrado (`/?recorte=criticos`, o filtro "Críticos sem
   atendimento"); um selo "Sem atendimento há N min" no cartão; e um aviso no
   chamado, com o que fazer. Solicitante e técnico não recebem nada disso.
+- **Fora da tela** (migração 030): a mesma passagem de 15 minutos do agendador
+  (`POST /tarefas/notificar-atrasos`) procura esses chamados e avisa a gestão ativa
+  (administrador e gestor) **no sino e por e-mail**, uma vez por chamado
+  (`chamado.critico_notificado_em` é a reivindicação, como a do aviso de atraso).
+  Um crítico aberto às 22h, ou num sábado, avisa em até 30 minutos (15 de espera
+  mais uma passagem): o relógio é corrido, sem expediente. Chamado que já saiu de
+  `aberto` não gera aviso, e a falha desse passo aparece como falha da tarefa no
+  painel de saúde, em vez de passar calada. O destinatário é só a gestão: o chamado
+  ainda está em `aberto`, então não há técnico nem equipe a avisar.
 
 ## Segurança
 

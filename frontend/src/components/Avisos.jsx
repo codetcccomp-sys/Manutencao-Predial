@@ -7,15 +7,17 @@ const TIPO_ROTULO = {
   mudanca_estado: 'Mudança de estado',
   conclusao: 'Conclusão',
   atraso: 'Atraso',
+  critico_sem_atendimento: 'Crítico sem atendimento',
   comentario: 'Comentário',
   reabertura: 'Reabertura',
 };
 
-// Atraso e reabertura são os dois avisos que pedem ação; os demais são
+// Atraso, crítico sem atendimento e reabertura são os avisos que pedem ação; os demais são
 // informativos. A cor não carrega a informação sozinha — o rótulo de tipo
 // está escrito ao lado, porque a RNF02 pede não depender só de cor.
 const TIPO_COR = {
   atraso: 'bg-red-100 text-red-700',
+  critico_sem_atendimento: 'bg-red-100 text-red-700',
   reabertura: 'bg-amber/20 text-amber',
 };
 

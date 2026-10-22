@@ -7,6 +7,7 @@ const ASSUNTO_POR_TIPO = {
   mudanca_estado: 'Atualização no seu chamado',
   conclusao: 'Chamado concluído',
   atraso: 'Chamado em atraso',
+  critico_sem_atendimento: 'CRÍTICO sem atendimento',
   comentario: 'Novo comentário no chamado',
 };
 
