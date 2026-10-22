@@ -294,7 +294,7 @@ O que o código faz, e onde procurar:
 
 ## Como rodar
 
-Requisitos: Node 22+ e PostgreSQL 16+ (o CI e a produção rodam a 17).
+Requisitos: Node 22 ou 24 (o CI testa as duas; a Vercel roda 24) e PostgreSQL 16+ (o CI e a produção rodam a 17).
 
 ```bash
 # Banco

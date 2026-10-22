@@ -11,6 +11,7 @@ const { ipDaSuite } = require('./apoio/ip');
 const IP = ipDaSuite(__filename);
 
 let gestor;
+let tecnico;
 let solicitante;
 let localId;
 let categoriaId;
@@ -52,6 +53,7 @@ beforeAll(async () => {
   await pool.query("UPDATE regra_priorizacao SET vigencia_fim = NULL WHERE versao = 'v1'");
 
   gestor = await criarUsuarioELogar('gestor');
+  tecnico = await criarUsuarioELogar('tecnico');
   solicitante = await criarUsuarioELogar('solicitante');
 
   const categoria = await pool.query('SELECT id FROM categoria LIMIT 1');
@@ -226,7 +228,8 @@ describe('PATCH /chamados/:id/priorizacao', () => {
     await request(app)
       .patch(`/chamados/${chamado.id}/atribuir`)
       .set(auth)
-      .send({ tecnico_id: gestor.usuario.id });
+      // Um técnico de verdade: a atribuição recusa quem não é técnico (RF05).
+      .send({ tecnico_id: tecnico.usuario.id });
     await request(app).patch(`/chamados/${chamado.id}/estado`).set(auth).send({ estado: 'em_andamento' });
     await request(app).patch(`/chamados/${chamado.id}/estado`).set(auth).send({ estado: 'concluido', servico_realizado: 'Servico executado e registrado conforme o combinado.', epi_confirmado: true });
 

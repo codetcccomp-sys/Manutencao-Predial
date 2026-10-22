@@ -421,6 +421,55 @@ async function buscarPorId(id, usuario) {
 // reatribuição, não a primeira distribuição.
 const ESTADOS_COM_RESPONSAVEL = ['atribuido', 'em_andamento', 'aguardando_material'];
 
+/**
+ * O destino de uma atribuição precisa existir e fazer sentido.
+ *
+ * `atribuir` gravava `tecnico_id` e `equipe_id` sem conferir nada: aceitava um
+ * solicitante como "técnico", um técnico inativo e até ninguém (estado
+ * `atribuido` com `tecnico_id` nulo). Como "atendido" é sair de `aberto`, um
+ * crítico atribuído assim deixava de alertar a gestão sem que ninguém tivesse
+ * assumido o chamado. A tela só oferece técnicos ativos, mas a regra não pode
+ * depender de quem chama a API.
+ */
+async function validarDestino(client, { tecnico_id: tecnicoId, equipe_id: equipeId }) {
+  if (!tecnicoId && !equipeId) {
+    throw new AppError('Informe o técnico, a equipe, ou os dois.', 422, 'DESTINO_OBRIGATORIO');
+  }
+
+  if (tecnicoId) {
+    const { rows } = await client.query('SELECT perfil, ativo FROM usuario WHERE id = $1', [tecnicoId]);
+    if (!rows[0]) {
+      throw new AppError('Técnico não encontrado.', 422, 'TECNICO_INVALIDO');
+    }
+    if (rows[0].perfil !== 'tecnico') {
+      throw new AppError('Este usuário não é técnico.', 422, 'TECNICO_INVALIDO');
+    }
+    if (!rows[0].ativo) {
+      throw new AppError('Este técnico está inativo.', 422, 'TECNICO_INVALIDO');
+    }
+  }
+
+  if (equipeId) {
+    const { rows } = await client.query('SELECT ativo FROM equipe WHERE id = $1', [equipeId]);
+    if (!rows[0]) {
+      throw new AppError('Equipe não encontrada.', 422, 'EQUIPE_INVALIDA');
+    }
+    if (!rows[0].ativo) {
+      throw new AppError('Esta equipe está desativada.', 422, 'EQUIPE_INVALIDA');
+    }
+  }
+
+  if (tecnicoId && equipeId) {
+    const { rowCount } = await client.query(
+      'SELECT 1 FROM equipe_tecnico WHERE equipe_id = $1 AND usuario_id = $2',
+      [equipeId, tecnicoId]
+    );
+    if (rowCount === 0) {
+      throw new AppError('Este técnico não faz parte da equipe escolhida.', 422, 'TECNICO_FORA_DA_EQUIPE');
+    }
+  }
+}
+
 async function atribuir(id, { tecnico_id, equipe_id, justificativa }, usuario) {
   if (!['administrador', 'gestor'].includes(usuario.perfil)) {
     throw new AppError('Apenas gestores ou administradores podem atribuir chamados.', 403, 'ACESSO_NEGADO');
@@ -449,6 +498,8 @@ async function atribuir(id, { tecnico_id, equipe_id, justificativa }, usuario) {
     } else {
       validarTransicao(atual.estado, 'atribuido');
     }
+
+    await validarDestino(client, { tecnico_id, equipe_id });
 
     const novoEstado = ehReatribuicao ? atual.estado : 'atribuido';
 
