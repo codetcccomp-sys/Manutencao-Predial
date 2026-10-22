@@ -104,6 +104,7 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RF04 | A regra de distribuição é o mínimo da prioridade | `backend/tests/prioridadeNaAbertura.test.js` | as respostas não descem abaixo do mínimo, e o histórico diz que foi o mínimo |
 | RF04 | O formulário pergunta a situação, sem resposta marcada, e não envia sem responder | `frontend/testes/NovoChamado.test.jsx` | sem responder, o chamado não é enviado |
 | RF04 | O formulário envia urgência, impacto e risco, e nenhuma prioridade | `frontend/testes/NovoChamado.test.jsx` | envia urgência, impacto e risco como números e nenhuma prioridade |
+| RF04 | Nenhuma resposta repete o nome de outro campo (o leitor de tela as confundiria) | `frontend/testes/NovoChamado.test.jsx` | nenhuma resposta traz o nome de outro campo: o rótulo "Equipamento" achava o rádio de risco |
 | RN12 | O chamado guarda a versão da regra que o classificou | `backend/tests/priorizacao.test.js` | chamado priorizado antes guarda a versão que o classificou |
 | SLA | O prazo nasce da prioridade | `backend/tests/sla.test.js` | define prazo a partir da prioridade |
 | SLA | Atraso é calculado: prazo passou e o chamado segue aberto | `backend/tests/sla.test.js` | marca em_atraso quando o prazo passou e o chamado segue aberto |

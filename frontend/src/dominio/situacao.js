@@ -17,7 +17,7 @@ export const PERGUNTAS_DE_SITUACAO = [
     opcoes: [
       { valor: 1, texto: 'Não' },
       { valor: 2, texto: 'Pode virar risco se demorar' },
-      { valor: 3, texto: 'Risco para equipamentos ou para o prédio' },
+      { valor: 3, texto: 'Risco de dano ao prédio ou a bens' },
       { valor: 4, texto: 'Risco para pessoas agora' },
     ],
   },

@@ -1667,6 +1667,13 @@ const MUTACOES = [
     para: 'urgencia: Number(situacao.impacto),\n    impacto: Number(situacao.urgencia),',
     spec: 'testes/NovoChamado.test.jsx',
   },
+  {
+    descricao: 'na abertura, uma resposta volta a trazer o nome do campo Equipamento',
+    arquivo: 'src/dominio/situacao.js',
+    de: "Risco de dano ao prédio ou a bens",
+    para: "Risco para equipamentos ou para o prédio",
+    spec: 'testes/NovoChamado.test.jsx',
+  },
 ];
 
 /**

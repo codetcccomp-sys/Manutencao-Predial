@@ -68,6 +68,16 @@ describe('Situação do chamado (urgência, impacto e risco)', () => {
     }
   });
 
+  it('nenhuma resposta traz o nome de outro campo: o rótulo "Equipamento" achava o rádio de risco', () => {
+    // getByLabel/getByLabelText de teste e de leitor de tela casam por trecho do nome; uma opção
+    // "Risco para equipamentos…" disputava o nome com o seletor de Equipamento.
+    const campos = /equipamento|local|categoria|título|descrição/i;
+    const repetidas = PERGUNTAS_DE_SITUACAO.flatMap((p) => p.opcoes)
+      .map((o) => o.texto)
+      .filter((texto) => campos.test(texto));
+    expect(repetidas).toEqual([]);
+  });
+
   it('sem responder, o chamado não é enviado', async () => {
     const usuario = userEvent.setup();
     abrir();
