@@ -118,16 +118,85 @@ async function resolverAlvo(client, { categoria_id, local_id, equipamento_id }) 
   return { local_id, categoria_id, equipamento_id: null };
 }
 
-async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id, prioridade }, solicitanteId) {
+const ORDEM_PRIORIDADE = ['baixa', 'media', 'alta', 'critica'];
+const maiorPrioridade = (a, b) => (ORDEM_PRIORIDADE.indexOf(a) >= ORDEM_PRIORIDADE.indexOf(b) ? a : b);
+
+/**
+ * A prioridade com que o chamado nasce, e por quê.
+ *
+ * Antes, o formulário mandava a prioridade e ela valia: vinha com "baixa" já
+ * marcada, então quem não mexia no campo (um elevador parado, aberto às pressas)
+ * esperava o prazo da "baixa" sem disparar o alerta de 15 minutos; e quem marcava
+ * "crítica" para tudo saturava esse mesmo alerta. A regra de distribuição nunca
+ * decidia a prioridade de um chamado aberto pela tela.
+ *
+ * Agora quem abre responde sobre a SITUAÇÃO (urgência, impacto e risco, os três
+ * fatores da regra de priorização, RF04) e o servidor calcula com a regra vigente,
+ * como a gestão faz na triagem. A divisão de papéis é a da boa prática de
+ * atendimento: o solicitante diz o que está acontecendo, o sistema aplica o critério.
+ *
+ * - Gestão pode definir a prioridade direto (`prioridade`): é decisão dela.
+ * - Do solicitante, `prioridade` é ignorada, e não recusada: uma aba com a versão
+ *   antiga do aplicativo (o service worker a mantém) ainda a envia, e recusar
+ *   impediria de abrir chamado até a página ser recarregada.
+ * - A prioridade da regra de distribuição é o MÍNIMO daquela rotina: as respostas
+ *   podem subir a prioridade, não descer abaixo do que a gestão definiu.
+ * - Sem fatores e sem regra, "média": sem informação nenhuma, "baixa" é a aposta
+ *   que mais custa se errar.
+ */
+async function prioridadeNaAbertura(client, { prioridade, urgencia, impacto, risco }, perfil, regraDeDistribuicao) {
+  const ehGestao = ['administrador', 'gestor'].includes(perfil);
+  const piso = regraDeDistribuicao?.prioridade ?? null;
+
+  if (ehGestao && prioridade) return { prioridade };
+
+  if ([urgencia, impacto, risco].some((v) => v !== undefined && v !== null)) {
+    // Os três ou nenhum: dois fatores calculariam uma prioridade que ninguém decidiu.
+    priorizacaoService.validarFatores({ urgencia, impacto, risco });
+
+    let regra;
+    try {
+      regra = await priorizacaoService.regraVigente(client);
+    } catch (err) {
+      // Sem regra vigente não se calcula, mas abrir o chamado não pode falhar por isso.
+      if (err.code !== 'SEM_REGRA_VIGENTE') throw err;
+      return { prioridade: piso ?? 'media' };
+    }
+
+    const sugestao = priorizacaoService.calcular({ urgencia, impacto, risco }, regra);
+    const final = piso ? maiorPrioridade(sugestao.prioridade, piso) : sugestao.prioridade;
+    return {
+      prioridade: final,
+      fatores: { urgencia, impacto, risco },
+      regraId: regra.id,
+      motivo:
+        final === sugestao.prioridade
+          ? sugestao.motivo
+          : `${sugestao.motivo} A regra de distribuição define o mínimo de "${piso}".`,
+    };
+  }
+
+  return { prioridade: piso ?? 'media' };
+}
+
+async function criar(
+  { titulo, descricao, categoria_id, local_id, equipamento_id, prioridade, urgencia, impacto, risco },
+  solicitanteId,
+  perfil = 'solicitante'
+) {
   const protocolo = gerarProtocolo();
 
   const { chamado, notificacaoId } = await transacao(async (client) => {
     const alvo = await resolverAlvo(client, { categoria_id, local_id, equipamento_id });
 
-    // Com regra de distribuição, a prioridade é a que a gestão definiu para
-    // aquela rotina — a menos que quem abre tenha dito outra.
     const regra = await distribuicaoService.regraPara(client, alvo);
-    const prioridadeInicial = prioridade ?? regra?.prioridade ?? null;
+    const inicial = await prioridadeNaAbertura(
+      client,
+      { prioridade, urgencia, impacto, risco },
+      perfil,
+      regra
+    );
+    const prioridadeInicial = inicial.prioridade;
 
     // O prazo nasce junto do chamado, na mesma transação: um chamado sem
     // prazo ficaria invisível para toda a apuração de atraso. A conta (horas
@@ -135,9 +204,11 @@ async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id
     // mesma que repriorizar e reabrir usam.
     const { rows } = await client.query(
       `INSERT INTO chamado (protocolo, titulo, descricao, categoria_id, local_id, equipamento_id,
-                            solicitante_id, prioridade, prazo_estimado)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::prioridade_chamado, 'baixa'),
-               prazo_sla(COALESCE($8::prioridade_chamado, 'baixa'), now(), '0 seconds', '0 seconds', $9))
+                            solicitante_id, prioridade, prazo_estimado,
+                            urgencia, impacto, risco, prioridade_sugerida, regra_priorizacao_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::prioridade_chamado,
+               prazo_sla($8::prioridade_chamado, now(), '0 seconds', '0 seconds', $9),
+               $10, $11, $12, $13::prioridade_chamado, $14)
        RETURNING *, ${CALCULADOS}`,
       [
         protocolo,
@@ -149,12 +220,26 @@ async function criar({ titulo, descricao, categoria_id, local_id, equipamento_id
         solicitanteId,
         prioridadeInicial,
         FUSO,
+        inicial.fatores?.urgencia ?? null,
+        inicial.fatores?.impacto ?? null,
+        inicial.fatores?.risco ?? null,
+        // A sugestão é a própria prioridade de nascença: a regra de justificativa
+        // (RN05) só cobra texto quando a gestão diverge dela, e aqui ninguém divergiu.
+        inicial.fatores ? prioridadeInicial : null,
+        inicial.regraId ?? null,
       ]
     );
 
     const criado = rows[0];
 
-    await registrarHistorico(client, criado.id, solicitanteId, null, 'aberto', 'Chamado aberto.');
+    await registrarHistorico(
+      client,
+      criado.id,
+      solicitanteId,
+      null,
+      'aberto',
+      inicial.motivo ? `Chamado aberto. Prioridade pela situação informada: ${inicial.motivo}` : 'Chamado aberto.'
+    );
 
     if (!regra) return { chamado: criado };
     return distribuir(client, criado, regra);

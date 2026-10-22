@@ -50,7 +50,12 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
 
 - **Prioridade**: enum `baixa | media | alta | critica`. Sai da regra de
   priorização vigente (urgência, impacto e risco — `priorizacao.service`); a
-  gestão pode divergir com justificativa.
+  gestão pode divergir com justificativa. **Na abertura o solicitante não escolhe
+  a prioridade**: responde três perguntas de situação (`dominio/situacao.js`) e o
+  servidor calcula (`prioridadeNaAbertura` em `chamados.service`). A `prioridade`
+  enviada por solicitante é ignorada, não recusada (aba com PWA antigo); a da regra
+  de distribuição é o **mínimo**; sem informação nenhuma o chamado nasce `media`, não
+  `baixa`.
 - **Prazo (SLA)**: mora na tabela `sla` (`prazo_horas` e `contagem`, corridas ou
   úteis), nunca em constante no código. O valor vigente em produção veio da
   folha de validação da instituição: ver `docs/piloto.md` §2.4. Mudar o SLA só

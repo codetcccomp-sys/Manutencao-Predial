@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { montarCenario, entrar, conferirQueCabeNaTela } from './apoio.js';
+import { montarCenario, entrar, conferirQueCabeNaTela, responderSituacao } from './apoio.js';
 
 /**
  * A manutenção preventiva de ponta a ponta: a gestão cadastra o equipamento e
@@ -40,7 +40,7 @@ test('gestão cadastra equipamento e plano, gera a execução, e o técnico a re
   await page.getByLabel('Serviço').fill(servico);
   await page.getByLabel('Roteiro').fill('Desligar, lavar o filtro, secar e recolocar.');
   await page
-    .getByLabel('Equipamento')
+    .getByLabel('Equipamento', { exact: true })
     .selectOption({ label: `${codigo} — Split 12.000 BTU · Unidade E2E ${cenario.marca} / A` });
   await page.getByLabel('Repetir a cada').fill('3');
   await page.getByLabel('Próxima execução').fill('2031-03-10');
@@ -95,11 +95,12 @@ test('pelo endereço do QR Code, o solicitante abre o chamado sem escolher o loc
   await page.goto(`/chamados/novo?equipamento=${codigo.toLowerCase()}`);
 
   await expect(page.getByText('Chamado para este equipamento')).toBeVisible();
-  await expect(page.getByLabel('Equipamento')).toHaveValue(String(corpo.equipamento.id));
+  await expect(page.getByLabel('Equipamento', { exact: true })).toHaveValue(String(corpo.equipamento.id));
 
   const titulo = `Bomba fazendo barulho ${cenario.marca}`;
   await page.getByLabel('Título').fill(titulo);
   await page.getByLabel('Descrição').fill('Ruído forte ao ligar, desde ontem.');
+  await responderSituacao(page);
   await page.getByRole('button', { name: 'Abrir chamado' }).click();
 
   await page.waitForURL(/\/chamados\/\d+$/);

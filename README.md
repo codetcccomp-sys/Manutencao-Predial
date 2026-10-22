@@ -744,6 +744,15 @@ só nas variáveis do backend, nunca no frontend.
 
 ## Priorização
 
+**Na abertura**, quem registra o chamado não escolhe a prioridade: responde três
+perguntas sobre a situação (risco, impacto e urgência, cada uma com quatro opções, sem
+nenhuma marcada) e o servidor calcula com a regra vigente, como na triagem. Os fatores
+ficam no chamado e a gestão os confere na triagem, já preenchidos. A `prioridade` enviada
+por solicitante é ignorada (não recusada, para não travar uma aba com o aplicativo
+antigo); gestão e administrador ainda podem defini-la direto pela API. Sem resposta
+nenhuma e sem regra de distribuição, o chamado nasce **média**, não baixa. A prioridade
+da regra de distribuição é o **mínimo** daquela rotina: as respostas sobem, não descem.
+
 O gestor registra três fatores na triagem — urgência, impacto e risco, em
 escala de 1 a 4 — e o sistema sugere a prioridade por uma regra versionada
 (tabela `regra_priorizacao`), combinando pesos e limiares. Risco que atinge o
@@ -766,7 +775,7 @@ toda, uma unidade ou um bloco), a equipe e a prioridade. Nenhuma regra vem
 cadastrada: sem regra, nada muda.
 
 - O chamado aberto naquela categoria e naquele lugar nasce atribuído, com a
-  prioridade da regra (a menos que quem abriu tenha dito outra) e o prazo da
+  prioridade da regra como mínimo (as respostas sobre a situação podem subi-la) e o prazo da
   tabela de SLA. O histórico mostra os mesmos estados de uma triagem manual
   (aberto → em triagem → atribuído) e diz qual regra distribuiu.
 - A regra mais específica vence: bloco, depois unidade, depois a instituição.

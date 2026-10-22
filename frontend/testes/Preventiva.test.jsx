@@ -341,6 +341,13 @@ describe('Ficha do equipamento', () => {
   });
 });
 
+/** A prioridade sai da situação informada (RF04): sem as três respostas o formulário não envia. */
+async function responderSituacao(usuario) {
+  for (const nome of ['Não', 'Só incomoda; tudo funciona', 'Pode esperar alguns dias']) {
+    await usuario.click(screen.getByRole('radio', { name: nome }));
+  }
+}
+
 function abrirNovoChamado(url = '/chamados/novo') {
   api.get.mockImplementation(async (caminho, opcoes) => {
     if (caminho === '/equipamentos/codigo/AC-204') return { data: { equipamento: EQUIPAMENTO } };
@@ -375,6 +382,7 @@ describe('Abrir chamado para um equipamento', () => {
 
     await usuario.type(screen.getByLabelText('Título'), 'Pingando água');
     await usuario.type(screen.getByLabelText('Descrição'), 'Escorre pela parede.');
+    await responderSituacao(usuario);
     await usuario.click(screen.getByRole('button', { name: 'Abrir chamado' }));
 
     await waitFor(() => expect(api.post).toHaveBeenCalled());
@@ -403,6 +411,7 @@ describe('Abrir chamado para um equipamento', () => {
 
     await usuario.type(screen.getByLabelText('Título'), 'Lâmpada queimada');
     await usuario.type(screen.getByLabelText('Descrição'), 'Corredor escuro.');
+    await responderSituacao(usuario);
     await usuario.click(screen.getByRole('button', { name: 'Abrir chamado' }));
     await waitFor(() => expect(api.post).toHaveBeenCalled());
     expect(api.post.mock.calls[0][1].equipamento_id).toBeUndefined();

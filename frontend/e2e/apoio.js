@@ -158,6 +158,19 @@ export async function montarCenario({ perfis = ['gestor', 'solicitante', 'tecnic
 }
 
 /** Entra pela tela de login, como uma pessoa entraria. */
+/**
+ * Responde as três perguntas de situação do formulário de abertura (RF04). Sem elas o
+ * formulário não envia: a prioridade sai delas. O padrão é a situação mais leve.
+ */
+export async function responderSituacao(
+  page,
+  { risco = 'Não', impacto = 'Só incomoda; tudo funciona', urgencia = 'Pode esperar alguns dias' } = {}
+) {
+  for (const nome of [risco, impacto, urgencia]) {
+    await page.getByRole('radio', { name: nome, exact: true }).check();
+  }
+}
+
 export async function entrar(page, cliente) {
   await page.goto('/login');
   await page.getByLabel(/e-?mail/i).fill(cliente.usuario.email);

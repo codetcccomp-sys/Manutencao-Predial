@@ -26,15 +26,19 @@ async function criarUsuarioELogar(perfil) {
   return { token: login.body.token, usuario: login.body.usuario };
 }
 
+// Nasce "baixa" e sem fatores, aberto pela gestão (a prioridade do solicitante é calculada
+// pela situação que ele informa: ver prioridadeNaAbertura.test.js). Aqui o ponto de partida
+// é um chamado ainda não priorizado, que a triagem reclassifica.
 async function abrir() {
   const resp = await request(app)
     .post('/chamados')
-    .set('Authorization', `Bearer ${solicitante.token}`)
+    .set('Authorization', `Bearer ${gestor.token}`)
     .send({
       titulo: 'Chamado para priorizar',
       descricao: 'Descrição do problema relatado',
       categoria_id: categoriaId,
       local_id: localId,
+      prioridade: 'baixa',
     });
   return resp.body.chamado;
 }
@@ -190,7 +194,7 @@ describe('PATCH /chamados/:id/priorizacao', () => {
 
     const detalhe = await request(app)
       .get(`/chamados/${chamado.id}`)
-      .set('Authorization', `Bearer ${solicitante.token}`);
+      .set('Authorization', `Bearer ${gestor.token}`);
 
     const entrada = detalhe.body.chamado.historico.find((h) => /Priorização/.test(h.observacao || ''));
     expect(entrada).toBeDefined();

@@ -162,7 +162,7 @@ test('quem lê a etiqueta sem estar logado passa pelo login e volta ao formulár
   await expect(page.getByText('Chamado para este equipamento')).toBeVisible();
   // O equipamento aparece no aviso do topo e já escolhido no seletor.
   await expect(page.getByRole('status').filter({ hasText: `${codigo} — Porta corta-fogo` })).toBeVisible();
-  await expect(page.getByLabel('Equipamento').locator('option:checked')).toHaveText(
+  await expect(page.getByLabel('Equipamento', { exact: true }).locator('option:checked')).toHaveText(
     `${codigo} — Porta corta-fogo`
   );
 });

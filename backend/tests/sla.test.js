@@ -25,10 +25,13 @@ async function criarUsuarioELogar(perfil) {
   return { token: login.body.token, usuario: login.body.usuario };
 }
 
+// Aberto pela gestão: é ela quem define a prioridade direto. A do solicitante é
+// ignorada (ver tests/prioridadeNaAbertura.test.js), e este arquivo mede o prazo que
+// nasce de cada prioridade, não quem tem o direito de escolhê-la.
 async function abrir(prioridade) {
   const resp = await request(app)
     .post('/chamados')
-    .set('Authorization', `Bearer ${solicitante.token}`)
+    .set('Authorization', `Bearer ${gestor.token}`)
     .send({
       titulo: `Chamado ${prioridade}`,
       descricao: 'Descrição do chamado de SLA',
@@ -71,13 +74,15 @@ describe('Prazo na abertura do chamado', () => {
     expect(horas(baixo)).toBeCloseTo(168, 1);
   });
 
-  it('usa o prazo de "baixa" quando a prioridade é omitida', async () => {
+  it('usa o prazo de "média" quando a prioridade é omitida', async () => {
+    // Sem informação nenhuma, "baixa" é a aposta que mais custa se errar: um
+    // chamado urgente esperaria 168 horas. Ver prioridadeNaAbertura no serviço.
     const semPrioridade = await abrir(null);
-    expect(semPrioridade.prioridade).toBe('baixa');
+    expect(semPrioridade.prioridade).toBe('media');
 
     const horas =
       (new Date(semPrioridade.prazo_estimado) - new Date(semPrioridade.data_abertura)) / 3_600_000;
-    expect(horas).toBeCloseTo(168, 1);
+    expect(horas).toBeCloseTo(72, 1);
   });
 
   it('abre o chamado mesmo sem prazo configurado para a prioridade', async () => {
@@ -103,7 +108,7 @@ describe('Atraso', () => {
 
     const detalhe = await request(app)
       .get(`/chamados/${chamado.id}`)
-      .set('Authorization', `Bearer ${solicitante.token}`);
+      .set('Authorization', `Bearer ${gestor.token}`);
     expect(detalhe.body.chamado.em_atraso).toBe(true);
   });
 
@@ -127,7 +132,7 @@ describe('Atraso', () => {
 
     const detalhe = await request(app)
       .get(`/chamados/${chamado.id}`)
-      .set('Authorization', `Bearer ${solicitante.token}`);
+      .set('Authorization', `Bearer ${gestor.token}`);
     expect(detalhe.body.chamado.em_atraso).toBe(false);
   });
 
@@ -139,7 +144,7 @@ describe('Atraso', () => {
 
     const resp = await request(app)
       .get('/chamados?atrasados=true&limite=100')
-      .set('Authorization', `Bearer ${solicitante.token}`);
+      .set('Authorization', `Bearer ${gestor.token}`);
 
     const ids = resp.body.chamados.map((c) => c.id);
     expect(ids).toContain(atrasado.id);
