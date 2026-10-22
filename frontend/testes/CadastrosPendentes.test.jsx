@@ -119,7 +119,7 @@ describe('Tela de cadastro', () => {
     );
     await u.type(screen.getByLabelText('Nome'), 'Ana Souza');
     await u.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
-    await u.type(screen.getByLabelText('Senha'), 'senha123');
+    await u.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await u.click(screen.getByRole('button', { name: 'Cadastrar' }));
   }
 
@@ -128,14 +128,32 @@ describe('Tela de cadastro', () => {
     await cadastrar();
     const titulo = await screen.findByRole('heading', { name: 'Pedido enviado' });
     expect(screen.getByText(/aguarda a aprovação da gestão/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ir para o login' })).toBeInTheDocument();
     // O formulário que tinha o foco saiu da tela: o título o recebe.
     expect(titulo).toHaveFocus();
     expect(screen.getByRole('main')).toBeInTheDocument();
   });
 
-  it('sem aprovação, segue como antes: conta criada', async () => {
+  it('sem aprovação, diz que o pedido foi recebido e manda entrar: não afirma que a conta foi criada', async () => {
     registrar.mockResolvedValue({ aguardando_aprovacao: false });
     await cadastrar();
-    expect(await screen.findByText(/Conta criada!/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Pedido enviado' })).toBeInTheDocument();
+    expect(screen.getByText(/entre com este e-mail e a senha que você escolheu/)).toBeInTheDocument();
+    expect(screen.queryByText(/aguarda a aprovação/)).toBeNull();
+    // O e-mail repetido recebe a mesma tela: nada aqui pode afirmar "conta criada".
+    expect(screen.queryByText(/Conta criada/)).toBeNull();
+    expect(screen.getByText(/Se você já tinha conta, a senha dela não mudou/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Esqueci minha senha' })).toHaveAttribute('href', '/recuperar-senha');
+  });
+
+  it('pede a senha de 10 caracteres ou mais, e diz a regra antes do erro', async () => {
+    render(
+      <MemoryRouter>
+        <Cadastro />
+      </MemoryRouter>
+    );
+    const campo = screen.getByLabelText('Senha');
+    expect(campo).toHaveAttribute('minlength', '10');
+    expect(screen.getByText(/Ao menos 10 caracteres/)).toBeInTheDocument();
   });
 });

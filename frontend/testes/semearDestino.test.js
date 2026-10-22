@@ -16,7 +16,7 @@ describe('resolverDestino', () => {
       local: true,
       adminEmail: 'admin_video@exemplo.com',
       adminSenha: 'senha_video_local',
-      senha: 'senha123',
+      senha: 'senha-teste-123',
       cron: 'video',
     });
   });

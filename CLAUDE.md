@@ -73,6 +73,12 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
 - **Anexos**: até 10 por chamado (`config/anexos.js`; 422 `LIMITE_DE_ANEXOS`, conferido sob
   cadeado por chamado) e aviso à gestão aos 70% do banco (`GET /operacao/armazenamento`).
   Ligar o Storage é decisão e ação do dono (chave de serviço), nunca de código.
+- **Cadastro público**: `POST /auth/registrar` responde 202 com o mesmo corpo para e-mail novo e
+  repetido (não devolve conta nem token; o 409 é só da administração), tem teto por IP e por dia
+  (`rateLimit.limitarCadastro`, tabela `tentativa_cadastro`, migração 029) e exige senha nova de 10+
+  caracteres fora da lista de comuns (`utils/senha.js`). Teste que cria conta pela API não precisa de
+  nada: `tests/apoio/ambiente.js` abre o teto; só `cadastroSeguro.test.js` o aperta. Senha de teste
+  tem de ter 10+ caracteres e não ser comum (`senha-teste-123`, não `senha123`).
 - **Equipamento**: tem só `ativo BOOLEAN`.
 - **Sem conexão**: o service worker guarda as *leituras* (fila e chamado). Escrita
   falha na hora e a tela diz que nada foi registrado. É decisão deliberada

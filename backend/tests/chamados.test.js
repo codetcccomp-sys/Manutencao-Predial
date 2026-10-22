@@ -15,13 +15,13 @@ afterAll(async () => {
 
 async function criarUsuarioELogar(perfilDesejado) {
   const email = `${perfilDesejado}_${Date.now()}_${Math.random().toString(36).slice(2)}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: 'Teste', email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: 'Teste', email, senha: 'senha-teste-123' });
 
   if (perfilDesejado !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfilDesejado, email]);
   }
 
-  const loginResp = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+  const loginResp = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha-teste-123' });
   return { token: loginResp.body.token, usuario: loginResp.body.usuario };
 }
 

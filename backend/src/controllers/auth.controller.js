@@ -52,9 +52,11 @@ function urlDoApp(req) {
   return HOST_LOCAL.test(host) ? `${req.protocol}://${host}` : null;
 }
 
+// 202, e o mesmo corpo para e-mail novo e repetido: ver authService.criarUsuario. Não devolve a
+// conta criada nem token; quem se cadastrou entra pelo login.
 const registrar = asyncHandler(async (req, res) => {
-  const usuario = await authService.registrar(req.body);
-  res.status(201).json({ usuario, aguardando_aprovacao: Boolean(usuario.cadastro_pendente_desde) });
+  const { aguardando_aprovacao } = await authService.registrar(req.body);
+  res.status(202).json({ recebido: true, aguardando_aprovacao });
 });
 
 const login = asyncHandler(async (req, res) => {

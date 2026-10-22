@@ -29,7 +29,7 @@ export function resolverDestino(env = process.env) {
     local,
     adminEmail: pegar('SEMEAR_ADMIN_EMAIL', 'admin_video@exemplo.com'),
     adminSenha: pegar('SEMEAR_ADMIN_SENHA', 'senha_video_local'),
-    senha: pegar('SEMEAR_SENHA', 'senha123'),
+    senha: pegar('SEMEAR_SENHA', 'senha-teste-123'),
     // Sem o segredo do agendador as duas tarefas automáticas não rodam; fora do
     // banco local isso é aceito, e a tela tem o botão "Gerar agora".
     cron: pegar('SEMEAR_CRON_SECRET', 'video'),

@@ -12,7 +12,7 @@ const IP = ipDaSuite(__filename);
 const email = `ratelimit_${Date.now()}@exemplo.com`;
 
 beforeAll(async () => {
-  await request(app).post('/auth/registrar').send({ nome: 'Rate Limit', email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: 'Rate Limit', email, senha: 'senha-teste-123' });
 });
 
 // Os testes desta suíte compartilham o mesmo IP, então sem zerar as tentativas
@@ -53,7 +53,7 @@ describe('Rate limiting do login', () => {
       await tentarSenhaErrada();
     }
 
-    const resposta = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+    const resposta = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha-teste-123' });
     expect(resposta.status).toBe(429);
   });
 
@@ -62,7 +62,7 @@ describe('Rate limiting do login', () => {
       await tentarSenhaErrada();
     }
 
-    const sucesso = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+    const sucesso = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha-teste-123' });
     expect(sucesso.status).toBe(200);
 
     const { rows } = await pool.query(
@@ -116,7 +116,7 @@ describe('Enumeração de usuários', () => {
   it('responde o mesmo corpo para e-mail inexistente e para senha errada', async () => {
     const inexistente = await request(app)
       .post('/auth/login').set('X-Real-IP', IP)
-      .send({ email: `nao_existe_${Date.now()}@exemplo.com`, senha: 'senha123' });
+      .send({ email: `nao_existe_${Date.now()}@exemplo.com`, senha: 'senha-teste-123' });
     const senhaErrada = await tentarSenhaErrada();
 
     expect(inexistente.status).toBe(senhaErrada.status);

@@ -25,9 +25,9 @@ const feriadosCriados = [];
 
 async function pessoa(perfil) {
   const email = `${perfil}_uteis_${Date.now()}_${Math.random().toString(36).slice(2)}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: `Úteis ${perfil}`, email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: `Úteis ${perfil}`, email, senha: 'senha-teste-123' });
   await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
-  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha-teste-123' });
   return { token: login.body.token, id: login.body.usuario.id };
 }
 

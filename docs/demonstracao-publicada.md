@@ -68,7 +68,7 @@ código tolera a ausência; é o mesmo caminho do desenvolvimento).
 | --- | --- |
 | `DEMO_DATABASE_URL` | a string do **Session pooler** (5432) do banco da demonstração |
 | `DEMO_ADMIN_SENHA` | a senha do administrador da demo — **só você** a usa, e diferente de qualquer outra |
-| `DEMO_SENHA` | a senha das contas de exemplo — esta você entrega a quem for experimentar |
+| `DEMO_SENHA` | a senha das contas de exemplo — esta você entrega a quem for experimentar. Ao menos 10 caracteres e fora das senhas comuns (uma frase serve): o semeador cria as contas pela API, que recusa as fracas |
 
 ### 4. Rodar
 

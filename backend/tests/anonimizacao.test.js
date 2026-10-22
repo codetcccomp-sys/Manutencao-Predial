@@ -27,15 +27,15 @@ let outroAdmin;
 async function novaConta(perfil = 'solicitante') {
   const email = `anon_${perfil}_${Date.now()}_${Math.random().toString(36).slice(2)}@exemplo.com`;
   const nome = `Pessoa ${Math.random().toString(36).slice(2, 7)}`;
-  await request(app).post('/auth/registrar').send({ nome, email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome, email, senha: 'senha-teste-123' });
   if (perfil !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
   }
   const login = await request(app)
     .post('/auth/login')
     .set('X-Real-IP', `${IP}-${Math.random()}`)
-    .send({ email, senha: 'senha123' });
-  return { ...login.body.usuario, email, nome, token: login.body.token, senha: 'senha123' };
+    .send({ email, senha: 'senha-teste-123' });
+  return { ...login.body.usuario, email, nome, token: login.body.token, senha: 'senha-teste-123' };
 }
 
 beforeAll(async () => {

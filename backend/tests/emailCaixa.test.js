@@ -18,15 +18,16 @@ describe('E-mail insensível a maiúsculas', () => {
   it('guarda o e-mail em minúsculas mesmo quando enviado com maiúsculas', async () => {
     const resp = await request(app)
       .post('/auth/registrar')
-      .send({ nome: 'Teste Caixa', email: base, senha: 'senha123' });
+      .send({ nome: 'Teste Caixa', email: base, senha: 'senha-teste-123' });
 
-    expect(resp.status).toBe(201);
-    expect(resp.body.usuario.email).toBe(base.toLowerCase());
+    expect(resp.status).toBe(202);
+    const { rows } = await pool.query('SELECT email FROM usuario WHERE lower(email) = lower($1)', [base]);
+    expect(rows.map((r) => r.email)).toEqual([base.toLowerCase()]);
   });
 
   it('autentica com qualquer combinação de maiúsculas', async () => {
     for (const variacao of [base, base.toLowerCase(), base.toUpperCase()]) {
-      const resp = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email: variacao, senha: 'senha123' });
+      const resp = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email: variacao, senha: 'senha-teste-123' });
       expect(resp.status).toBe(200);
       expect(resp.body.usuario.email).toBe(base.toLowerCase());
     }
@@ -35,16 +36,18 @@ describe('E-mail insensível a maiúsculas', () => {
   it('impede uma segunda conta que só difere pela caixa', async () => {
     const resp = await request(app)
       .post('/auth/registrar')
-      .send({ nome: 'Clone', email: base.toUpperCase(), senha: 'senha123' });
+      .send({ nome: 'Clone', email: base.toUpperCase(), senha: 'senha-teste-123' });
 
-    expect(resp.status).toBe(409);
-    expect(resp.body.erro.codigo).toBe('EMAIL_EM_USO');
+    // Não vira outra conta, e a resposta não conta que o e-mail já existia.
+    expect(resp.status).toBe(202);
+    const { rows } = await pool.query('SELECT 1 FROM usuario WHERE lower(email) = lower($1)', [base]);
+    expect(rows).toHaveLength(1);
   });
 
   it('ignora espaços em volta do e-mail', async () => {
     const resp = await request(app)
       .post('/auth/login').set('X-Real-IP', IP)
-      .send({ email: `  ${base}  `, senha: 'senha123' });
+      .send({ email: `  ${base}  `, senha: 'senha-teste-123' });
 
     expect(resp.status).toBe(200);
   });

@@ -18,18 +18,21 @@ describe('POST /auth/registrar', () => {
   it('cria um usuário com perfil solicitante mesmo se outro perfil for enviado', async () => {
     const resposta = await request(app)
       .post('/auth/registrar')
-      .send({ nome: 'Usuário Teste', email, senha: 'senha123', perfil: 'administrador' });
+      .send({ nome: 'Usuário Teste', email, senha: 'senha-teste-123', perfil: 'administrador' });
 
-    expect(resposta.status).toBe(201);
-    expect(resposta.body.usuario.perfil).toBe('solicitante');
+    expect(resposta.status).toBe(202);
+    const { rows } = await pool.query('SELECT perfil FROM usuario WHERE email = $1', [email]);
+    expect(rows[0].perfil).toBe('solicitante');
   });
 
-  it('rejeita cadastro duplicado', async () => {
+  it('e-mail repetido não cria outra conta (a resposta é a do cadastro novo: ver cadastroSeguro.test.js)', async () => {
     const resposta = await request(app)
       .post('/auth/registrar')
-      .send({ nome: 'Usuário Teste', email, senha: 'senha123' });
+      .send({ nome: 'Usuário Teste', email, senha: 'senha-teste-123' });
 
-    expect(resposta.status).toBe(409);
+    expect(resposta.status).toBe(202);
+    const { rows } = await pool.query('SELECT 1 FROM usuario WHERE email = $1', [email]);
+    expect(rows).toHaveLength(1);
   });
 
   it('valida campos obrigatórios', async () => {
@@ -42,11 +45,11 @@ describe('POST /auth/login', () => {
   const email = `login_${Date.now()}@exemplo.com`;
 
   beforeAll(async () => {
-    await request(app).post('/auth/registrar').send({ nome: 'Login Teste', email, senha: 'senha123' });
+    await request(app).post('/auth/registrar').send({ nome: 'Login Teste', email, senha: 'senha-teste-123' });
   });
 
   it('autentica com credenciais corretas e retorna token', async () => {
-    const resposta = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+    const resposta = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha-teste-123' });
     expect(resposta.status).toBe(200);
     expect(resposta.body.token).toBeDefined();
     expect(resposta.body.usuario.email).toBe(email);

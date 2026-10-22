@@ -62,8 +62,8 @@ let chamadoId;
 
 async function pessoa(prefixo) {
   const email = `${prefixo}_storage_${Date.now()}_${Math.random().toString(36).slice(2)}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: 'Storage', email, senha: 'senha123' });
-  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: 'Storage', email, senha: 'senha-teste-123' });
+  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha-teste-123' });
   return login.body.token;
 }
 

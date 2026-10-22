@@ -44,7 +44,7 @@ class Cliente {
   }
 }
 
-export const SENHA = 'senha123';
+export const SENHA = 'senha-teste-123';
 
 // Credenciais do administrador semeado pelo backend. Não têm valor secreto:
 // existem só no banco de teste, e o script que as cria recusa rodar com

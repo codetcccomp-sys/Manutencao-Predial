@@ -32,10 +32,10 @@ function exigirAprovacao(ligada) {
   exigencia = jest.spyOn(configuracaoService, 'cadastroExigeAprovacao').mockResolvedValue(ligada);
 }
 
-const registrar = (email, senha = 'senha123') =>
+const registrar = (email, senha = 'senha-teste-123') =>
   request(app).post('/auth/registrar').send({ nome: 'Pedido de Cadastro', email, senha });
 
-const entrar = (email, senha = 'senha123') =>
+const entrar = (email, senha = 'senha-teste-123') =>
   request(app).post('/auth/login').set('X-Real-IP', `${IP}-${Math.random()}`).send({ email, senha });
 
 // Conta pronta para entrar, aprovação ligada ou não: quem age nos testes não
@@ -54,7 +54,9 @@ async function conta(perfil) {
 async function pedido() {
   const email = emailNovo();
   const resp = await registrar(email);
-  return { email, id: resp.body.usuario.id, resp };
+  // A resposta do cadastro não traz a conta (ver authService.criarUsuario): o id vem do banco.
+  const { rows } = await pool.query('SELECT id, ativo FROM usuario WHERE email = $1', [email]);
+  return { email, id: rows[0].id, ativo: rows[0].ativo, resp };
 }
 
 beforeAll(async () => {
@@ -72,11 +74,11 @@ afterAll(async () => {
 
 describe('Cadastro com aprovação ligada', () => {
   it('o pedido fica pendente e não entra; senha errada não revela que ele existe', async () => {
-    const { email, resp } = await pedido();
+    const { email, resp, ativo } = await pedido();
 
-    expect(resp.status).toBe(201);
+    expect(resp.status).toBe(202);
     expect(resp.body.aguardando_aprovacao).toBe(true);
-    expect(resp.body.usuario.ativo).toBe(false);
+    expect(ativo).toBe(false);
 
     const certa = await entrar(email);
     expect(certa.status).toBe(403);
@@ -160,7 +162,7 @@ describe('Cadastro com aprovação ligada', () => {
     expect(rows).toHaveLength(0);
 
     const denovo = await registrar(email);
-    expect(denovo.status).toBe(201);
+    expect(denovo.status).toBe(202);
   });
 
   it('recusar não apaga conta que não é pedido', async () => {
@@ -213,9 +215,9 @@ describe('Cadastro com aprovação ligada', () => {
 describe('A exigência de aprovação', () => {
   it('desligada, o cadastro entra direto, como antes', async () => {
     exigirAprovacao(false);
-    const { email, resp } = await pedido();
+    const { email, resp, ativo } = await pedido();
     expect(resp.body.aguardando_aprovacao).toBe(false);
-    expect(resp.body.usuario.ativo).toBe(true);
+    expect(ativo).toBe(true);
     expect((await entrar(email)).status).toBe(200);
   });
 

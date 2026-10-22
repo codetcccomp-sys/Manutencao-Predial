@@ -191,6 +191,74 @@ async function limitarRecuperacao(req, res, next) {
   next();
 }
 
+// Teto do cadastro público (migração 029). Dois números, como na recuperação de senha:
+// o por IP segura o script casual (um prédio inteiro sai por um IP só, então cabe um dia de
+// adesão em massa), e o diário vale para todos os IPs somados e protege a CPU da função e a
+// fila de pendentes da gestão. Passado o teto diário a saída existe: a administração cria a
+// conta (POST /usuarios). Lidos a cada pedido, para a operação ajustar sem redeploy de código
+// e para o teste poder apertá-los.
+const CADASTRO_POR_IP_PADRAO = 10;
+const CADASTRO_POR_DIA_PADRAO = 200;
+const JANELA_CADASTRO_MINUTOS = 60;
+
+function limiteDe(nome, padrao) {
+  const valor = Number(process.env[nome]);
+  return Number.isInteger(valor) && valor > 0 ? valor : padrao;
+}
+
+async function limparCadastrosAntigos() {
+  try {
+    await pool.query(`DELETE FROM tentativa_cadastro WHERE criado_em < now() - interval '${RETENCAO_HORAS} hours'`);
+  } catch (err) {
+    console.error('[rateLimit] falha ao limpar tentativas de cadastro:', err.message);
+  }
+}
+
+/**
+ * Barra o cadastro antes do bcrypt.
+ *
+ * Como na recuperação: o pedido é registrado ANTES de conferir (senão o próprio teto liberaria
+ * uma vaga a cada recusa), e a linha existe tenha o e-mail conta ou não, para o contador não
+ * virar oráculo. Vem depois do `validate`: corpo malformado não gasta uma vaga.
+ */
+async function limitarCadastro(req, res, next) {
+  const ip = ipDoCliente(req);
+
+  try {
+    await pool.query('INSERT INTO tentativa_cadastro (ip) VALUES ($1)', [ip]);
+
+    const { rows } = await pool.query(
+      `SELECT
+         count(*) FILTER (WHERE ip = $1 AND criado_em > now() - interval '${JANELA_CADASTRO_MINUTOS} minutes') AS por_ip,
+         count(*) AS no_dia
+       FROM tentativa_cadastro
+       WHERE criado_em > now() - interval '24 hours'`,
+      [ip]
+    );
+
+    if (
+      Number(rows[0].por_ip) > limiteDe('CADASTRO_MAX_POR_IP', CADASTRO_POR_IP_PADRAO) ||
+      Number(rows[0].no_dia) > limiteDe('CADASTRO_MAX_POR_DIA', CADASTRO_POR_DIA_PADRAO)
+    ) {
+      // A mesma mensagem nos dois tetos: dizer qual estourou calibraria o próximo ataque.
+      return next(
+        new AppError(
+          'Muitos pedidos de cadastro. Tente novamente mais tarde ou peça a um administrador para criar sua conta.',
+          429,
+          'MUITOS_CADASTROS'
+        )
+      );
+    }
+  } catch (err) {
+    // Contador indisponível (inclusive antes de `npm run migrate` aplicar a 029) não pode
+    // virar cadastro indisponível: mesma escolha do login e da recuperação.
+    console.error('[rateLimit] falha ao verificar limite de cadastro:', err.message);
+  }
+
+  if (Math.random() < CHANCE_LIMPEZA) limparCadastrosAntigos();
+  next();
+}
+
 /**
  * Registra o desfecho da tentativa. Um login bem-sucedido apaga as falhas
  * anteriores daquele e-mail: sem isso, alguém que errou a senha quatro vezes,
@@ -216,6 +284,7 @@ module.exports = {
   limitarLogin,
   conferirLimite,
   limitarRecuperacao,
+  limitarCadastro,
   registrarTentativa,
   ipDoCliente,
   LIMITES: {
@@ -225,5 +294,7 @@ module.exports = {
     MAX_PEDIDOS_POR_IP,
     JANELA_RECUPERACAO_MINUTOS,
     MAX_ENVIOS_POR_DIA,
+    CADASTRO_POR_IP_PADRAO,
+    CADASTRO_POR_DIA_PADRAO,
   },
 };

@@ -26,14 +26,14 @@ let categoriaId;
 
 async function criarUsuarioELogar(perfil) {
   const email = `${perfil}_atr_${Date.now()}_${Math.random().toString(36).slice(2)}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: `Atr ${perfil}`, email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: `Atr ${perfil}`, email, senha: 'senha-teste-123' });
   if (perfil !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
   }
   const login = await request(app)
     .post('/auth/login')
     .set('X-Real-IP', IP)
-    .send({ email, senha: 'senha123' });
+    .send({ email, senha: 'senha-teste-123' });
   return { token: login.body.token, usuario: login.body.usuario };
 }
 

@@ -38,7 +38,7 @@ async function tokenMaisRecente() {
 }
 
 beforeAll(async () => {
-  await request(app).post('/auth/registrar').send({ nome: 'Recupera', email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: 'Recupera', email, senha: 'senha-teste-123' });
   const { rows } = await pool.query('SELECT id FROM usuario WHERE email = $1', [email]);
   usuarioId = rows[0].id;
 });
@@ -122,17 +122,17 @@ describe('POST /auth/redefinir-senha', () => {
     const comNova = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'novaSenha456' });
     expect(comNova.status).toBe(200);
 
-    const comAntiga = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha123' });
+    const comAntiga = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha-teste-123' });
     expect(comAntiga.status).toBe(401);
 
     // Devolve ao estado inicial para os demais testes.
     const outro = await tokenMaisRecente();
-    await request(app).post('/auth/redefinir-senha').send({ token: outro, senha: 'senha123' });
+    await request(app).post('/auth/redefinir-senha').send({ token: outro, senha: 'senha-teste-123' });
   });
 
   it('recusa o mesmo token duas vezes', async () => {
     const token = await tokenMaisRecente();
-    await request(app).post('/auth/redefinir-senha').send({ token, senha: 'senha123' });
+    await request(app).post('/auth/redefinir-senha').send({ token, senha: 'senha-teste-123' });
 
     const segunda = await request(app)
       .post('/auth/redefinir-senha')
@@ -154,7 +154,7 @@ describe('POST /auth/redefinir-senha', () => {
       [usuarioId]
     );
 
-    const resp = await request(app).post('/auth/redefinir-senha').send({ token, senha: 'senha123' });
+    const resp = await request(app).post('/auth/redefinir-senha').send({ token, senha: 'senha-teste-123' });
     expect(resp.status).toBe(400);
   });
 
@@ -162,7 +162,7 @@ describe('POST /auth/redefinir-senha', () => {
     const inventado = crypto.randomBytes(32).toString('hex');
     const resp = await request(app)
       .post('/auth/redefinir-senha')
-      .send({ token: inventado, senha: 'senha123' });
+      .send({ token: inventado, senha: 'senha-teste-123' });
 
     expect(resp.status).toBe(400);
     expect(resp.body.erro.codigo).toBe('TOKEN_INVALIDO');
@@ -172,7 +172,7 @@ describe('POST /auth/redefinir-senha', () => {
     const primeiro = await tokenMaisRecente();
     const segundo = await tokenMaisRecente();
 
-    await request(app).post('/auth/redefinir-senha').send({ token: segundo, senha: 'senha123' });
+    await request(app).post('/auth/redefinir-senha').send({ token: segundo, senha: 'senha-teste-123' });
 
     // Um link antigo pode estar numa caixa de e-mail que não é mais a da
     // pessoa; ele não pode continuar valendo depois da troca.
@@ -187,15 +187,15 @@ describe('POST /auth/redefinir-senha', () => {
     for (let i = 0; i < 6; i += 1) {
       await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'errada' });
     }
-    const bloqueado = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha123' });
+    const bloqueado = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha-teste-123' });
     expect(bloqueado.status).toBe(429);
 
     const token = await tokenMaisRecente();
-    await request(app).post('/auth/redefinir-senha').send({ token, senha: 'senha123' });
+    await request(app).post('/auth/redefinir-senha').send({ token, senha: 'senha-teste-123' });
 
     // Quem acabou de provar ser dono da conta não deve seguir barrado por
     // erros anteriores.
-    const depois = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha123' });
+    const depois = await request(app).post('/auth/login').set('X-Real-IP', ipDoTeste()).send({ email, senha: 'senha-teste-123' });
     expect(depois.status).toBe(200);
   });
 

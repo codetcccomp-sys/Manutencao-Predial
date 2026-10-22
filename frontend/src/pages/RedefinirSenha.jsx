@@ -4,6 +4,7 @@ import api from '../api/client';
 import { Campo } from '../components/ui/Campo';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
+import { AJUDA_SENHA, MINIMO_SENHA } from '../dominio/senha';
 
 function RedefinirSenha() {
   const [params] = useSearchParams();
@@ -58,7 +59,7 @@ function RedefinirSenha() {
           </>
         ) : (
           <form onSubmit={enviar} className="grid gap-4">
-            <p className="text-sm text-tinta-2">Escolha uma senha de ao menos 6 caracteres.</p>
+            <p className="text-sm text-tinta-2">{AJUDA_SENHA}</p>
 
             {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
@@ -66,7 +67,7 @@ function RedefinirSenha() {
               rotulo="Nova senha"
               type="password"
               autoComplete="new-password"
-              minLength={6}
+              minLength={MINIMO_SENHA}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
             />
@@ -75,7 +76,7 @@ function RedefinirSenha() {
               rotulo="Repita a nova senha"
               type="password"
               autoComplete="new-password"
-              minLength={6}
+              minLength={MINIMO_SENHA}
               value={confirmacao}
               erro={naoConferem ? 'As senhas não conferem.' : undefined}
               onChange={(e) => setConfirmacao(e.target.value)}

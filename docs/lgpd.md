@@ -59,6 +59,7 @@ pessoa indiretamente, como o endereço de rede.
 | `equipe_tecnico` | quem está em qual equipe | Distribuição |
 | `tentativa_login` | **e-mail e IP** de cada tentativa | Bloquear força bruta |
 | `erro_aplicacao` | rota (sem query string), código e mensagem do erro de servidor, com e-mails mascarados; **sem usuário, IP nem corpo** | Achar defeito (a Vercel Hobby guarda os logs por 1 hora) |
+| `tentativa_cadastro` | **IP** de cada pedido de cadastro, sem o e-mail | Conter cadastro em massa (a fila de pendentes e a CPU da função) |
 | `recuperacao_senha` | **IP** de quem pediu, hash do token | Rastrear pedido de troca de senha |
 | `usuario`, `codigo_recuperacao_2fa` | chave do aplicativo autenticador e data de ativação; códigos de recuperação em hash | Verificação em duas etapas (só de quem liga) |
 
@@ -85,6 +86,7 @@ O que o sistema **já apaga sozinho**, sem ninguém pedir:
 | Dado | Prazo | Onde está no código |
 | --- | --- | --- |
 | Tentativas de login | **24 horas** | `middlewares/rateLimit.js` |
+| Pedidos de cadastro (só o IP) | **24 horas** | `middlewares/rateLimit.js` |
 | Pedidos de redefinição de senha | **7 dias** | `services/recuperacao.service.js` |
 | Erros de servidor | **30 dias** | `services/erros.service.js` |
 
@@ -197,8 +199,8 @@ não há como avisar sobre o andamento nem apurar quem atendeu.
 **Necessidade.** São tratados nome, e-mail institucional, perfil de acesso e o
 que a pessoa escreveu no chamado. Não há coleta de dado sensível, de documento
 de identificação, de telefone nem de endereço residencial. O IP é guardado só
-para conter ataque de senha, por 24 horas, e no pedido de recuperação, por 7
-dias.
+para conter ataque de senha e cadastro em massa, por 24 horas, e no pedido de
+recuperação, por 7 dias.
 
 **Expectativa do titular.** Quem abre um chamado de manutenção espera ser
 identificado nele: é a condição para o problema ser resolvido e para a pessoa
@@ -341,7 +343,9 @@ feito.
 
 Apaga junto o que só existe por causa da pessoa: suas notificações, suas
 tentativas de login e seus pedidos de recuperação de senha — este último é o
-que guarda IP.
+que guarda IP. A contagem de cadastros (`tentativa_cadastro`) não guarda e-mail nem
+nada que a ligue a uma pessoa: não há o que apagar por pedido, e ela some sozinha
+em 24 horas.
 
 Preserva chamados, comentários, avaliações, anexos e histórico, agora
 assinados por "Usuário removido".
