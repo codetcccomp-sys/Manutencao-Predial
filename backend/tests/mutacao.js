@@ -1052,6 +1052,20 @@ const MUTACOES = [
     para: '',
     spec: 'tests/avisoCriticoSemAtendimento.test.js',
   },
+  {
+    descricao: 'vercel, o projeto legado da raiz volta a publicar o repositório a cada push',
+    arquivo: '../vercel.json',
+    de: '"deploymentEnabled": false',
+    para: '"deploymentEnabled": true',
+    spec: 'tests/projetosVercel.test.js',
+  },
+  {
+    descricao: 'vercel, o projeto da API de produção passa a ter as implantações desligadas',
+    arquivo: 'vercel.json',
+    de: '"regions": ["gru1"],',
+    para: '"regions": ["gru1"], "git": { "deploymentEnabled": false },',
+    spec: 'tests/projetosVercel.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';
