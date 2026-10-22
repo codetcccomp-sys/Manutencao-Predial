@@ -70,6 +70,9 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
   calculado na consulta como `em_atraso`; faixa no Layout, selo no cartão, aviso
   no chamado). "Atendido" é sair de `aberto`. O 15 é a constante de
   `backend/src/config/atendimento.js`, não uma coluna de `sla`.
+- **Anexos**: até 10 por chamado (`config/anexos.js`; 422 `LIMITE_DE_ANEXOS`, conferido sob
+  cadeado por chamado) e aviso à gestão aos 70% do banco (`GET /operacao/armazenamento`).
+  Ligar o Storage é decisão e ação do dono (chave de serviço), nunca de código.
 - **Equipamento**: tem só `ativo BOOLEAN`.
 - **Sem conexão**: o service worker guarda as *leituras* (fila e chamado). Escrita
   falha na hora e a tela diz que nada foi registrado. É decisão deliberada

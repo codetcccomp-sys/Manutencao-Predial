@@ -1,6 +1,8 @@
 const pool = require('../config/db');
 const { AppError } = require('../middlewares/errorHandler');
 const armazenamento = require('./armazenamento.service');
+const { transacao } = require('../config/transacao');
+const { LIMITE_POR_CHAMADO } = require('../config/anexos');
 
 // Limite do corpo de uma requisição em função serverless na Vercel é 4,5 MB;
 // 4 MB deixa folga para o restante do multipart.
@@ -63,8 +65,25 @@ function validarArquivo(arquivo) {
   }
 }
 
+function limiteAtingido() {
+  return new AppError(
+    `Este chamado já tem ${LIMITE_POR_CHAMADO} anexos, que é o limite. Remova algum para enviar outro.`,
+    422,
+    'LIMITE_DE_ANEXOS'
+  );
+}
+
+async function contar(client, chamadoId) {
+  const { rows } = await client.query('SELECT COUNT(*)::int AS n FROM anexo WHERE chamado_id = $1', [chamadoId]);
+  return rows[0].n;
+}
+
 async function anexar(chamadoId, usuarioId, arquivo) {
   validarArquivo(arquivo);
+
+  // Recusa antes de subir o arquivo ao Storage: o caso comum (limite já atingido) não
+  // gasta envio nem apaga objeto. A conferência que vale é a de dentro da transação.
+  if ((await contar(pool, chamadoId)) >= LIMITE_POR_CHAMADO) throw limiteAtingido();
 
   const noStorage = armazenamento.modo() === 'supabase';
   const chave = noStorage ? armazenamento.novaChave(chamadoId) : null;
@@ -75,24 +94,31 @@ async function anexar(chamadoId, usuarioId, arquivo) {
   if (noStorage) await armazenamento.guardar(chave, arquivo.buffer, arquivo.mimetype);
 
   try {
-    const { rows } = await pool.query(
-      `INSERT INTO anexo (chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes,
-                          conteudo, armazenamento, chave_externa)
-       VALUES ($1, $2, $3::tipo_anexo, $4, $5, $6, $7, $8, $9)
-       RETURNING id, chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes, data_upload`,
-      [
-        chamadoId,
-        usuarioId,
-        TIPOS_ACEITOS[arquivo.mimetype].categoria,
-        arquivo.originalname.slice(0, 255),
-        arquivo.mimetype,
-        arquivo.size,
-        noStorage ? null : arquivo.buffer,
-        noStorage ? 'supabase' : 'banco',
-        chave,
-      ]
-    );
-    return rows[0];
+    return await transacao(async (client) => {
+      // Duas fotos enviadas juntas com o chamado em 9 anexos contariam 9 cada uma e
+      // passariam as duas. O cadeado é por chamado e some no fim da transação.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('anexo_chamado'), $1::int)", [chamadoId]);
+      if ((await contar(client, chamadoId)) >= LIMITE_POR_CHAMADO) throw limiteAtingido();
+
+      const { rows } = await client.query(
+        `INSERT INTO anexo (chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes,
+                            conteudo, armazenamento, chave_externa)
+         VALUES ($1, $2, $3::tipo_anexo, $4, $5, $6, $7, $8, $9)
+         RETURNING id, chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes, data_upload`,
+        [
+          chamadoId,
+          usuarioId,
+          TIPOS_ACEITOS[arquivo.mimetype].categoria,
+          arquivo.originalname.slice(0, 255),
+          arquivo.mimetype,
+          arquivo.size,
+          noStorage ? null : arquivo.buffer,
+          noStorage ? 'supabase' : 'banco',
+          chave,
+        ]
+      );
+      return rows[0];
+    });
   } catch (err) {
     if (noStorage) await armazenamento.apagar(chave);
     throw err;
@@ -172,5 +198,6 @@ module.exports = {
   buscarConteudo,
   remover,
   TAMANHO_MAXIMO_BYTES,
+  LIMITE_POR_CHAMADO,
   TIPOS_ACEITOS,
 };

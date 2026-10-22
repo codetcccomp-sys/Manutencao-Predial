@@ -3,6 +3,7 @@ const { authenticate, authorize } = require('../middlewares/auth');
 const { asyncHandler } = require('../utils/asyncHandler');
 const execucoes = require('../services/execucoes.service');
 const erros = require('../services/erros.service');
+const armazenamentoUso = require('../services/armazenamentoUso.service');
 
 const router = Router();
 
@@ -15,6 +16,15 @@ router.get(
   '/agendador',
   asyncHandler(async (req, res) => {
     res.json({ tarefas: await execucoes.saude() });
+  })
+);
+
+// Quanto do banco está ocupado. A gestão vê porque é ela quem decide ligar o Storage
+// (docs/piloto.md, 2.1.2); o número é só tamanho, sem dado de pessoa.
+router.get(
+  '/armazenamento',
+  asyncHandler(async (req, res) => {
+    res.json(await armazenamentoUso.uso());
   })
 );
 

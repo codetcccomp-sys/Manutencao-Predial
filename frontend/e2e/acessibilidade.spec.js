@@ -87,6 +87,29 @@ test('o detalhe do chamado não tem violação de acessibilidade', async ({ page
   expect(await violacoes(page)).toEqual([]);
 });
 
+test('o painel com o aviso de espaço do banco não tem violação de acessibilidade', async ({ page }) => {
+  // O banco de teste está longe dos 70%: a resposta é simulada para a faixa aparecer.
+  await page.route('**/operacao/armazenamento', (rota) =>
+    rota.fulfill({
+      json: {
+        banco_bytes: 380 * 1024 * 1024,
+        limite_bytes: 500 * 1024 * 1024,
+        percentual: 76,
+        alerta: true,
+        alerta_a_partir_de: 70,
+        anexos_no_banco_bytes: 200 * 1024 * 1024,
+        anexos_no_banco: 300,
+        anexos_no_storage: 0,
+        modo: 'banco',
+      },
+    })
+  );
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto('/');
+  await expect(page.getByText('O espaço do banco está acabando')).toBeVisible();
+  expect(await violacoes(page)).toEqual([]);
+});
+
 test('o diálogo de confirmação aberto não tem violação de acessibilidade', async ({ page }) => {
   await entrar(page, cenario.pessoas.gestor);
   await page.goto(`/chamados/${chamado.id}`);

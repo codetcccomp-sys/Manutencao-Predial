@@ -742,6 +742,21 @@ continuam no banco e continuam abrindo: cada linha diz onde está o seu arquivo
 sem linha órfã. A chave de serviço ignora as políticas de acesso do banco: fica
 só nas variáveis do backend, nunca no frontend.
 
+## Cota de anexos
+
+Anexo é o que mais enche o banco, e o plano gratuito do Supabase tem 500 MB para o
+sistema todo. Dois freios, em `backend/src/config/anexos.js`:
+
+- **Até 10 anexos por chamado.** O 11º volta 422 `LIMITE_DE_ANEXOS`, com a mensagem na
+  tela; remover um libera a vaga. A conferência é refeita dentro da transação, sob um
+  cadeado por chamado (`pg_advisory_xact_lock`): dois envios simultâneos na última vaga
+  não passam os dois. `GET /chamados/:id/anexos` devolve `limite`, e a tela mostra "3 de 10"
+  e desliga o envio no limite.
+- **Aviso aos 70% do banco.** `GET /operacao/armazenamento` (gestão) devolve o tamanho do
+  banco (`pg_database_size`), o limite, o percentual e quanto é anexo; o painel da gestão
+  mostra a faixa "O espaço do banco está acabando" a partir de 70%, a tempo de ligar o Storage
+  (`docs/piloto.md`, seção 2.1.2). O limite é 500 MB, ou `BANCO_LIMITE_MB` num plano maior.
+
 ## Priorização
 
 **Na abertura**, quem registra o chamado não escolhe a prioridade: responde três

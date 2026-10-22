@@ -237,6 +237,12 @@ mais cresce. Para mandar os anexos novos para o Storage:
 Os anexos já enviados continuam no banco e continuam abrindo. Sem as
 variáveis, nada muda.
 
+**Quando fazer isso.** O painel da gestão mostra a faixa "O espaço do banco está acabando"
+quando o banco passa de 70% do limite (350 MB nos 500 MB do plano gratuito). Esse é o sinal:
+a faixa pode ser conferida a qualquer hora em `GET /operacao/armazenamento`. Cada chamado
+aceita no máximo 10 anexos. Num plano maior, informe o novo limite em `BANCO_LIMITE_MB` (em
+MB) nas variáveis do backend, para a faixa medir contra o número certo.
+
 ### 2.1.3 Sessão em cookie e verificação em duas etapas
 
 As migrações `022_sessao_e_2fa` e `023_funcoes_so_para_o_backend` vão junto

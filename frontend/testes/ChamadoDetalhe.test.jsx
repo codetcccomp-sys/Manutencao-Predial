@@ -583,6 +583,52 @@ describe('Confirmação antes do que não tem volta', () => {
   });
 });
 
+describe('Limite de anexos', () => {
+  function abrirComAnexos(quantidade, limite = 3) {
+    api.get.mockImplementation(async (caminho) => {
+      if (caminho === '/chamados/7') return { data: { chamado: chamado() } };
+      if (caminho === '/chamados/7/anexos')
+        return {
+          data: {
+            limite,
+            anexos: Array.from({ length: quantidade }, (_, i) => ({
+              id: i + 1,
+              nome_arquivo: `foto-${i + 1}.jpg`,
+              tamanho_bytes: 1024,
+              usuario_id: GESTOR.id,
+              usuario_nome: 'Gestor',
+              data_upload: '2025-01-01T12:00:00Z',
+            })),
+          },
+        };
+      if (caminho === '/chamados/7/comentarios') return { data: { comentarios: [] } };
+      return { data: { usuarios: [], categorias: [], locais: [] } };
+    });
+    return render(
+      <MemoryRouter>
+        <ChamadoDetalhe />
+      </MemoryRouter>
+    );
+  }
+
+  it('mostra quantos anexos o chamado tem e deixa enviar enquanto há vaga', async () => {
+    abrirComAnexos(2);
+    await screen.findByText('foto-2.jpg');
+
+    expect(screen.getByText('2 de 3')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Adicionar anexo/)).toBeEnabled();
+  });
+
+  it('no limite, desliga o envio e diz por quê', async () => {
+    abrirComAnexos(3);
+    await screen.findByText('foto-3.jpg');
+
+    expect(screen.getByText('3 de 3')).toBeInTheDocument();
+    const envio = screen.getByLabelText(/já tem 3 anexos, que é o limite/);
+    expect(envio).toBeDisabled();
+  });
+});
+
 describe('Crítico sem atendimento', () => {
   const parado = (extra = {}) =>
     chamado({
