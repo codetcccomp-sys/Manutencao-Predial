@@ -30,11 +30,40 @@ export default function AnuncioDeRota() {
     if (anterior.current === pathname) return;
     anterior.current = pathname;
 
-    const alvo = document.querySelector('h1') ?? document.querySelector('main');
-    if (!alvo) return;
-    if (!alvo.hasAttribute('tabindex')) alvo.setAttribute('tabindex', '-1');
-    alvo.classList.add('outline-none');
-    alvo.focus();
+    function focar(alvo) {
+      if (!alvo.hasAttribute('tabindex')) alvo.setAttribute('tabindex', '-1');
+      alvo.classList.add('outline-none');
+      alvo.focus();
+    }
+
+    const titulo = document.querySelector('h1');
+    if (titulo) {
+      focar(titulo);
+      return undefined;
+    }
+
+    // Sem título ainda: a tela é sob demanda (telaSobDemanda) e o pedaço dela está
+    // chegando. Enquanto isso o foco vai para o `main`, para quem usa teclado não
+    // ficar sem lugar; quando o `h1` aparecer, passa para ele, a não ser que a
+    // pessoa já tenha mexido o foco para outro lugar.
+    const principal = document.querySelector('main');
+    if (!principal) return undefined;
+    focar(principal);
+
+    const observador = new MutationObserver(() => {
+      const chegou = document.querySelector('h1');
+      if (!chegou) return;
+      observador.disconnect();
+      if (document.activeElement === principal) focar(chegou);
+    });
+    observador.observe(document.body, { childList: true, subtree: true });
+    // Tela que nunca ganha título (ou erro): para de observar.
+    const limite = setTimeout(() => observador.disconnect(), 5000);
+
+    return () => {
+      clearTimeout(limite);
+      observador.disconnect();
+    };
   }, [pathname]);
 
   return null;

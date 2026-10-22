@@ -121,6 +121,14 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   e numa API que o confirma em `/health/db`; endereço novo do site da demo entra em
   `ORIGENS_EXTRAS` da API e em `demo/frontend/vercel.json`, nunca em `DOMINIOS_FIXOS`.
   `reiniciar-demonstracao.sql` apaga o schema inteiro e só roda no banco marcado.
+- **Erros de servidor (5xx) ficam em `erro_aplicacao`** (migração 028), porque na Vercel Hobby os logs
+  duram 1 hora. Sem usuário, IP, query string nem corpo; e-mail na mensagem sai mascarado; 30 dias; teto
+  de 100 por minuto. Só o administrador lê (`GET /operacao/erros`, tela de Usuários). Mexeu no que ela
+  guarda? Mude `docs/lgpd.md` e o aviso de privacidade junto. A migração só vale em produção depois de
+  `npm run migrate` lá: antes disso gravar falha em silêncio e vai só para o console.
+- Telas de gestão são sob demanda (`telaSobDemanda` em `App.jsx`); a fila, o chamado e o formulário de
+  abertura ficam no arquivo principal porque o técnico os lê sem conexão. Tela offline nova não entra na lista
+  sob demanda (um teste confere). O `AnuncioDeRota` espera o `h1` que chega depois.
 - Tela nova entra na lista de `frontend/e2e/acessibilidade.spec.js`: o axe falha o e2e com
   violação de WCAG 2.2 AA. Texto não usa cinza cru do Tailwind (use os tokens: `contraste.test.js`
   barra), `<select>` e `<input>` levam rótulo, link dentro de frase leva `underline`, e rota nova

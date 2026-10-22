@@ -10,6 +10,7 @@ import { Esqueleto, Regiao } from '../components/ui/Estados';
 import Confirmacao from '../components/ui/Confirmacao';
 import CadastrosPendentes from '../components/CadastrosPendentes';
 import ExigenciaDoisFatores from '../components/ExigenciaDoisFatores';
+import ErrosDoSistema from '../components/ErrosDoSistema';
 
 const PERFIS = [
   { valor: 'solicitante', rotulo: 'Solicitante' },
@@ -332,6 +333,8 @@ function Usuarios() {
         )}
         </Regiao>
       </div>
+
+      <ErrosDoSistema />
 
       <Confirmacao
         aberto={Boolean(aRedefinir2fa)}

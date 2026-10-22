@@ -53,11 +53,24 @@ function Avisos() {
   }, []);
 
   useEffect(() => {
-    carregar();
+    // Aba escondida não consulta: um aparelho com o aplicativo aberto no fundo
+    // fazia 1.440 consultas por dia sem ninguém olhar (e a função serverless
+    // cobra por chamada). Ao voltar para a aba, o evento refaz a consulta na hora.
+    // Mesmo cuidado de AlertaDeCriticos.
+    function consultar() {
+      if (document.hidden) return;
+      carregar();
+    }
+
+    consultar();
     // O aviso de atraso nasce de uma varredura agendada, não de uma ação de
     // quem está na tela: sem reconsultar, ele só apareceria no próximo F5.
-    const id = setInterval(carregar, INTERVALO_MS);
-    return () => clearInterval(id);
+    const id = setInterval(consultar, INTERVALO_MS);
+    document.addEventListener('visibilitychange', consultar);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', consultar);
+    };
   }, [carregar]);
 
   // Fechar ao clicar fora é o que se espera de um painel suspenso; sem isso

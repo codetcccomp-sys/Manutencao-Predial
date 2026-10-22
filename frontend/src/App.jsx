@@ -8,16 +8,20 @@ import Cadastro from './pages/Cadastro';
 import RecuperarSenha from './pages/RecuperarSenha';
 import RedefinirSenha from './pages/RedefinirSenha';
 import Privacidade from './pages/Privacidade';
+import { telaSobDemanda } from './dominio/telaSobDemanda';
 import Inicio from './pages/Inicio';
 import NovoChamado from './pages/NovoChamado';
 import ChamadoDetalhe from './pages/ChamadoDetalhe';
-import Relatorios from './pages/Relatorios';
-import Usuarios from './pages/Usuarios';
-import Cadastros from './pages/Cadastros';
-import Preventiva from './pages/Preventiva';
-import Equipamento from './pages/Equipamento';
-import Etiquetas from './pages/Etiquetas';
-import MinhaConta from './pages/MinhaConta';
+// Telas de gestão sob demanda: a fila, o chamado e o formulário de abertura (o que o
+// técnico usa no subsolo, e o que o service worker guarda para uso sem conexão)
+// ficam no arquivo principal; o resto só é baixado ao abrir a rota.
+const Relatorios = telaSobDemanda(() => import('./pages/Relatorios'));
+const Usuarios = telaSobDemanda(() => import('./pages/Usuarios'));
+const Cadastros = telaSobDemanda(() => import('./pages/Cadastros'));
+const Preventiva = telaSobDemanda(() => import('./pages/Preventiva'));
+const Equipamento = telaSobDemanda(() => import('./pages/Equipamento'));
+const Etiquetas = telaSobDemanda(() => import('./pages/Etiquetas'));
+const MinhaConta = telaSobDemanda(() => import('./pages/MinhaConta'));
 
 function App() {
   return (

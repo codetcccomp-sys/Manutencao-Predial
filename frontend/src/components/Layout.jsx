@@ -1,9 +1,11 @@
+import { Suspense } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import AlertaDeCriticos from './AlertaDeCriticos';
 import AvisoDeConexao from './AvisoDeConexao';
 import FaixaDeDemonstracao from './FaixaDeDemonstracao';
 import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
+import LimiteDeErro from './LimiteDeErro';
 import Marca from './ui/Marca';
 import { rotuloPerfil } from '../dominio/rotulos';
 
@@ -134,7 +136,20 @@ function Layout() {
             (de desfocado para nítido) roda de novo. Trocar só os filtros da
             mesma tela não muda o caminho, então não pisca. */}
         <div key={localizacao.pathname} className="animate-pagina-in">
-          <Outlet />
+          {/* As telas de gestão vêm sob demanda (telaSobDemanda): o cabeçalho e o
+              menu ficam de pé enquanto o pedaço chega, e se ele não chegar o
+              LimiteDeErro diz o que fazer em vez de deixar a página em branco. */}
+          <LimiteDeErro>
+            <Suspense
+              fallback={
+                <p role="status" className="text-sm text-tinta-2">
+                  Carregando...
+                </p>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </LimiteDeErro>
         </div>
       </main>
     </div>

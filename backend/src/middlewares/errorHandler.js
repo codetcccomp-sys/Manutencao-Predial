@@ -1,3 +1,5 @@
+const erros = require('../services/erros.service');
+
 /**
  * Erros que o `express.json()` levanta antes de a rota existir.
  *
@@ -38,7 +40,7 @@ function traduzirErroDeCorpo(err) {
  *   exatamente ao contrário do necessário — ruído demais no esperado, detalhe
  *   de menos no inesperado.
  */
-function errorHandler(err, req, res, next) {
+async function errorHandler(err, req, res, next) {
   traduzirErroDeCorpo(err);
   const status = err.status || 500;
   const isProd = process.env.NODE_ENV === 'production';
@@ -47,6 +49,22 @@ function errorHandler(err, req, res, next) {
   if (status >= 500) {
     // O stack e não a mensagem: é a única chance de saber de onde veio.
     console.error(`[ERRO] ${onde} ->`, err.stack || err.message);
+
+    // E no banco, para sobreviver à noite: os logs da Vercel Hobby duram 1 hora.
+    // Antes de responder, e não depois: numa função serverless o que vem depois
+    // do `res.json` pode nem rodar. `registrar` já não lança; o `.catch` é para o
+    // handler, que agora é assíncrono: o Express 4 não captura a rejeição de um
+    // handler de erro, e uma exceção aqui deixaria a requisição sem resposta.
+    await erros
+      .registrar({
+        metodo: req.method,
+        url: req.originalUrl,
+        status,
+        codigo: err.code,
+        mensagem: err.message,
+        pilha: err.stack,
+      })
+      .catch(() => {});
   } else {
     console.warn(`[RECUSA ${status}] ${onde} ->`, err.message);
   }

@@ -917,3 +917,17 @@ tolerância: 1 h para o aviso de atraso, 26 h para a preventiva), `falhando`
 passagem: o job não foi criado). A tela inicial da gestão mostra um aviso
 quando alguma não está `ok`. Antes disso, um agendador parado era silêncio —
 e silêncio parece saúde.
+
+### O que quebrou durante a noite?
+
+Na Vercel Hobby os logs de execução duram **1 hora**: um erro das 2h da manhã não
+existe mais às 9h. Por isso todo erro de servidor (5xx) é gravado também em
+`erro_aplicacao` (migração 028): método, rota (sem query string), código, mensagem e
+as linhas do stack. **Não guarda pessoa**: nem usuário, nem IP, nem corpo da requisição,
+e e-mail que um erro do banco repita na mensagem sai mascarado. Fica 30 dias, com teto
+de 100 linhas por minuto (um defeito que falha a cada requisição não enche o banco).
+`GET /operacao/erros` lista os mais recentes, só para o **administrador** (a pilha mostra
+caminhos e nomes internos), e a tela de Usuários traz a lista recolhida, que só consulta
+ao abrir. A gravação acontece **antes** de responder, porque numa função serverless o que
+vem depois do `res.json` pode nem rodar, e nunca derruba a resposta: se o banco falhar, o
+erro só vai para o console. Em produção a tabela só existe depois de `npm run migrate`.
