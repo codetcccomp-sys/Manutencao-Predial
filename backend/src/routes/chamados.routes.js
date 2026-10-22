@@ -23,6 +23,11 @@ router.post(
     local_id: { tipo: 'number' },
     equipamento_id: { tipo: 'number' },
     prioridade: { enum: ['baixa', 'media', 'alta', 'critica'] },
+    // Os três fatores da regra de priorização (RF04), de 1 a 4. Quem confere que
+    // vêm os três ou nenhum é o serviço, que já conhece a escala.
+    urgencia: { tipo: 'number' },
+    impacto: { tipo: 'number' },
+    risco: { tipo: 'number' },
   }),
   chamadosController.criar
 );

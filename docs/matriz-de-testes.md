@@ -98,6 +98,12 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RN04 | Risco grave impõe prioridade crítica | `backend/tests/priorizacao.test.js` | RN04: risco grave impõe crítica mesmo com pontuação baixa |
 | RF04 | Divergir da sugestão exige justificativa | `backend/tests/priorizacao.test.js` | exige justificativa quando o gestor diverge da sugestão |
 | RF04 | O solicitante não prioriza | `backend/tests/priorizacao.test.js` | solicitante não prioriza |
+| RF04 | A situação informada (urgência, impacto e risco) define a prioridade na abertura | `backend/tests/prioridadeNaAbertura.test.js` | urgência, impacto e risco altos nascem críticos, com o prazo da crítica e a conta guardada |
+| RF04 | O solicitante não escolhe a prioridade: a enviada é ignorada | `backend/tests/prioridadeNaAbertura.test.js` | "crítica" enviada pelo solicitante é ignorada: sem situação informada, nasce média |
+| RF04 | Situação parcial ou fora de 1 a 4 é recusada | `backend/tests/prioridadeNaAbertura.test.js` | só uma parte dos fatores é recusada: dois calculariam o que ninguém decidiu |
+| RF04 | A regra de distribuição é o mínimo da prioridade | `backend/tests/prioridadeNaAbertura.test.js` | as respostas não descem abaixo do mínimo, e o histórico diz que foi o mínimo |
+| RF04 | O formulário pergunta a situação, sem resposta marcada, e não envia sem responder | `frontend/testes/NovoChamado.test.jsx` | sem responder, o chamado não é enviado |
+| RF04 | O formulário envia urgência, impacto e risco, e nenhuma prioridade | `frontend/testes/NovoChamado.test.jsx` | envia urgência, impacto e risco como números e nenhuma prioridade |
 | RN12 | O chamado guarda a versão da regra que o classificou | `backend/tests/priorizacao.test.js` | chamado priorizado antes guarda a versão que o classificou |
 | SLA | O prazo nasce da prioridade | `backend/tests/sla.test.js` | define prazo a partir da prioridade |
 | SLA | Atraso é calculado: prazo passou e o chamado segue aberto | `backend/tests/sla.test.js` | marca em_atraso quando o prazo passou e o chamado segue aberto |
@@ -313,6 +319,7 @@ com o que cobre.
 | `frontend/testes/LoginGoogle.test.jsx` | O botão do Google |
 | `frontend/testes/Marca.test.jsx` | A marca e o rótulo do perfil |
 | `frontend/testes/Operacao.test.jsx` | Aviso de agendador parado, expediente e feriados |
+| `frontend/testes/NovoChamado.test.jsx` | As perguntas de situação do formulário de abertura |
 | `frontend/testes/PainelDeResumo.test.jsx` | O painel lateral de resumo do chamado |
 | `frontend/testes/Preventiva.test.jsx` | A tela de preventiva e a ficha do equipamento |
 | `frontend/testes/Privacidade.test.jsx` | O texto do aviso, e que ele não promete o que o sistema não faz |

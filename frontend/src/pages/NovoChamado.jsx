@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import api from '../api/client';
 import { AreaDeTexto, Campo, Selecao } from '../components/ui/Campo';
+import EscolhaUnica from '../components/ui/EscolhaUnica';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
-import { ORDEM_PRIORIDADES, PRIORIDADES } from '../dominio/rotulos';
+import { PERGUNTAS_DE_SITUACAO, fatoresDaSituacao } from '../dominio/situacao';
 import { rotuloEquipamento, rotuloLocal } from '../dominio/preventiva';
 
 /**
@@ -34,7 +35,10 @@ function NovoChamado() {
     categoria_id: '',
     local_id: '',
     equipamento_id: '',
-    prioridade: 'baixa',
+    // Sem resposta marcada: um padrão aqui seria a "baixa" de antes, escondida.
+    urgencia: '',
+    impacto: '',
+    risco: '',
   });
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -114,7 +118,8 @@ function NovoChamado() {
       const { data } = await api.post('/chamados', {
         titulo: form.titulo,
         descricao: form.descricao,
-        prioridade: form.prioridade,
+        // A prioridade o servidor calcula; a pessoa só descreve a situação.
+        ...fatoresDaSituacao(form),
         categoria_id: Number(form.categoria_id),
         local_id: Number(form.local_id),
         ...(form.equipamento_id ? { equipamento_id: Number(form.equipamento_id) } : {}),
@@ -163,33 +168,18 @@ function NovoChamado() {
           onChange={(e) => atualizarCampo('descricao', e.target.value)}
         />
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Selecao
-            rotulo="Categoria"
-            value={form.categoria_id}
-            onChange={(e) => atualizarCampo('categoria_id', e.target.value)}
-          >
-            <option value="">Selecione</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </Selecao>
-
-          <Selecao
-            rotulo="Prioridade"
-            value={form.prioridade}
-            onChange={(e) => atualizarCampo('prioridade', e.target.value)}
-            ajuda="A gestão revisa na triagem, com urgência, impacto e risco."
-          >
-            {ORDEM_PRIORIDADES.map((valor) => (
-              <option key={valor} value={valor}>
-                {PRIORIDADES[valor].rotulo}
-              </option>
-            ))}
-          </Selecao>
-        </div>
+        <Selecao
+          rotulo="Categoria"
+          value={form.categoria_id}
+          onChange={(e) => atualizarCampo('categoria_id', e.target.value)}
+        >
+          <option value="">Selecione</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
+            </option>
+          ))}
+        </Selecao>
 
         <Selecao
           rotulo="Local"
@@ -220,6 +210,21 @@ function NovoChamado() {
             ))}
           </Selecao>
         )}
+
+        <div className="grid gap-4 rounded border border-borda p-4">
+          <p className="text-xs text-tinta-2">
+            Responda sobre a situação: o sistema define a prioridade, e a gestão confere na triagem.
+          </p>
+          {PERGUNTAS_DE_SITUACAO.map(({ campo, pergunta, opcoes }) => (
+            <EscolhaUnica
+              key={campo}
+              pergunta={pergunta}
+              opcoes={opcoes}
+              valor={form[campo]}
+              onChange={(valor) => atualizarCampo(campo, valor)}
+            />
+          ))}
+        </div>
 
         <Botao
           type="submit"

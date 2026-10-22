@@ -828,6 +828,48 @@ const MUTACOES = [
     para: 'dados[campo] = valor;',
     spec: 'tests/cadastrosAuxiliares.test.js',
   },
+  {
+    descricao: 'na abertura, a prioridade enviada pelo solicitante volta a valer',
+    arquivo: 'src/services/chamados.service.js',
+    de: 'if (ehGestao && prioridade) return { prioridade };',
+    para: 'if (prioridade) return { prioridade };',
+    spec: 'tests/prioridadeNaAbertura.test.js',
+  },
+  {
+    descricao: 'na abertura, sem informação nenhuma o chamado volta a nascer baixo',
+    arquivo: 'src/services/chamados.service.js',
+    de: "\n  return { prioridade: piso ?? 'media' };\n}",
+    para: "\n  return { prioridade: piso ?? 'baixa' };\n}",
+    spec: 'tests/prioridadeNaAbertura.test.js',
+  },
+  {
+    descricao: 'na abertura, as respostas podem descer abaixo do mínimo da regra de distribuição',
+    arquivo: 'src/services/chamados.service.js',
+    de: 'const final = piso ? maiorPrioridade(sugestao.prioridade, piso) : sugestao.prioridade;',
+    para: 'const final = sugestao.prioridade;',
+    spec: 'tests/prioridadeNaAbertura.test.js',
+  },
+  {
+    descricao: 'na abertura, a maior prioridade passa a ser a menor',
+    arquivo: 'src/services/chamados.service.js',
+    de: 'ORDEM_PRIORIDADE.indexOf(a) >= ORDEM_PRIORIDADE.indexOf(b)',
+    para: 'ORDEM_PRIORIDADE.indexOf(a) <= ORDEM_PRIORIDADE.indexOf(b)',
+    spec: 'tests/prioridadeNaAbertura.test.js',
+  },
+  {
+    descricao: 'na abertura, uma parte dos fatores é aceita e o resto vira nulo',
+    arquivo: 'src/services/chamados.service.js',
+    de: '    priorizacaoService.validarFatores({ urgencia, impacto, risco });\n\n    let regra;',
+    para: '    let regra;',
+    spec: 'tests/prioridadeNaAbertura.test.js',
+  },
+  {
+    descricao: 'na abertura, os fatores informados não ficam guardados no chamado',
+    arquivo: 'src/services/chamados.service.js',
+    de: 'inicial.fatores?.urgencia ?? null,',
+    para: 'null,',
+    spec: 'tests/prioridadeNaAbertura.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';

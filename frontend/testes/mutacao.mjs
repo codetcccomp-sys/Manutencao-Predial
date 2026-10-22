@@ -1639,6 +1639,34 @@ const MUTACOES = [
     para: 'focar(chegou);',
     spec: 'testes/AnuncioDeRota.test.jsx',
   },
+  {
+    descricao: 'na abertura, o formulário deixa de enviar a situação informada',
+    arquivo: 'src/pages/NovoChamado.jsx',
+    de: '...fatoresDaSituacao(form),',
+    para: '',
+    spec: 'testes/NovoChamado.test.jsx',
+  },
+  {
+    descricao: 'na abertura, as perguntas de situação deixam de ser obrigatórias',
+    arquivo: 'src/components/ui/EscolhaUnica.jsx',
+    de: '              required\n',
+    para: '',
+    spec: 'testes/NovoChamado.test.jsx',
+  },
+  {
+    descricao: 'na abertura, uma resposta já vem marcada',
+    arquivo: 'src/pages/NovoChamado.jsx',
+    de: "    urgencia: '',",
+    para: "    urgencia: '1',",
+    spec: 'testes/NovoChamado.test.jsx',
+  },
+  {
+    descricao: 'na abertura, urgência e impacto trocam de lugar no envio',
+    arquivo: 'src/dominio/situacao.js',
+    de: 'urgencia: Number(situacao.urgencia),\n    impacto: Number(situacao.impacto),',
+    para: 'urgencia: Number(situacao.impacto),\n    impacto: Number(situacao.urgencia),',
+    spec: 'testes/NovoChamado.test.jsx',
+  },
 ];
 
 /**

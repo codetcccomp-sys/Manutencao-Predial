@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { montarCenario, entrar } from './apoio.js';
+import { montarCenario, entrar, responderSituacao } from './apoio.js';
 
 /**
  * O caminho que o sistema existe para percorrer: alguém abre um chamado, a
@@ -29,10 +29,17 @@ test('abrir um chamado pela tela e vê-lo na lista', async ({ page }) => {
   await page.getByLabel('Descrição').fill('A porta não fecha desde a chuva da semana passada.');
   await page.getByLabel('Categoria').selectOption({ index: 1 });
   await page.getByLabel('Local').selectOption({ label: `Unidade E2E ${cenario.marca} / A` });
+  // Urgência 3, impacto 3 e risco 2 somam 8: "alta" na regra v1. A pessoa não escolhe a prioridade.
+  await responderSituacao(page, {
+    risco: 'Pode virar risco se demorar',
+    impacto: 'Uma sala ou um serviço não pode ser usado',
+    urgencia: 'Hoje',
+  });
   await page.getByRole('button', { name: /abrir chamado|criar/i }).click();
 
   await page.waitForURL(/\/chamados\/\d+$/);
   await expect(page.getByRole('heading', { name: titulo })).toBeVisible();
+  await expect(page.getByText('Alta', { exact: true }).first()).toBeVisible();
 
   // E aparece na lista de quem abriu.
   await page.goto('/');
@@ -226,6 +233,7 @@ test('importar planilha de locais e abrir chamado num deles (RF02/RF11)', async 
   await page.getByLabel('Título').fill(`Chamado no local importado ${cenario.marca}`);
   await page.getByLabel('Descrição').fill('Lâmpada queimada na sala recém-cadastrada.');
   await page.getByLabel('Categoria').selectOption({ index: 1 });
+  await responderSituacao(page);
   await page.getByRole('button', { name: /abrir chamado|criar/i }).click();
 
   await page.waitForURL(/\/chamados\/\d+$/);

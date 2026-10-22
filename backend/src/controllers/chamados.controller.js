@@ -2,7 +2,7 @@ const chamadosService = require('../services/chamados.service');
 const { asyncHandler } = require('../utils/asyncHandler');
 
 const criar = asyncHandler(async (req, res) => {
-  const chamado = await chamadosService.criar(req.body, req.usuario.id);
+  const chamado = await chamadosService.criar(req.body, req.usuario.id, req.usuario.perfil);
   res.status(201).json({ chamado });
 });
 
