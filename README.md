@@ -289,6 +289,15 @@ O que o código faz, e onde procurar:
   deploy). A alternativa, `sslmode=require`, criptografa mas não confere quem
   está do outro lado.
 - **Anexos** conferidos pelo conteúdo do arquivo, não pelo tipo declarado.
+- **Cadastro público** (`POST /auth/registrar`) com três travas. **Teto**: 10 pedidos por IP por hora e
+  200 por dia (`CADASTRO_MAX_POR_IP` e `CADASTRO_MAX_POR_DIA` os ajustam; migração 029, só o IP é
+  guardado, 24 horas), 429 `MUITOS_CADASTROS` depois; contador fora do ar não derruba o cadastro.
+  **Resposta uniforme**: 202 e o mesmo corpo para e-mail novo e repetido, com o mesmo trabalho de bcrypt
+  nos dois, para a resposta nem o tempo dizerem quem tem conta; a tela diz "pedido recebido" e quem já
+  tinha conta usa o login ou a recuperação. A administração (autenticada) segue recebendo 409.
+  **Senha nova** de 10 caracteres ou mais, fora de uma lista das comuns, de repetições, de sequências
+  de dígitos e do próprio e-mail (`src/utils/senha.js`), sem regra de composição; vale no cadastro, na
+  conta criada pela administração e na redefinição. Quem já tem senha curta continua entrando.
 - **Dados pessoais**: retenção, base legal e procedimento de remoção em
   [docs/lgpd.md](docs/lgpd.md).
 
@@ -553,7 +562,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 
 | Método | Rota | Quem |
 | --- | --- | --- |
-| `POST` | `/auth/registrar` | público (cria `solicitante`) |
+| `POST` | `/auth/registrar` | público (cria `solicitante`; 202 igual para e-mail novo e repetido; teto por IP e por dia) |
 | `POST` | `/auth/login` | público (limitado por tentativa). Com duas etapas ligadas, responde `{ requer_2fa, desafio, email }` em vez da sessão (o e-mail é o da conta que passou pela primeira etapa, para a tela do código dizer em qual conta se está; o login com Google devolve o mesmo) |
 | `POST` | `/auth/login/2fa` | público: `{ desafio, codigo }` — código do aplicativo ou de recuperação; mesmo limite do login |
 | `GET POST` | `/auth/google` | público: `GET` diz se o login com Google está ligado (`{ client_id }`); `POST { credencial }` entra como o login, ou responde `202 { aguardando_aprovacao }` |

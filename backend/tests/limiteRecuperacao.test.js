@@ -30,7 +30,7 @@ let usuarioId;
 beforeAll(async () => {
   await request(app)
     .post('/auth/registrar')
-    .send({ nome: 'Limite Recuperacao', email, senha: 'senha123' });
+    .send({ nome: 'Limite Recuperacao', email, senha: 'senha-teste-123' });
   const { rows } = await pool.query('SELECT id FROM usuario WHERE email = $1', [email]);
   usuarioId = rows[0].id;
 });

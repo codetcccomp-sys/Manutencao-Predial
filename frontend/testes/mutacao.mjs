@@ -727,8 +727,8 @@ const MUTACOES = [
   {
     descricao: 'aprovação: cadastro pendente é mandado ao login como se tivesse entrado',
     arquivo: 'src/pages/Cadastro.jsx',
-    de: '      if (resposta?.aguardando_aprovacao) {',
-    para: '      if (false) {',
+    de: 'setRecebido({ aguardando: Boolean(resposta?.aguardando_aprovacao) });',
+    para: 'setRecebido({ aguardando: false });',
     spec: 'testes/CadastrosPendentes.test.jsx',
   },
   {
@@ -1701,6 +1701,27 @@ const MUTACOES = [
     de: "const noStorage = uso.modo === 'supabase';",
     para: 'const noStorage = false;',
     spec: 'testes/AvisoDeEspaco.test.jsx',
+  },
+  {
+    descricao: 'cadastro, a senha do formulário volta a aceitar 6 caracteres',
+    arquivo: 'src/dominio/senha.js',
+    de: 'export const MINIMO_SENHA = 10;',
+    para: 'export const MINIMO_SENHA = 6;',
+    spec: 'testes/CadastrosPendentes.test.jsx',
+  },
+  {
+    descricao: 'cadastro, o formulário deixa de pedir o mínimo da senha',
+    arquivo: 'src/pages/Cadastro.jsx',
+    de: 'minLength={MINIMO_SENHA}',
+    para: '',
+    spec: 'testes/CadastrosPendentes.test.jsx',
+  },
+  {
+    descricao: 'cadastro, a tela volta a afirmar que a conta foi criada (e o e-mail repetido a lê)',
+    arquivo: 'src/pages/Cadastro.jsx',
+    de: "'Recebemos o pedido de cadastro. Se este e-mail ainda não tinha conta, ela foi criada: entre com este e-mail e a senha que você escolheu. '",
+    para: "'Conta criada! Entre com este e-mail e a senha que você escolheu. '",
+    spec: 'testes/CadastrosPendentes.test.jsx',
   },
 ];
 

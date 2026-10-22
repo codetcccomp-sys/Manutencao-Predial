@@ -109,7 +109,7 @@ describe('Conta nova', () => {
     const { rows } = await pool.query('SELECT senha_hash FROM usuario WHERE email = ANY($1)', [emails]);
     expect(rows).toHaveLength(2);
     expect(rows[0].senha_hash).not.toBe(rows[1].senha_hash);
-    for (const senha of ['senha123', 'google', emails[0]]) {
+    for (const senha of ['senha-teste-123', 'google', emails[0]]) {
       const login = await request(app)
         .post('/auth/login')
         .set('X-Real-IP', `${IP}-${Math.random()}`)
@@ -122,7 +122,7 @@ describe('Conta nova', () => {
 describe('Conta que já existe', () => {
   async function contaComSenha(perfil = 'gestor') {
     const email = gmailNovo();
-    await request(app).post('/auth/registrar').send({ nome: 'Já Cadastrada', email, senha: 'senha123' });
+    await request(app).post('/auth/registrar').send({ nome: 'Já Cadastrada', email, senha: 'senha-teste-123' });
     await pool.query('UPDATE usuario SET perfil = $1, ativo = TRUE, cadastro_pendente_desde = NULL WHERE email = $2', [perfil, email]);
     return email;
   }
@@ -137,11 +137,11 @@ describe('Conta que já existe', () => {
   it('com duas etapas ligadas, o Google não dispensa o código', async () => {
     const email = await contaComSenha('gestor');
     const token = (
-      await request(app).post('/auth/login').set('X-Real-IP', `${IP}-${Math.random()}`).send({ email, senha: 'senha123' })
+      await request(app).post('/auth/login').set('X-Real-IP', `${IP}-${Math.random()}`).send({ email, senha: 'senha-teste-123' })
     ).body.token;
     const como = { Authorization: `Bearer ${token}` };
     const { segredo } = (await request(app).post('/auth/2fa/iniciar').set(como)).body;
-    await request(app).post('/auth/2fa/ativar').set(como).send({ senha: 'senha123', codigo: codigoNoPasso(segredo, passoDe(Date.now())) });
+    await request(app).post('/auth/2fa/ativar').set(como).send({ senha: 'senha-teste-123', codigo: codigoNoPasso(segredo, passoDe(Date.now())) });
 
     const resp = await entrarGoogle(credencial({ email }));
     expect(resp.status).toBe(200);

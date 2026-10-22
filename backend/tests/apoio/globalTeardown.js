@@ -35,6 +35,8 @@ module.exports = async function limparDepoisDosTestes() {
     const planos = await limparPlanosDeTeste(client);
     const regras = await limparRegrasDeTeste(client);
     const contas = await limparUsuariosDeTeste(client);
+    // Só contagem de IP do teto de cadastro: sem pessoa, mas também sem razão para ficar.
+    await client.query('DELETE FROM tentativa_cadastro').catch(() => {});
     console.log(
       `\n[limpeza] ${removidos} chamados, ${planos} planos, ${regras} regras e ${contas} contas de teste removidos.`
     );

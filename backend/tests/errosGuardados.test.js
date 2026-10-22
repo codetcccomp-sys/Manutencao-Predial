@@ -22,14 +22,14 @@ let solicitante;
 
 async function conta(perfil) {
   const email = `${perfil}_err_${Date.now()}_${Math.random().toString(36).slice(2)}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: `Erros ${perfil}`, email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: `Erros ${perfil}`, email, senha: 'senha-teste-123' });
   if (perfil !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
   }
   const login = await request(app)
     .post('/auth/login')
     .set('X-Real-IP', `${IP}-${Math.random()}`)
-    .send({ email, senha: 'senha123' });
+    .send({ email, senha: 'senha-teste-123' });
   return { token: login.body.token };
 }
 
@@ -48,7 +48,7 @@ async function provocarErro500(url, mensagem) {
     return await request(app)
       .post(url)
       .set('X-Real-IP', `${IP}-${Math.random()}`)
-      .send({ email: 'quebra@exemplo.com', senha: 'senha123' });
+      .send({ email: 'quebra@exemplo.com', senha: 'senha-teste-123' });
   } finally {
     espiao.mockRestore();
     log.mockRestore();
@@ -110,7 +110,7 @@ describe('Guardar o erro', () => {
     try {
       const resp = await request(app)
         .post('/auth/registrar')
-        .send({ nome: 'Quem Quer Que Seja', email: 'quebra@exemplo.com', senha: 'senha123' });
+        .send({ nome: 'Quem Quer Que Seja', email: 'quebra@exemplo.com', senha: 'senha-teste-123' });
 
       expect(resp.status).toBe(500);
       expect(log.mock.calls.flat().join(' ')).toContain('não foi possível guardar o erro');

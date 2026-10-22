@@ -16,7 +16,7 @@ const { ipDaSuite } = require('./apoio/ip');
  */
 
 const IP = ipDaSuite(__filename);
-const SENHA = 'senha123';
+const SENHA = 'senha-teste-123';
 const MARCA = `exige2fa${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
 let n = 0;
 

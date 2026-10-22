@@ -11,6 +11,7 @@ import Confirmacao from '../components/ui/Confirmacao';
 import CadastrosPendentes from '../components/CadastrosPendentes';
 import ExigenciaDoisFatores from '../components/ExigenciaDoisFatores';
 import ErrosDoSistema from '../components/ErrosDoSistema';
+import { MINIMO_SENHA } from '../dominio/senha';
 
 const PERFIS = [
   { valor: 'solicitante', rotulo: 'Solicitante' },
@@ -180,11 +181,11 @@ function Usuarios() {
           </label>
 
           <label className="grid gap-1 text-sm">
-            <span className="text-tinta-2">Senha provisória</span>
+            <span className="text-tinta-2">Senha provisória (ao menos {MINIMO_SENHA} caracteres)</span>
             <input
               required
               type="password"
-              minLength={6}
+              minLength={MINIMO_SENHA}
               value={novo.senha}
               onChange={(e) => setNovo({ ...novo, senha: e.target.value })}
               className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"

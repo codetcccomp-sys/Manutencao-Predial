@@ -11,7 +11,7 @@ const { ipDaSuite } = require('./apoio/ip');
  */
 
 const IP = ipDaSuite(__filename);
-const SENHA = 'senha123';
+const SENHA = 'senha-teste-123';
 
 async function conta(perfil = 'solicitante') {
   const email = `${perfil}_2fa_${Date.now()}_${Math.random().toString(36).slice(2)}@exemplo.com`;

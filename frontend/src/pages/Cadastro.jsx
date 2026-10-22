@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Campo } from '../components/ui/Campo';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
 import PedidoEnviado from '../components/PedidoEnviado';
+import { AJUDA_SENHA, MINIMO_SENHA } from '../dominio/senha';
 
 function Cadastro() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
-  const [sucesso, setSucesso] = useState(false);
-  const [aguardando, setAguardando] = useState(false);
+  // null até a resposta; depois, se a conta (quando é criada) espera a gestão.
+  const [recebido, setRecebido] = useState(null);
   const [carregando, setCarregando] = useState(false);
   const { registrar } = useAuth();
-  const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -23,14 +23,10 @@ function Cadastro() {
     setCarregando(true);
     try {
       const resposta = await registrar(nome, email, senha);
-      // Esperando aprovação não vai ao login: lá a pessoa leria "aguarda
-      // aprovação" como erro e tentaria de novo.
-      if (resposta?.aguardando_aprovacao) {
-        setAguardando(true);
-        return;
-      }
-      setSucesso(true);
-      setTimeout(() => navigate('/login'), 1200);
+      // A resposta é a mesma para e-mail novo e repetido (o servidor não diz se havia conta),
+      // então a tela também não pode dizer "conta criada": diz que o pedido foi recebido e o
+      // que fazer em cada caso.
+      setRecebido({ aguardando: Boolean(resposta?.aguardando_aprovacao) });
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível concluir o cadastro.');
     } finally {
@@ -38,17 +34,24 @@ function Cadastro() {
     }
   }
 
-  if (aguardando) {
+  if (recebido) {
     return (
       <PedidoEnviado
         acao={
-          <Link to="/login" className="alvo-toque inline-block py-1 text-center text-sm font-medium text-navy hover:underline">
-            Voltar para o login
-          </Link>
+          <div className="grid gap-1">
+            <Link to="/login" className="alvo-toque inline-block py-1 text-center text-sm font-medium text-navy hover:underline">
+              Ir para o login
+            </Link>
+            <Link to="/recuperar-senha" className="alvo-toque inline-block py-1 text-center text-sm font-medium text-navy hover:underline">
+              Esqueci minha senha
+            </Link>
+          </div>
         }
       >
-        Seu cadastro foi recebido e aguarda a aprovação da gestão. Você poderá entrar com este e-mail e
-        senha assim que ele for aprovado.
+        {recebido.aguardando
+          ? 'Recebemos o pedido de cadastro. Se este e-mail ainda não tinha conta, ela foi criada e aguarda a aprovação da gestão: você poderá entrar com este e-mail e a senha que escolheu assim que ela for aprovada. '
+          : 'Recebemos o pedido de cadastro. Se este e-mail ainda não tinha conta, ela foi criada: entre com este e-mail e a senha que você escolheu. '}
+        Se você já tinha conta, a senha dela não mudou: entre com ela ou peça uma nova.
       </PedidoEnviado>
     );
   }
@@ -65,7 +68,6 @@ function Cadastro() {
         </div>
 
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
-        {sucesso && <Aviso tipo="sucesso">Conta criada! Redirecionando para login...</Aviso>}
 
         <Campo
           rotulo="Nome"
@@ -86,8 +88,8 @@ function Cadastro() {
           rotulo="Senha"
           type="password"
           autoComplete="new-password"
-          minLength={6}
-          ajuda="Ao menos 6 caracteres."
+          minLength={MINIMO_SENHA}
+          ajuda={AJUDA_SENHA}
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
         />

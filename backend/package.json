@@ -16,6 +16,7 @@
     "test:sla": "jest --runInBand tests/sla.test.js tests/horasUteis.test.js tests/atrasos.test.js"
   },
   "jest": {
+    "setupFiles": ["<rootDir>/tests/apoio/ambiente.js"],
     "globalTeardown": "<rootDir>/tests/apoio/globalTeardown.js"
   },
   "dependencies": {

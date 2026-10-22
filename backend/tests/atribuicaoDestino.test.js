@@ -32,14 +32,14 @@ const equipes = [];
 
 async function conta(perfil, { ativo = true } = {}) {
   const email = `${MARCA}_${perfil}_${Math.random().toString(36).slice(2)}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: `Destino ${perfil}`, email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: `Destino ${perfil}`, email, senha: 'senha-teste-123' });
   if (perfil !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
   }
   const login = await request(app)
     .post('/auth/login')
     .set('X-Real-IP', `${IP}-${Math.random()}`)
-    .send({ email, senha: 'senha123' });
+    .send({ email, senha: 'senha-teste-123' });
   const dados = { ...login.body.usuario, token: login.body.token };
   // Desativada depois de entrar: o token já emitido não importa aqui, só o cadastro.
   if (!ativo) await pool.query('UPDATE usuario SET ativo = FALSE WHERE id = $1', [dados.id]);

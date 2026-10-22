@@ -34,7 +34,7 @@ com o Playwright e **desliga tudo ao sair**, mesmo se algo falhar.
 
 Ele recusa rodar com `DATABASE_URL` ou `NODE_ENV=production`, ou com `DB_HOST` que não seja
 local: o script cria contas e apaga o banco `smp_video`. As contas do roteiro
-(`*@conserva.demo`, senha `senha123`, e o administrador `admin_video@exemplo.com`) existem
+(`*@conserva.demo`, senha `senha-teste-123`, e o administrador `admin_video@exemplo.com`) existem
 só nesse banco.
 
 Precisa de: PostgreSQL local (o papel de `backend/.env` precisa poder criar bancos:

@@ -8,6 +8,7 @@ const { AppError } = require('../middlewares/errorHandler');
 const configuracaoService = require('./configuracao.service');
 const googleService = require('./google.service');
 const { PERFIS_DA_GESTAO } = require('../middlewares/auth');
+const { validarSenhaNova } = require('../utils/senha');
 
 const SALT_ROUNDS = 10;
 
@@ -42,27 +43,52 @@ function normalizarNome(nome) {
   return String(nome ?? '').trim().replace(/\s+/g, ' ');
 }
 
-async function criarUsuario({ nome, email, senha, perfil }, { pendente = false } = {}) {
+/**
+ * Cria a conta. `silencioso`: e-mail que já existe não é erro, devolve `null`.
+ *
+ * O cadastro público usa o modo silencioso. Um 409 "já existe" respondia a quem quisesse, sem
+ * login nenhum, se um e-mail tem conta, e uma lista de e-mails confirmados é o que se usa para
+ * dirigir phishing e tentativa de senha. A administração (POST /usuarios) segue recebendo o 409:
+ * é autenticada e precisa saber por que a conta não foi criada.
+ */
+async function criarUsuario({ nome, email, senha, perfil }, { pendente = false, silencioso = false } = {}) {
   const emailNormalizado = normalizarEmail(email);
+
+  validarSenhaNova(senha, { email: emailNormalizado });
+
+  // O hash vem ANTES de olhar se o e-mail existe, e é feito nos dois casos: o bcrypt é a parte
+  // lenta, e pular dele para o e-mail repetido deixaria o tempo de resposta contar o que o corpo
+  // da resposta esconde.
+  const senhaHash = await bcrypt.hash(senha, SALT_ROUNDS);
+
+  const emUso = () => new AppError('Já existe um usuário cadastrado com este e-mail.', 409, 'EMAIL_EM_USO');
 
   const existente = await pool.query('SELECT id FROM usuario WHERE email = $1', [emailNormalizado]);
   if (existente.rows.length > 0) {
-    throw new AppError('Já existe um usuário cadastrado com este e-mail.', 409, 'EMAIL_EM_USO');
+    if (silencioso) return null;
+    throw emUso();
   }
-
-  const senhaHash = await bcrypt.hash(senha, SALT_ROUNDS);
 
   // Pendente nasce inativa: tudo o que já recusa conta inativa (login,
   // recuperação de senha, listas, avisos) recusa a pendente sem precisar
   // saber que ela existe.
-  const { rows } = await pool.query(
-    `INSERT INTO usuario (nome, email, senha_hash, perfil, ativo, cadastro_pendente_desde)
-     VALUES ($1, $2, $3, $4, NOT $5::boolean, CASE WHEN $5::boolean THEN now() END)
-     RETURNING id, nome, email, perfil, ativo, criado_em, cadastro_pendente_desde`,
-    [normalizarNome(nome), emailNormalizado, senhaHash, perfil, pendente]
-  );
-
-  return rows[0];
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO usuario (nome, email, senha_hash, perfil, ativo, cadastro_pendente_desde)
+       VALUES ($1, $2, $3, $4, NOT $5::boolean, CASE WHEN $5::boolean THEN now() END)
+       RETURNING id, nome, email, perfil, ativo, criado_em, cadastro_pendente_desde`,
+      [normalizarNome(nome), emailNormalizado, senhaHash, perfil, pendente]
+    );
+    return rows[0];
+  } catch (err) {
+    // Dois pedidos do mesmo e-mail ao mesmo tempo: o UNIQUE da coluna decide, e quem perde
+    // recebe o mesmo desfecho de quem chegou depois.
+    if (err.code === '23505' && err.constraint?.includes('email')) {
+      if (silencioso) return null;
+      throw emUso();
+    }
+    throw err;
+  }
 }
 
 // Cadastro público: sempre cria perfil "solicitante". Perfis internos
@@ -72,9 +98,13 @@ async function criarUsuario({ nome, email, senha, perfil }, { pendente = false }
 //
 // Com a aprovação ligada (RF01: "autocadastro sob aprovação"), a conta nasce
 // esperando a gestão e não entra até ser aprovada.
+//
+// A resposta não diz se o e-mail era novo: devolve só se a conta, quando existe, espera a
+// gestão (uma configuração do sistema, igual para todo mundo).
 async function registrar({ nome, email, senha }) {
   const pendente = await configuracaoService.cadastroExigeAprovacao();
-  return criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente });
+  await criarUsuario({ nome, email, senha, perfil: 'solicitante' }, { pendente, silencioso: true });
+  return { aguardando_aprovacao: pendente };
 }
 
 /**

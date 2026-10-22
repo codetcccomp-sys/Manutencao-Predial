@@ -40,6 +40,14 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RF01 | Cinco falhas por e-mail bloqueiam o login | `backend/tests/rateLimit.test.js` | bloqueia com 429 após o limite de falhas do e-mail e informa Retry-After |
 | RF01 | Ataque espalhado por vários e-mails cai no limite por IP | `backend/tests/rateLimit.test.js` | limita por IP quando o ataque espalha as tentativas por vários e-mails |
 | RF01 | A recusa não revela se o e-mail existe | `backend/tests/rateLimit.test.js` | responde o mesmo corpo para e-mail inexistente e para senha errada |
+| RF01 | O cadastro responde igual para e-mail novo e repetido | `backend/tests/cadastroSeguro.test.js` | e-mail novo e repetido voltam o mesmo status e o mesmo corpo, sem conta nem token |
+| RF01 | O e-mail repetido faz o mesmo trabalho do novo (o tempo não o denuncia) | `backend/tests/cadastroSeguro.test.js` | o pedido repetido faz o mesmo trabalho do novo: o tempo não conta o que o corpo esconde |
+| RF01 | O cadastro tem teto por IP e por dia | `backend/tests/cadastroSeguro.test.js` | passado o teto por IP volta 429, e outro IP não é afetado |
+| RF01 | O teto do dia vale para todos os IPs | `backend/tests/cadastroSeguro.test.js` | o teto do dia vale para todos os IPs somados |
+| RF01 | Senha nova: 10 caracteres ou mais | `backend/tests/cadastroSeguro.test.js` | 9 caracteres é recusado; 10 passa |
+| RF01 | Senha nova: fora das comuns | `backend/tests/cadastroSeguro.test.js` | senha comum é recusada com o motivo, mesmo com 10 caracteres |
+| RF01 | Quem já tem senha curta continua entrando | `backend/tests/cadastroSeguro.test.js` | quem já tem senha curta continua entrando: a regra é da senha nova |
+| RF01 | O formulário de cadastro diz a regra e não afirma "conta criada" | `frontend/testes/CadastrosPendentes.test.jsx` | sem aprovação, diz que o pedido foi recebido e manda entrar: não afirma que a conta foi criada |
 | RF01 | Recuperação de senha responde igual para quem tem e quem não tem conta | `backend/tests/recuperacaoSenha.test.js` | responde igual para e-mail existente e inexistente |
 | RF01 | O link de redefinição vale uma vez | `backend/tests/recuperacaoSenha.test.js` | recusa o mesmo token duas vezes |
 | RF01 | O link de redefinição expira | `backend/tests/recuperacaoSenha.test.js` | recusa token expirado |
@@ -293,6 +301,7 @@ com o que cobre.
 | `backend/tests/emailCaixa.test.js` | E-mail sem distinção de maiúsculas |
 | `backend/tests/emailSenha.test.js` | A senha do SMTP não vaza para o log |
 | `backend/tests/emailSmtp.test.js` | Envio por SMTP de verdade, contra um servidor de mentira |
+| `backend/tests/cadastroSeguro.test.js` | Cadastro público: resposta uniforme, tetos e senha nova (ver a seção da regra RF01) |
 | `backend/tests/limiteRecuperacao.test.js` | Tetos por IP e por dia do pedido de recuperação de senha |
 | `backend/tests/limparDemonstracao.test.js` | O script de limpeza da demonstração, que já rodou em produção |
 | `backend/tests/limpezaDeTestes.test.js` | A limpeza dos dados que as próprias suítes criam |

@@ -46,6 +46,28 @@ test('abrir um chamado pela tela e vê-lo na lista', async ({ page }) => {
   await expect(page.getByText(titulo)).toBeVisible();
 });
 
+test('cadastrar-se pela tela: senha comum é recusada com o motivo, e a boa leva a "pedido enviado" e depois entra', async ({ page }) => {
+  const email = `cadastro_${cenario.marca}_${Date.now()}@exemplo.com`;
+  await page.goto('/cadastro');
+  await page.getByLabel('Nome').fill('Pessoa do Cadastro');
+  await page.getByLabel('E-mail').fill(email);
+
+  // Dez caracteres, mas entre as mais usadas: o servidor recusa e a tela diz por quê.
+  await page.getByLabel('Senha').fill('senha12345');
+  await page.getByRole('button', { name: 'Cadastrar' }).click();
+  await expect(page.getByRole('alert')).toContainText('muito comum');
+
+  await page.getByLabel('Senha').fill('uma frase longa para a senha');
+  await page.getByRole('button', { name: 'Cadastrar' }).click();
+  await expect(page.getByRole('heading', { name: 'Pedido enviado' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Ir para o login' }).click();
+  await page.getByLabel(/e-?mail/i).fill(email);
+  await page.getByLabel(/senha/i).fill('uma frase longa para a senha');
+  await page.getByRole('button', { name: /entrar/i }).click();
+  await expect(page.getByRole('heading', { name: 'Meus pedidos' })).toBeVisible();
+});
+
 test('buscar pelo protocolo encontra o chamado (RF03)', async ({ page }) => {
   const chamado = await cenario.abrirChamado({ titulo: `Buscável ${cenario.marca}` });
 

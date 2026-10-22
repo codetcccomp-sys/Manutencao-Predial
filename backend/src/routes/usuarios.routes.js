@@ -15,7 +15,7 @@ router.post(
   validate({
     nome: { aparar: true, obrigatorio: true, tipo: 'string', minLength: 3 },
     email: { obrigatorio: true, tipo: 'string', email: true },
-    senha: { obrigatorio: true, tipo: 'string', minLength: 6 },
+    senha: { obrigatorio: true, tipo: 'string', minLength: 10, maxLength: 200 },
     perfil: { obrigatorio: true, enum: ['solicitante', 'tecnico', 'gestor', 'administrador'] },
   }),
   usuariosController.criar

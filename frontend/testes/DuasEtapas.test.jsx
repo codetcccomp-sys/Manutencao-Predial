@@ -45,7 +45,7 @@ describe('Login com verificação em duas etapas', () => {
     abrirLogin();
 
     await usuario.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
-    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
 
     expect(await screen.findByText('Formulário')).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('Login com verificação em duas etapas', () => {
     abrirLogin();
 
     await usuario.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
-    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
 
     const campo = await screen.findByLabelText('Código');
@@ -87,7 +87,7 @@ describe('Login com verificação em duas etapas', () => {
     abrirLogin();
 
     await usuario.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
-    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
     await usuario.type(await screen.findByLabelText('Código'), '000000');
     await usuario.click(screen.getByRole('button', { name: 'Confirmar' }));
@@ -103,7 +103,7 @@ describe('Login com verificação em duas etapas', () => {
 
     // Digitado com outra caixa: a conta é a que o servidor devolveu.
     await usuario.type(screen.getByLabelText('E-mail'), 'ANA@Exemplo.com');
-    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
 
     expect(await screen.findByLabelText('Código')).toBeInTheDocument();
@@ -117,7 +117,7 @@ describe('Login com verificação em duas etapas', () => {
     abrirLogin();
 
     await usuario.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
-    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
 
     expect(await screen.findByLabelText('Código')).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe('Login com verificação em duas etapas', () => {
     abrirLogin();
 
     await usuario.type(screen.getByLabelText('E-mail'), 'ana@exemplo.com');
-    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
     await usuario.type(await screen.findByLabelText('Código'), '123456');
     await usuario.click(screen.getByRole('button', { name: 'Confirmar' }));
@@ -175,12 +175,12 @@ describe('Minha conta', () => {
 
     api.get.mockResolvedValue({ data: { ativo: true, ativado_em: '2026-10-07T12:00:00Z', codigos_restantes: 2 } });
     await usuario.type(screen.getByLabelText('Código do aplicativo'), '123456');
-    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await usuario.click(screen.getByRole('button', { name: 'Ligar' }));
 
     expect(await screen.findByText('AAAAA-BBBBB')).toBeInTheDocument();
     expect(screen.getByText(/não aparecem de novo/)).toBeInTheDocument();
-    expect(api.post).toHaveBeenLastCalledWith('/auth/2fa/ativar', { senha: 'senha123', codigo: '123456' });
+    expect(api.post).toHaveBeenLastCalledWith('/auth/2fa/ativar', { senha: 'senha-teste-123', codigo: '123456' });
   });
 
   it('desligar pede a senha e um código', async () => {
@@ -189,12 +189,12 @@ describe('Minha conta', () => {
     api.post.mockResolvedValueOnce({ data: {} });
 
     await usuario.click(await screen.findByRole('button', { name: 'Desligar' }));
-    await usuario.type(screen.getByLabelText('Senha'), 'senha123');
+    await usuario.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await usuario.type(screen.getByLabelText('Código do aplicativo'), '654321');
     await usuario.click(screen.getByRole('button', { name: 'Confirmar e desligar' }));
 
     await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith('/auth/2fa/desativar', { senha: 'senha123', codigo: '654321' })
+      expect(api.post).toHaveBeenCalledWith('/auth/2fa/desativar', { senha: 'senha-teste-123', codigo: '654321' })
     );
   });
 

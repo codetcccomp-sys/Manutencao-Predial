@@ -16,11 +16,11 @@ let solicitante;
 
 async function criarUsuarioELogar(perfil) {
   const email = `${perfil}_usr_${Date.now()}_${Math.random().toString(36).slice(2)}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: `Usr ${perfil}`, email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: `Usr ${perfil}`, email, senha: 'senha-teste-123' });
   if (perfil !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
   }
-  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha-teste-123' });
   return { token: login.body.token, usuario: login.body.usuario };
 }
 
@@ -44,7 +44,7 @@ describe('POST /usuarios', () => {
       .send({
         nome: 'Técnico Novo',
         email: `tecnico_novo_${Date.now()}@exemplo.com`,
-        senha: 'senha123',
+        senha: 'senha-teste-123',
         perfil: 'tecnico',
       });
 
@@ -56,7 +56,7 @@ describe('POST /usuarios', () => {
     const resp = await request(app)
       .post('/usuarios')
       .set('Authorization', `Bearer ${gestor.token}`)
-      .send({ nome: 'X', email: `x_${Date.now()}@exemplo.com`, senha: 'senha123', perfil: 'tecnico' });
+      .send({ nome: 'X', email: `x_${Date.now()}@exemplo.com`, senha: 'senha-teste-123', perfil: 'tecnico' });
 
     expect(resp.status).toBe(403);
   });
@@ -70,7 +70,7 @@ describe('GET /usuarios', () => {
       .send({
         nome: 'Vai Desligar',
         email: `desligado_${Date.now()}@exemplo.com`,
-        senha: 'senha123',
+        senha: 'senha-teste-123',
         perfil: 'tecnico',
       });
     const id = criado.body.usuario.id;
@@ -303,7 +303,7 @@ describe('Nome sem espaço sobrando', () => {
     const resp = await request(app)
       .post('/usuarios')
       .set(comoAdmin())
-      .send({ nome: '  Maria   Silva  ', email, senha: 'senha123', perfil: 'tecnico' });
+      .send({ nome: '  Maria   Silva  ', email, senha: 'senha-teste-123', perfil: 'tecnico' });
 
     // O e-mail já era normalizado; o nome entrava cru. O espaço passa
     // despercebido no cadastro e reaparece no cabeçalho, na autoria do
@@ -324,7 +324,7 @@ describe('Nome sem espaço sobrando', () => {
       .send({
         nome: '   ',
         email: `vazio_${Date.now()}@exemplo.com`,
-        senha: 'senha123',
+        senha: 'senha-teste-123',
         perfil: 'tecnico',
       });
 

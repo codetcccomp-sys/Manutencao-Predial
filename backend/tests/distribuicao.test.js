@@ -27,14 +27,14 @@ const criados = { chamados: [], regras: [], equipes: [], categorias: [], equipam
 
 async function conta(perfil) {
   const email = `${MARCA}_${perfil}_${Math.random().toString(36).slice(2)}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: `Dist ${perfil}`, email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: `Dist ${perfil}`, email, senha: 'senha-teste-123' });
   if (perfil !== 'solicitante') {
     await pool.query('UPDATE usuario SET perfil = $1 WHERE email = $2', [perfil, email]);
   }
   const login = await request(app)
     .post('/auth/login')
     .set('X-Real-IP', `${IP}-${Math.random()}`)
-    .send({ email, senha: 'senha123' });
+    .send({ email, senha: 'senha-teste-123' });
   return { ...login.body.usuario, token: login.body.token };
 }
 

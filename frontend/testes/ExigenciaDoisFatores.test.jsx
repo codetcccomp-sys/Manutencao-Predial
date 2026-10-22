@@ -72,7 +72,7 @@ describe('Gestão com a verificação exigida e desligada', () => {
 
     await u.click(await screen.findByRole('button', { name: /Ligar/ }));
     await u.type(screen.getByLabelText('Código do aplicativo'), '123456');
-    await u.type(screen.getByLabelText('Senha'), 'senha123');
+    await u.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await u.click(screen.getByRole('button', { name: 'Ligar' }));
 
     await waitFor(() =>
@@ -266,7 +266,7 @@ describe('Foco acompanha a ativação da verificação', () => {
   it('ao ligar, o foco vai para os códigos de recuperação, que aparecem uma vez só', async () => {
     const u = await aberta();
     await u.type(screen.getByLabelText('Código do aplicativo'), '123456');
-    await u.type(screen.getByLabelText('Senha'), 'senha123');
+    await u.type(screen.getByLabelText('Senha'), 'senha-teste-123');
     await u.click(screen.getByRole('button', { name: 'Ligar' }));
     expect(await screen.findByRole('region', { name: 'Códigos de recuperação' })).toHaveFocus();
   });

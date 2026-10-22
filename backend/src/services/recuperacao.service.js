@@ -4,6 +4,7 @@ const pool = require('../config/db');
 const { transacao } = require('../config/transacao');
 const { AppError } = require('../middlewares/errorHandler');
 const { normalizarEmail } = require('./auth.service');
+const { validarSenhaNova } = require('../utils/senha');
 const email = require('./email.service');
 const { ASSINATURA } = require('../config/marca');
 
@@ -171,6 +172,8 @@ async function redefinir(token, senhaNova) {
   if (!token || typeof token !== 'string') {
     throw new AppError('Token de redefinição inválido ou expirado.', 400, 'TOKEN_INVALIDO');
   }
+
+  validarSenhaNova(senhaNova);
 
   const senhaHash = await bcrypt.hash(senhaNova, SALT_ROUNDS);
 

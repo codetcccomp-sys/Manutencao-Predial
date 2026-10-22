@@ -17,8 +17,8 @@ let categoriaId;
 
 beforeAll(async () => {
   const email = `paginacao_${Date.now()}@exemplo.com`;
-  await request(app).post('/auth/registrar').send({ nome: 'Paginação', email, senha: 'senha123' });
-  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha123' });
+  await request(app).post('/auth/registrar').send({ nome: 'Paginação', email, senha: 'senha-teste-123' });
+  const login = await request(app).post('/auth/login').set('X-Real-IP', IP).send({ email, senha: 'senha-teste-123' });
   solicitante = { token: login.body.token, usuario: login.body.usuario };
 
   const categoria = await pool.query('SELECT id FROM categoria LIMIT 1');

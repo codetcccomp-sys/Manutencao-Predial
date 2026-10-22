@@ -73,6 +73,10 @@ export default defineConfig({
         JWT_SECRET: process.env.JWT_SECRET ?? 'segredo_de_teste_e2e',
         JWT_EXPIRES_IN: '1h',
         CRON_SECRET: process.env.CRON_SECRET ?? 'segredo_de_agendador_e2e',
+        // O cenário cria dezenas de contas pelo mesmo endereço: o teto do cadastro público
+        // (10 por IP por hora) é provado no jest, e aqui só atrapalharia.
+        CADASTRO_MAX_POR_IP: '1000000',
+        CADASTRO_MAX_POR_DIA: '1000000',
         DB_HOST: process.env.DB_HOST ?? 'localhost',
         DB_PORT: process.env.DB_PORT ?? '5432',
         DB_NAME: process.env.DB_NAME ?? 'smp',

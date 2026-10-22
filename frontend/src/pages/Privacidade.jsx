@@ -72,7 +72,8 @@ function Privacidade() {
             <li>
               <strong>Tentativas de entrar:</strong> o e-mail e o endereço de rede (IP) de cada
               tentativa, inclusive de quem errou a senha, para barrar quem tenta adivinhá-la. No pedido
-              de troca de senha, também o IP.
+              de troca de senha, também o IP. Em cada pedido de cadastro, só o IP (sem o e-mail), para
+              barrar cadastros em massa.
             </li>
             <li>
               <strong>Erros do sistema:</strong> quando algo falha por defeito nosso, guardamos a rota, o
@@ -122,7 +123,7 @@ function Privacidade() {
 
         <Secao titulo="Por quanto tempo">
           <ul className={LISTA}>
-            <li>Tentativas de entrar: apagadas em 24 horas. Pedidos de troca de senha: em 7 dias.</li>
+            <li>Tentativas de entrar e pedidos de cadastro (o IP): apagadas em 24 horas. Pedidos de troca de senha: em 7 dias.</li>
             <li>Pedido de cadastro recusado: apagado na hora da recusa.</li>
             <li>Erros técnicos do sistema: apagados em 30 dias.</li>
             <li>

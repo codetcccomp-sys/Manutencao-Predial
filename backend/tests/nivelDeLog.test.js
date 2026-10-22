@@ -69,7 +69,7 @@ describe('5xx é nosso, e precisa do stack', () => {
       // que está sendo medido aqui.
       const resp = await request(app)
         .post('/auth/registrar')
-        .send({ nome: 'Quem Quer Que Seja', email: 'quebra@exemplo.com', senha: 'senha123' });
+        .send({ nome: 'Quem Quer Que Seja', email: 'quebra@exemplo.com', senha: 'senha-teste-123' });
 
       expect(resp.status).toBe(500);
       expect(log.erro).toHaveBeenCalled();

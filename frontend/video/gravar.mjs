@@ -11,7 +11,7 @@ import { chromium } from '@playwright/test';
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const APP = process.env.APP ?? 'http://localhost:4173';
 const SAIDA = process.argv[2] ?? path.join(AQUI, 'saida');
-const SENHA = 'senha123';
+const SENHA = 'senha-teste-123';
 // Conta do administrador do banco DESCARTÁVEL de vídeo (criada por rodar.sh). Não existe em
 // nenhum outro lugar, e o semear-admin.js recusa rodar com NODE_ENV=production.
 const ADMIN = { email: 'admin_video@exemplo.com', senha: 'senha_video_local' };

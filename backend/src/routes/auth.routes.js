@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const authController = require('../controllers/auth.controller');
 const { validate } = require('../validators/validate');
-const { limitarLogin, limitarRecuperacao, conferirLimite } = require('../middlewares/rateLimit');
+const { limitarLogin, limitarRecuperacao, limitarCadastro, conferirLimite } = require('../middlewares/rateLimit');
 const { authenticate, authenticateSem2fa } = require('../middlewares/auth');
 const authService = require('../services/auth.service');
 
@@ -14,8 +14,9 @@ router.post(
   validate({
     nome: { aparar: true, obrigatorio: true, tipo: 'string', minLength: 3 },
     email: { obrigatorio: true, tipo: 'string', email: true },
-    senha: { obrigatorio: true, tipo: 'string', minLength: 6 },
+    senha: { obrigatorio: true, tipo: 'string', minLength: 10, maxLength: 200 },
   }),
+  limitarCadastro,
   authController.registrar
 );
 
@@ -119,7 +120,7 @@ router.post(
   '/redefinir-senha',
   validate({
     token: { obrigatorio: true, tipo: 'string', minLength: 32, maxLength: 128 },
-    senha: { obrigatorio: true, tipo: 'string', minLength: 6, maxLength: 200 },
+    senha: { obrigatorio: true, tipo: 'string', minLength: 10, maxLength: 200 },
   }),
   authController.redefinirSenha
 );
