@@ -61,6 +61,8 @@ function ChamadoDetalhe() {
   const [tecnicos, setTecnicos] = useState([]);
   const [nota, setNota] = useState(5);
   const [anexos, setAnexos] = useState([]);
+  // Quantos anexos o chamado aceita; vem da API, que é quem faz valer o limite.
+  const [limiteAnexos, setLimiteAnexos] = useState(null);
   // null, 'preparando' (reduzindo a foto) ou 'enviando'.
   const [enviandoAnexo, setEnviandoAnexo] = useState(null);
   const [fatores, setFatores] = useState({ urgencia: '', impacto: '', risco: '' });
@@ -119,7 +121,10 @@ function ChamadoDetalhe() {
   const carregarAnexos = useCallback(() => {
     api
       .get(`/chamados/${id}/anexos`)
-      .then(({ data }) => setAnexos(data.anexos))
+      .then(({ data }) => {
+        setAnexos(data.anexos);
+        setLimiteAnexos(data.limite ?? null);
+      })
       .catch(() => setErro('Não foi possível carregar os anexos.'));
   }, [id]);
 
@@ -388,6 +393,8 @@ function ChamadoDetalhe() {
       carregarAnexos();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível enviar o anexo.');
+      // Outra pessoa pode ter ocupado a última vaga: a lista na tela está desatualizada.
+      if (err.response?.data?.erro?.codigo === 'LIMITE_DE_ANEXOS') carregarAnexos();
     } finally {
       setEnviandoAnexo(null);
       // Limpa o input para que escolher o mesmo arquivo de novo dispare
@@ -462,6 +469,7 @@ function ChamadoDetalhe() {
   // da gestão. O servidor confere de novo — aqui é só para não oferecer um
   // botão que seria recusado.
   const encerrado = ['concluido', 'cancelado'].includes(chamado.estado);
+  const anexosNoLimite = limiteAnexos != null && anexos.length >= limiteAnexos;
   const podeEditar =
     !encerrado &&
     (podeGerenciar ||
@@ -992,7 +1000,14 @@ function ChamadoDetalhe() {
       )}
 
       <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
-        <h2 className="font-medium text-navy">Anexos</h2>
+        <div>
+          <h2 className="font-medium text-navy">Anexos</h2>
+          {limiteAnexos != null && (
+            <p className="text-xs text-tinta-2">
+              {anexos.length} de {limiteAnexos}
+            </p>
+          )}
+        </div>
 
         {anexos.length === 0 ? (
           <p className="text-sm text-tinta-2">Nenhum anexo neste chamado.</p>
@@ -1044,12 +1059,14 @@ function ChamadoDetalhe() {
               ? 'Preparando a foto...'
               : enviandoAnexo === 'enviando'
                 ? 'Enviando...'
-                : 'Adicionar anexo (foto ou PDF). Fotos grandes são reduzidas antes do envio; PDF até 4 MB.'}
+                : anexosNoLimite
+                  ? `O chamado já tem ${limiteAnexos} anexos, que é o limite. Remova um para enviar outro.`
+                  : 'Adicionar anexo (foto ou PDF). Fotos grandes são reduzidas antes do envio; PDF até 4 MB.'}
           </span>
           <input
             type="file"
             onChange={enviarAnexo}
-            disabled={Boolean(enviandoAnexo)}
+            disabled={Boolean(enviandoAnexo) || anexosNoLimite}
             accept="image/jpeg,image/png,image/webp,application/pdf"
             className="mt-1 block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-navy file:px-3 file:py-2 file:text-white hover:file:bg-navy-2 disabled:opacity-50"
           />

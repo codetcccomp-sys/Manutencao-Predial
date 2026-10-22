@@ -870,6 +870,41 @@ const MUTACOES = [
     para: 'null,',
     spec: 'tests/prioridadeNaAbertura.test.js',
   },
+  {
+    descricao: 'anexos, o limite por chamado passa a contar um a menos',
+    arquivo: 'src/services/anexos.service.js',
+    de: "'SELECT COUNT(*)::int AS n FROM anexo WHERE chamado_id = $1'",
+    para: "'SELECT (COUNT(*) - 1)::int AS n FROM anexo WHERE chamado_id = $1'",
+    spec: 'tests/anexosCota.test.js',
+  },
+  {
+    descricao: 'anexos, só a conferência de antes do envio vale (a de dentro da transação some)',
+    arquivo: 'src/services/anexos.service.js',
+    de: "      if ((await contar(client, chamadoId)) >= LIMITE_POR_CHAMADO) throw limiteAtingido();\n",
+    para: '',
+    spec: 'tests/anexosCota.test.js',
+  },
+  {
+    descricao: 'anexos, o cadeado por chamado some e envios simultâneos passam do limite',
+    arquivo: 'src/services/anexos.service.js',
+    de: "      await client.query(\"SELECT pg_advisory_xact_lock(hashtext('anexo_chamado'), $1::int)\", [chamadoId]);\n",
+    para: '',
+    spec: 'tests/anexosCota.test.js',
+  },
+  {
+    descricao: 'anexos, a listagem deixa de informar o limite',
+    arquivo: 'src/controllers/anexos.controller.js',
+    de: 'res.json({ anexos, limite: anexosService.LIMITE_POR_CHAMADO });',
+    para: 'res.json({ anexos });',
+    spec: 'tests/anexosCota.test.js',
+  },
+  {
+    descricao: 'anexos, o aviso do banco só dispara depois dos 70%',
+    arquivo: 'src/services/armazenamentoUso.service.js',
+    de: 'alerta: percentual >= ALERTA_PERCENTUAL',
+    para: 'alerta: percentual > ALERTA_PERCENTUAL',
+    spec: 'tests/anexosCota.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';

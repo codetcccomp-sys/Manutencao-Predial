@@ -1674,6 +1674,34 @@ const MUTACOES = [
     para: "Risco para equipamentos ou para o prédio",
     spec: 'testes/NovoChamado.test.jsx',
   },
+  {
+    descricao: 'anexos, o envio continua ligado com o chamado no limite',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'disabled={Boolean(enviandoAnexo) || anexosNoLimite}',
+    para: 'disabled={Boolean(enviandoAnexo)}',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'anexos, a tela deixa de ler o limite que a API informa',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'setLimiteAnexos(data.limite ?? null);',
+    para: 'setLimiteAnexos(null);',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'anexos, o aviso de espaço aparece mesmo com espaço folgado',
+    arquivo: 'src/components/AvisoDeEspaco.jsx',
+    de: 'if (ativo && resposta?.data?.alerta) setUso(resposta.data);',
+    para: 'if (ativo && resposta?.data) setUso(resposta.data);',
+    spec: 'testes/AvisoDeEspaco.test.jsx',
+  },
+  {
+    descricao: 'anexos, o aviso de espaço manda ligar o Storage a quem já o ligou',
+    arquivo: 'src/components/AvisoDeEspaco.jsx',
+    de: "const noStorage = uso.modo === 'supabase';",
+    para: 'const noStorage = false;',
+    spec: 'testes/AvisoDeEspaco.test.jsx',
+  },
 ];
 
 /**

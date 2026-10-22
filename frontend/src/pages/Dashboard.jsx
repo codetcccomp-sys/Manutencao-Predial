@@ -8,6 +8,7 @@ import CartaoDeChamado from '../components/chamados/CartaoDeChamado';
 import { ESTADOS, ORDEM_ESTADOS } from '../dominio/rotulos';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import AvisoDoAgendador from '../components/AvisoDoAgendador';
+import AvisoDeEspaco from '../components/AvisoDeEspaco';
 import CadastrosPendentes from '../components/CadastrosPendentes';
 import Aviso from '../components/ui/Aviso';
 import Botao from '../components/ui/Botao';
@@ -195,6 +196,7 @@ function Dashboard() {
       />
 
       <AvisoDoAgendador />
+      <AvisoDeEspaco />
       <CadastrosPendentes />
 
       {resumo && (

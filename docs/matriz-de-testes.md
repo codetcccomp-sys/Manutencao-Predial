@@ -90,6 +90,12 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Anexos | Não se baixa anexo alheio trocando o id na URL | `backend/tests/anexos.test.js` | não deixa baixar anexo alheio passando o id de um chamado próprio na URL |
 | Anexos | Ligar o Storage não quebra os anexos antigos | `backend/tests/anexosStorage.test.js` | anexo antigo, em bytea, continua abrindo depois de ligar o Storage |
 | Anexos | Foto grande do celular é reduzida no navegador | `frontend/e2e/anexos.spec.js` | foto de câmera acima de 4 MB é reduzida no navegador e entra no chamado |
+| Anexos | Um chamado aceita até 10 anexos; o seguinte é recusado com o motivo | `backend/tests/anexosCota.test.js` | o último anexo dentro do limite entra, e o seguinte é recusado com o motivo |
+| Anexos | Remover um anexo libera uma vaga | `backend/tests/anexosCota.test.js` | remover um anexo libera uma vaga |
+| Anexos | Envio simultâneo na última vaga espera o cadeado e reconta | `backend/tests/anexosCota.test.js` | envio simultâneo no último lugar espera o cadeado do chamado e confere de novo |
+| Anexos | A gestão é avisada ao passar de 70% do banco | `backend/tests/anexosCota.test.js` | avisa a partir de 70% do limite, e não antes |
+| Anexos | A tela desliga o envio no limite e diz por quê | `frontend/testes/ChamadoDetalhe.test.jsx` | no limite, desliga o envio e diz por quê |
+| Anexos | O painel avisa que o espaço do banco está acabando | `frontend/testes/AvisoDeEspaco.test.jsx` | passando do limiar, diz quanto está usado e o que fazer |
 
 ## 4. Prioridade, prazo (SLA) e atraso
 
@@ -305,6 +311,7 @@ com o que cobre.
 | `frontend/testes/AlertaDeCriticos.test.jsx` | Faixa, selo e recorte dos críticos sem atendimento |
 | `frontend/testes/AreaPrincipal.test.jsx` | A área principal das telas de entrada |
 | `frontend/testes/AvisoDePrivacidade.test.jsx` | O aviso de privacidade apontado nas telas |
+| `frontend/testes/AvisoDeEspaco.test.jsx` | O aviso de espaço do banco no painel da gestão |
 | `frontend/testes/Avisos.test.jsx` | O sino de avisos |
 | `frontend/testes/Badge.test.jsx` | Selos de estado, prioridade e atraso |
 | `frontend/testes/Cadastros.test.jsx` | A tela de cadastros e a importação de planilha |
