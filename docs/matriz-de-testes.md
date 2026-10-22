@@ -209,6 +209,10 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Equipes | Só a gestão cria equipe | `backend/tests/equipesMateriais.test.js` | gestor cria equipe; solicitante não |
 | Materiais | O técnico designado lança o consumo | `backend/tests/equipesMateriais.test.js` | técnico designado lança consumo no chamado |
 | RF09 | Nota fora de 1 a 5 volta 422, não erro do banco | `backend/tests/equipesMateriais.test.js` | avaliação com nota fora de 1..5 volta 422, e não erro do banco |
+| Cadastros | Material: atualiza campo a campo, e recusa sem campo ou inexistente | `backend/tests/cadastrosAuxiliares.test.js` | recusa atualizar sem campo nenhum, e material que não existe |
+| Cadastros | Equipe: ao adicionar técnico, recusa equipe e usuário inexistentes e técnico inativo | `backend/tests/cadastrosAuxiliares.test.js` | ao adicionar técnico: equipe inexistente, usuário inexistente e técnico inativo são recusados |
+| Cadastros | Equipamento: categoria ou local inexistente volta 422, não erro do banco | `backend/tests/cadastrosAuxiliares.test.js` | categoria ou local que não existem voltam 422, e não erro do banco |
+| Cadastros | Equipamento: trocar o código por um que já existe volta 409 | `backend/tests/cadastrosAuxiliares.test.js` | trocar o código por um que já existe volta 409 |
 
 ## 10. Segurança, privacidade e acessibilidade
 
@@ -232,6 +236,25 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Acessibilidade | As seções dos cadastros dizem qual está aberta | `frontend/testes/Cadastros.test.jsx` | a seção aberta é dita por aria-pressed, não só pela borda azul |
 | Acessibilidade | O select de técnico tem nome acessível | `frontend/testes/ChamadoDetalhe.test.jsx` | o select de técnico da atribuição se chama "Técnico responsável" |
 | Acessibilidade | Nenhum texto usa cinza cru do Tailwind, que escapa dos tokens medidos | `frontend/testes/contraste.test.js` | nenhum texto da tela usa gray de 100 a 400 |
+| Observabilidade | Um 500 vira uma linha, com a rota sem a query string e sem a primeira linha do stack | `backend/tests/errosGuardados.test.js` | um 500 vira uma linha, com a rota sem a query string e sem a primeira linha do stack |
+| Observabilidade | O e-mail que o erro repetir sai mascarado | `backend/tests/errosGuardados.test.js` | o e-mail que o erro repetir sai mascarado |
+| Observabilidade | Recusa de cliente (4xx) não é gravada | `backend/tests/errosGuardados.test.js` | recusa de cliente (4xx) não é erro nosso: não grava |
+| Observabilidade | Se o banco falhar ao gravar, o erro original ainda é respondido | `backend/tests/errosGuardados.test.js` | se o banco falhar ao gravar, o erro original ainda é respondido |
+| Observabilidade | Passado o teto por minuto, a tabela para de crescer | `backend/tests/errosGuardados.test.js` | passado o teto por minuto, o console segue recebendo e a tabela para de crescer |
+| LGPD | O erro guardado é apagado em 30 dias, sem agendador | `backend/tests/errosGuardados.test.js` | apaga o que passou de 30 dias, sem agendador |
+| Observabilidade | Só o administrador lê os erros | `backend/tests/errosGuardados.test.js` | gestor e solicitante não leem (a pilha mostra caminhos e nomes internos) |
+| Observabilidade | A lista tem teto de 200, piso de 1 e padrão de 50 | `backend/tests/errosGuardados.test.js` | o limite pedido tem teto de 200, piso de 1 e padrão de 50 |
+| Observabilidade | A tela de erros começa recolhida e só consulta ao abrir | `frontend/testes/ErrosDoSistema.test.jsx` | começa recolhida e não consulta a API antes de abrir |
+| Observabilidade | Aberta, a lista dos erros passa no axe | `frontend/e2e/acessibilidade.spec.js` | os erros do sistema, abertos na tela de usuários, não têm violação de acessibilidade |
+| LGPD | O aviso de privacidade diz que guarda erros, e sem pessoa | `frontend/testes/Privacidade.test.jsx` | diz o que é guardado, inclusive o que passa despercebido |
+| Desempenho | Aba escondida não consulta os avisos | `frontend/testes/Avisos.test.jsx` | com a aba escondida, não consulta: um aparelho no fundo não gasta a API |
+| Desempenho | Ao voltar para a aba, consulta na hora | `frontend/testes/Avisos.test.jsx` | ao voltar para a aba, consulta na hora, sem esperar o minuto |
+| Desempenho | As telas de gestão vêm sob demanda | `frontend/testes/telaSobDemanda.test.jsx` | as telas de gestão vêm sob demanda |
+| Desempenho | O que o técnico usa sem conexão fica no arquivo principal | `frontend/testes/telaSobDemanda.test.jsx` | o que o técnico usa sem conexão fica no arquivo principal, não sob demanda |
+| Desempenho | Pedaço que sumiu numa publicação recarrega a página uma vez | `frontend/testes/telaSobDemanda.test.jsx` | se o pedaço sumiu (publicação nova), recarrega a página uma vez e não pisca erro |
+| Desempenho | Se continuar falhando, mostra o erro em vez de recarregar em laço | `frontend/testes/telaSobDemanda.test.jsx` | se já recarregou e continua falhando, mostra o erro em vez de recarregar em laço |
+| Acessibilidade | Se o h1 chega depois (tela sob demanda), o foco passa a ele | `frontend/testes/AnuncioDeRota.test.jsx` | se o h1 chega depois (tela sob demanda), o foco passa a ele |
+| Acessibilidade | O foco não é roubado se a pessoa já o moveu | `frontend/testes/AnuncioDeRota.test.jsx` | se a pessoa já mexeu o foco quando o h1 chega, o foco não é roubado |
 
 ## 11. Demonstração publicada
 

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 
@@ -195,5 +195,60 @@ describe('Ações', () => {
 
     await waitFor(() => expect(sino()).toHaveAccessibleName('Avisos'));
     expect(api.patch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Consulta periódica', () => {
+  function esconderAba(escondida) {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => escondida });
+  }
+
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+  afterEach(() => {
+    vi.useRealTimers();
+    esconderAba(false);
+  });
+
+  it('com a aba visível, reconsulta a cada minuto', async () => {
+    montar([aviso()]);
+    await waitFor(() => expect(api.get).toHaveBeenCalledTimes(1));
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(api.get).toHaveBeenCalledTimes(3);
+  });
+
+  it('com a aba escondida, não consulta: um aparelho no fundo não gasta a API', async () => {
+    esconderAba(true);
+    montar([aviso()]);
+
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+
+    expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it('ao voltar para a aba, consulta na hora, sem esperar o minuto', async () => {
+    esconderAba(true);
+    montar([aviso()]);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.get).not.toHaveBeenCalled();
+
+    esconderAba(false);
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await waitFor(() => expect(api.get).toHaveBeenCalledTimes(1));
+  });
+
+  it('desmontar para a consulta e solta o evento', async () => {
+    montar([aviso()]);
+    await waitFor(() => expect(api.get).toHaveBeenCalledTimes(1));
+    // `montar` devolve o resultado do render; o desmonte é o que interessa aqui.
+    cleanup();
+
+    await vi.advanceTimersByTimeAsync(3 * 60_000);
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(api.get).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { useEffect, useState } from 'react';
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter, Route, Routes } from 'react-router';
 
@@ -126,5 +127,64 @@ describe('foco ao trocar de tela', () => {
     await usuario.click(screen.getByRole('link', { name: 'Ir para outra' }));
 
     expect(document.activeElement?.tagName).toBe('MAIN');
+  });
+
+  it('se o h1 chega depois (tela sob demanda), o foco passa a ele', async () => {
+    const usuario = userEvent.setup();
+    function Atrasada() {
+      const [pronta, setPronta] = useState(false);
+      useEffect(() => {
+        const id = setTimeout(() => setPronta(true), 20);
+        return () => clearTimeout(id);
+      }, []);
+      return <main>{pronta && <h1>Chegou</h1>}</main>;
+    }
+    render(
+      <MemoryRouter initialEntries={['/primeira']}>
+        <AnuncioDeRota />
+        <Routes>
+          <Route path="/primeira" element={<Tela nome="Primeira" />} />
+          <Route path="/outra" element={<Atrasada />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await usuario.click(screen.getByRole('link', { name: 'Ir para outra' }));
+    expect(document.activeElement?.tagName).toBe('MAIN');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Chegou' })).toBeInTheDocument();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1 })));
+  });
+
+  it('se a pessoa já mexeu o foco quando o h1 chega, o foco não é roubado', async () => {
+    const usuario = userEvent.setup();
+    function Atrasada() {
+      const [pronta, setPronta] = useState(false);
+      useEffect(() => {
+        const id = setTimeout(() => setPronta(true), 60);
+        return () => clearTimeout(id);
+      }, []);
+      return (
+        <main>
+          <input aria-label="Campo" />
+          {pronta && <h1>Chegou</h1>}
+        </main>
+      );
+    }
+    render(
+      <MemoryRouter initialEntries={['/primeira']}>
+        <AnuncioDeRota />
+        <Routes>
+          <Route path="/primeira" element={<Tela nome="Primeira" />} />
+          <Route path="/outra" element={<Atrasada />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await usuario.click(screen.getByRole('link', { name: 'Ir para outra' }));
+    await act(async () => screen.getByLabelText('Campo').focus());
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Chegou' })).toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByLabelText('Campo'));
   });
 });

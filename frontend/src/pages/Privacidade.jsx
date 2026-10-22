@@ -75,6 +75,10 @@ function Privacidade() {
               de troca de senha, também o IP.
             </li>
             <li>
+              <strong>Erros do sistema:</strong> quando algo falha por defeito nosso, guardamos a rota, o
+              código e a mensagem técnica do erro, sem nome, e-mail nem IP, para corrigir o defeito.
+            </li>
+            <li>
               <strong>Verificação em duas etapas, se você ligar:</strong> a chave do aplicativo
               autenticador e os códigos de recuperação (estes, embaralhados).
             </li>
@@ -120,6 +124,7 @@ function Privacidade() {
           <ul className={LISTA}>
             <li>Tentativas de entrar: apagadas em 24 horas. Pedidos de troca de senha: em 7 dias.</li>
             <li>Pedido de cadastro recusado: apagado na hora da recusa.</li>
+            <li>Erros técnicos do sistema: apagados em 30 dias.</li>
             <li>
               Contas e chamados (com histórico, comentários, fotos e avaliações): ficam guardados. O
               projeto prevê guardar os chamados por 5 anos depois de concluídos e anonimizar as contas 2

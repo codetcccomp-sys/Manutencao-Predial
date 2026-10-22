@@ -95,6 +95,14 @@ test('o diálogo de confirmação aberto não tem violação de acessibilidade',
   expect(await violacoes(page)).toEqual([]);
 });
 
+test('os erros do sistema, abertos na tela de usuários, não têm violação de acessibilidade', async ({ page }) => {
+  await entrar(page, cenario.pessoas.administrador);
+  await page.goto('/usuarios');
+  await page.getByText('Ver os erros recentes').click();
+  await expect(page.getByText(/nas últimas 24 horas/)).toBeVisible();
+  expect(await violacoes(page)).toEqual([]);
+});
+
 test.describe('ao trocar de tela', () => {
   test('o título da aba acompanha a tela e o foco vai para o título da página', async ({ page }) => {
     await entrar(page, cenario.pessoas.gestor);

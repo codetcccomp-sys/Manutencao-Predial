@@ -52,6 +52,8 @@ describe('Aviso de privacidade', () => {
     expect(within(dados).getByText(/chave do aplicativo/)).toBeInTheDocument();
     expect(within(dados).getByText(/só o nome e o e-mail que o Google informa/)).toBeInTheDocument();
     expect(within(dados).getByText(/não coletamos dado sensível/)).toBeInTheDocument();
+    // O registro de erros (migração 028) guarda rota, código e mensagem, e nenhuma pessoa.
+    expect(within(dados).getByText(/sem nome, e-mail nem IP/)).toBeInTheDocument();
   });
 
   it('diz onde os dados ficam, inclusive o e-mail, que sai por um serviço de fora', () => {
@@ -78,6 +80,7 @@ describe('Aviso de privacidade', () => {
     expect(within(prazos).getByText(/apagadas em 24 horas/)).toBeInTheDocument();
     expect(within(prazos).getByText(/em 7 dias/)).toBeInTheDocument();
     expect(within(prazos).getByText(/apagado na hora da recusa/)).toBeInTheDocument();
+    expect(within(prazos).getByText(/Erros técnicos do sistema: apagados em 30 dias/)).toBeInTheDocument();
     // Os 5 e os 2 anos são políticas previstas: a rotina que as cumpre não existe.
     expect(within(prazos).getByText(/prevê guardar os chamados por 5 anos/)).toBeInTheDocument();
     expect(within(prazos).getByText(/ainda não faz isso sozinho/)).toBeInTheDocument();

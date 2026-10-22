@@ -58,6 +58,7 @@ pessoa indiretamente, como o endereço de rede.
 | `notificacao` | destinatário e mensagem | Sino e e-mail |
 | `equipe_tecnico` | quem está em qual equipe | Distribuição |
 | `tentativa_login` | **e-mail e IP** de cada tentativa | Bloquear força bruta |
+| `erro_aplicacao` | rota (sem query string), código e mensagem do erro de servidor, com e-mails mascarados; **sem usuário, IP nem corpo** | Achar defeito (a Vercel Hobby guarda os logs por 1 hora) |
 | `recuperacao_senha` | **IP** de quem pediu, hash do token | Rastrear pedido de troca de senha |
 | `usuario`, `codigo_recuperacao_2fa` | chave do aplicativo autenticador e data de ativação; códigos de recuperação em hash | Verificação em duas etapas (só de quem liga) |
 
@@ -85,6 +86,7 @@ O que o sistema **já apaga sozinho**, sem ninguém pedir:
 | --- | --- | --- |
 | Tentativas de login | **24 horas** | `middlewares/rateLimit.js` |
 | Pedidos de redefinição de senha | **7 dias** | `services/recuperacao.service.js` |
+| Erros de servidor | **30 dias** | `services/erros.service.js` |
 
 O que **nunca é apagado**, por decisão de projeto:
 
