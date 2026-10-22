@@ -252,3 +252,25 @@ describe('Consulta periódica', () => {
     expect(api.get).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Aviso de crítico sem atendimento', () => {
+  it('aparece no sino com o rótulo próprio e leva ao chamado', async () => {
+    const usuario = userEvent.setup();
+    montar([
+      aviso({
+        id: 9,
+        tipo: 'critico_sem_atendimento',
+        mensagem: 'Chamado CRÍTICO sem atendimento: SMP-7 ("Parada elétrica") está aberto há 20 minutos e ninguém o pegou.',
+        chamado_id: 7,
+        protocolo: 'SMP-7',
+      }),
+    ]);
+
+    await usuario.click(sino());
+
+    // O rótulo do tipo é o que dá ao aviso o nome "crítico", sem depender só da cor.
+    expect(await screen.findByText('Crítico sem atendimento')).toBeInTheDocument();
+    await usuario.click(screen.getByText(/ninguém o pegou/));
+    await waitFor(() => expect(navegar).toHaveBeenCalledWith('/chamados/7'));
+  });
+});

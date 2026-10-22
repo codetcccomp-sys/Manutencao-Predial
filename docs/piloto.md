@@ -146,11 +146,15 @@ administrador ativo e quando há anexo no Supabase Storage, porque apagar a
 linha não apaga o arquivo. O teste `tests/limparDemonstracao.test.js` roda o
 arquivo inteiro a cada mudança, numa transação desfeita.
 
-### 2.1 Aviso de atraso (só você pode fazer)
+### 2.1 Aviso de atraso e de crítico sem atendimento (só você pode fazer)
 
 Sem isto, a RF08 não acontece: o sistema registra o prazo, mostra "em atraso"
 na tela, mas ninguém é avisado. Um piloto que mede cumprimento de prazo sem o
-aviso mede o processo errado.
+aviso mede o processo errado. A mesma passagem de 15 minutos também avisa **a gestão, por
+e-mail e no sino, quando um chamado crítico fica 15 minutos sem ninguém** (um crítico das 22h
+deixa de depender de alguém abrir o aplicativo). O e-mail sai do mesmo endereço dos demais
+avisos: hoje uma conta pessoal do Gmail, com limite diário. Trocar por um endereço do domínio
+da instituição (com SPF e DKIM) é o caminho antes de confiar nele para emergência.
 
 1. Gere um segredo, na sua máquina:
    `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`

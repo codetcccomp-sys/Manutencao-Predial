@@ -133,6 +133,14 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Alerta de 15 min | Dentro dos 15 minutos ainda não alerta | `backend/tests/atendimentoCritico.test.js` | dentro dos 15 minutos ainda não é alerta |
 | Alerta de 15 min | Só a prioridade crítica conta | `backend/tests/atendimentoCritico.test.js` | só a prioridade crítica conta: alta, aberta há horas, não é este alerta |
 | Alerta de 15 min | Preventiva crítica não é emergência esquecida | `backend/tests/atendimentoCritico.test.js` | preventiva crítica na fila é trabalho planejado, e não emergência esquecida |
+| Alerta de 15 min | Fora da tela: a gestão ativa é avisada, no sino e por e-mail, e só ela | `backend/tests/avisoCriticoSemAtendimento.test.js` | avisa a gestão ativa, no sino e por e-mail, e só a gestão |
+| Alerta de 15 min | Avisa uma vez só por chamado | `backend/tests/avisoCriticoSemAtendimento.test.js` | avisa uma vez só: a passagem seguinte não repete |
+| Alerta de 15 min | Crítico de sábado à noite também avisa (relógio corrido) | `backend/tests/avisoCriticoSemAtendimento.test.js` | crítico de sábado à noite também avisa: o relógio é corrido, sem expediente |
+| Alerta de 15 min | Antes dos 15 minutos não avisa | `backend/tests/avisoCriticoSemAtendimento.test.js` | antes dos 15 minutos não avisa, e avisa quando passam |
+| Alerta de 15 min | Chamado atendido não gera aviso | `backend/tests/avisoCriticoSemAtendimento.test.js` | chamado que já saiu de "aberto" (alguém o pegou) não gera aviso |
+| Alerta de 15 min | Só o crítico corretivo gera o aviso | `backend/tests/avisoCriticoSemAtendimento.test.js` | só o crítico corretivo: alta, e a preventiva, não são este aviso |
+| Alerta de 15 min | A falha do aviso aparece como falha da tarefa | `backend/tests/avisoCriticoSemAtendimento.test.js` | se o aviso de crítico falhar, a tarefa aparece como falha em vez de passar calada |
+| Alerta de 15 min | O sino mostra o aviso com o rótulo próprio e leva ao chamado | `frontend/testes/Avisos.test.jsx` | aparece no sino com o rótulo próprio e leva ao chamado |
 | Alerta de 15 min | A gestão vê a faixa e o link filtra os críticos | `frontend/e2e/alertaCritico.spec.js` | a gestão vê a faixa, e o link abre o painel só com os críticos sem atendimento |
 | RF08 | O aviso de atraso chega ao solicitante | `backend/tests/atrasos.test.js` | avisa o solicitante quando o prazo estoura |
 | RF08 | Não avisa duas vezes pelo mesmo prazo | `backend/tests/atrasos.test.js` | não avisa duas vezes pelo mesmo prazo |

@@ -1723,6 +1723,13 @@ const MUTACOES = [
     para: "'Conta criada! Entre com este e-mail e a senha que você escolheu. '",
     spec: 'testes/CadastrosPendentes.test.jsx',
   },
+  {
+    descricao: 'aviso de crítico, o sino perde o rótulo do tipo novo',
+    arquivo: 'src/components/Avisos.jsx',
+    de: "  critico_sem_atendimento: 'Crítico sem atendimento',\n",
+    para: '',
+    spec: 'testes/Avisos.test.jsx',
+  },
 ];
 
 /**

@@ -69,7 +69,10 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
   `aberto` há mais de 15 min aparece como alerta para a gestão (`sem_atendimento_critico`,
   calculado na consulta como `em_atraso`; faixa no Layout, selo no cartão, aviso
   no chamado). "Atendido" é sair de `aberto`. O 15 é a constante de
-  `backend/src/config/atendimento.js`, não uma coluna de `sla`.
+  `backend/src/config/atendimento.js`, não uma coluna de `sla`. **Também avisa fora da tela**:
+  a passagem de 15 min do agendador (`/tarefas/notificar-atrasos`) manda sino e e-mail à gestão
+  ativa, uma vez por chamado (`criticos.service`, `chamado.critico_notificado_em`, migração 030).
+  O e-mail sai da conta do Gmail dos demais avisos; trocar por domínio da instituição é do dono.
 - **Anexos**: até 10 por chamado (`config/anexos.js`; 422 `LIMITE_DE_ANEXOS`, conferido sob
   cadeado por chamado) e aviso à gestão aos 70% do banco (`GET /operacao/armazenamento`).
   Ligar o Storage é decisão e ação do dono (chave de serviço), nunca de código.
