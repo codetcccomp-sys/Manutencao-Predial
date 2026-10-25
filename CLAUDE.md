@@ -162,6 +162,12 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   12/10/2026. Não rode de novo lá: ele apaga todos os chamados, e desde então
   são reais** (`docs/piloto.md` §2.0). Serve para banco de demonstração ou de
   homologação.
+- **A produção pode carregar dados de apresentação** (`docs/apresentacao-na-producao.md`): chamados com
+  protocolo `SMP-…-DEMOnn` e contas `@conserva.invalid` inativas, semeados por
+  `backend/database/semear-apresentacao.sql`, que recusa rodar onde há chamado real. Tirar é com
+  `remover-apresentacao.sql`, que só apaga o que o seed criou; o `limpar-demonstracao.sql` (tudo)
+  continua proibido onde houver uso real. Mexeu no seed? Os avisos têm de nascer com `email_enviado_em`
+  e as contas inativas, senão a gestão real recebe e-mail de dado inventado (o teste confere).
 - O cadastro da produção (37 locais da "Sede", 9 planos preventivos) é de teste,
   mantido para a apresentação, em dezembro de 2026. **Os planos estão desativados
   desde 12/10/2026** para não gerarem chamados de teste no meio do piloto. Para

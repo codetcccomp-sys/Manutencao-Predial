@@ -103,6 +103,12 @@ estiver preenchido.
 > seguidos. Depois, *Gerar agora* mostra o recurso funcionando. Passada a
 > apresentação, desative de novo, a não ser que a instituição já tenha
 > cadastrado os planos reais.
+>
+> **Dados de apresentação na produção.** Até a apresentação ninguém usa o
+> sistema de verdade, então a produção carrega chamados fictícios (protocolo
+> `-DEMO`, contas `@conserva.invalid` inativas): ver
+> [`apresentacao-na-producao.md`](apresentacao-na-producao.md). Antes do
+> primeiro uso real, `remover-apresentacao.sql` tira só eles.
 
 A produção guarda os chamados e as contas da demonstração. Misturados ao
 piloto, eles entram nos relatórios e estragam a comparação com a medida de
