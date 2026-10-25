@@ -312,6 +312,7 @@ com o que cobre.
 | `backend/tests/cadastroSeguro.test.js` | Cadastro público: resposta uniforme, tetos e senha nova (ver a seção da regra RF01) |
 | `backend/tests/limiteRecuperacao.test.js` | Tetos por IP e por dia do pedido de recuperação de senha |
 | `backend/tests/limparDemonstracao.test.js` | O script de limpeza da demonstração, que já rodou em produção |
+| `backend/tests/semearApresentacao.test.js` | Dados fictícios da apresentação na produção: travas, contas inativas, nenhum e-mail, e a remoção só do fictício (`docs/apresentacao-na-producao.md`) |
 | `backend/tests/limpezaDeTestes.test.js` | A limpeza dos dados que as próprias suítes criam |
 | `backend/tests/migracoes.test.js` | Migrações e privilégios no banco migrado |
 | `backend/tests/nivelDeLog.test.js` | 4xx é recusa; 5xx é falha nossa e leva o stack |
