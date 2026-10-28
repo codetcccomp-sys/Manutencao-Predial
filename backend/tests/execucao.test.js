@@ -85,7 +85,7 @@ describe('Início efetivo da execução', () => {
     await request(app)
       .patch(`/chamados/${id}/estado`)
       .set(auth(tecnico))
-      .send({ estado: 'aguardando_material' });
+      .send({ estado: 'aguardando_material', observacao: 'Falta a vedação do registro; pedido feito ao almoxarifado.' });
     await request(app).patch(`/chamados/${id}/estado`).set(auth(tecnico)).send({ estado: 'em_andamento' });
 
     const segundo = await pool.query('SELECT inicio_execucao FROM chamado WHERE id = $1', [id]);

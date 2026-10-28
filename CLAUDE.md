@@ -65,6 +65,10 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
 - **Conclusão** exige a descrição do serviço (RN07) **e a confirmação de uso de
   EPI** (`epi_confirmado: true`, gravada com quem e quando). Vale também para a
   preventiva. A reabertura zera a do chamado; a anterior fica na linha do tempo.
+- **Aderência ao Termo v1.2** (`backend/tests/aderenciaAoTermo.test.js`): chamado atribuído **só à equipe**
+  é de todos os técnicos dela (fila, detalhe e aviso) até alguém **iniciar**, que é assumir (RN06); **aguardando
+  material exige o motivo** de 10+ caracteres (RN08); **depois de 48 h só a gestão reabre**, e o histórico
+  diz que foi fora da janela (RN05). O solicitante não reabre fora da janela.
 - **Alerta de primeiro atendimento**: chamado `critica`, `corretiva` e ainda em
   `aberto` há mais de 15 min aparece como alerta para a gestão (`sem_atendimento_critico`,
   calculado na consulta como `em_atraso`; faixa no Layout, selo no cartão, aviso

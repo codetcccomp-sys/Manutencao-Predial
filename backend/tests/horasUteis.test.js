@@ -139,7 +139,7 @@ describe('O prazo do chamado segue a régua da prioridade', () => {
     await request(app).patch(`/chamados/${id}/estado`).set(como(gestor)).send({ estado: 'em_triagem' });
     await request(app).patch(`/chamados/${id}/atribuir`).set(como(gestor)).send({ tecnico_id: tecnicoId });
     await request(app).patch(`/chamados/${id}/estado`).set(como(tecnico)).send({ estado: 'em_andamento' });
-    await request(app).patch(`/chamados/${id}/estado`).set(como(tecnico)).send({ estado: 'aguardando_material' });
+    await request(app).patch(`/chamados/${id}/estado`).set(como(tecnico)).send({ estado: 'aguardando_material', observacao: 'Falta a vedação do registro; pedido feito ao almoxarifado.' });
 
     // A espera começou numa segunda às 9h (fixo, para a conta não depender de
     // quando a suíte roda) e termina agora.

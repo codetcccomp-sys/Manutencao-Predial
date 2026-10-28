@@ -170,7 +170,7 @@ describe('Conclusão pela API', () => {
   it('não cobra EPI de quem muda para outro estado', async () => {
     const id = await levarAteAndamento();
 
-    const espera = await estado(id, tecnico, { estado: 'aguardando_material' });
+    const espera = await estado(id, tecnico, { estado: 'aguardando_material', observacao: 'Falta a vedação do registro; pedido feito ao almoxarifado.' });
     expect(espera.status).toBe(200);
 
     const cancela = await estado(id, gestor, { estado: 'cancelado', observacao: 'Serviço deixou de ser necessário.' });

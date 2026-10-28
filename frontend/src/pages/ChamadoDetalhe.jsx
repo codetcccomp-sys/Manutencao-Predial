@@ -72,6 +72,9 @@ function ChamadoDetalhe() {
   const [diagnostico, setDiagnostico] = useState('');
   const [tempoEmpregado, setTempoEmpregado] = useState('');
   const [concluindo, setConcluindo] = useState(false);
+  // RN08: pedir material suspende o prazo, e a suspensão pede o motivo.
+  const [esperandoMaterial, setEsperandoMaterial] = useState(false);
+  const [motivoEspera, setMotivoEspera] = useState('');
   const [servicoRealizado, setServicoRealizado] = useState('');
   const [epiConfirmado, setEpiConfirmado] = useState(false);
   const [justificativaAtribuicao, setJustificativaAtribuicao] = useState('');
@@ -223,6 +226,8 @@ function ChamadoDetalhe() {
       await api.patch(`/chamados/${id}/estado`, { estado, ...extras });
       setConcluindo(false);
       setServicoRealizado('');
+      setEsperandoMaterial(false);
+      setMotivoEspera('');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível atualizar o estado.');
@@ -237,7 +242,15 @@ function ChamadoDetalhe() {
       // tenha sido o fim da vez anterior (desistência, conclusão, reabertura):
       // a declaração é de cada conclusão, não herdada.
       setEpiConfirmado(false);
+      setEsperandoMaterial(false);
       setConcluindo(true);
+      return;
+    }
+    // RN08: a espera por material suspende o prazo; o servidor exige o motivo,
+    // então a ação abre o campo em vez de tentar e falhar.
+    if (estado === 'aguardando_material') {
+      setConcluindo(false);
+      setEsperandoMaterial(true);
       return;
     }
     // §2.4: "cancelado" não tem estado seguinte. Diferente de "concluído", que
@@ -440,7 +453,9 @@ function ChamadoDetalhe() {
     );
   }
 
-  const podeMudarEstado = podeGerenciar || chamado.tecnico_id === usuario.id;
+  // `pode_assumir`: o chamado foi atribuído só à equipe do técnico (RN06) e ele
+  // pode começá-lo. Quem decide é o servidor; a tela só mostra o botão.
+  const podeMudarEstado = podeGerenciar || chamado.tecnico_id === usuario.id || chamado.pode_assumir === true;
   // RN05: cancelar é da gestão. O técnico vê só os passos do próprio
   // trabalho; o servidor recusa o resto de qualquer jeito, e oferecer o botão
   // seria convidar a um 403.
@@ -476,11 +491,13 @@ function ChamadoDetalhe() {
       (chamado.solicitante_id === usuario.id &&
         ['aberto', 'em_triagem'].includes(chamado.estado)));
 
+  // RN05 e RN09: o solicitante reabre em até 48 horas; a gestão, também depois
+  // delas, com justificativa. O servidor confere de novo.
+  const foraDaJanelaDeReabertura = horasDesdeConclusao !== null && horasDesdeConclusao > 48;
   const podeReabrir =
     chamado.estado === 'concluido' &&
     horasDesdeConclusao !== null &&
-    horasDesdeConclusao <= 48 &&
-    (podeGerenciar || chamado.solicitante_id === usuario.id);
+    (podeGerenciar || (chamado.solicitante_id === usuario.id && !foraDaJanelaDeReabertura));
 
   return (
     <div className="grid gap-6">
@@ -795,8 +812,11 @@ function ChamadoDetalhe() {
           <div>
             <h2 className="font-medium text-navy">Reabrir chamado</h2>
             <p className="text-xs text-tinta-2">
-              Disponível por 48 horas após a conclusão (RN09). A reabertura preserva todo o
-              histórico e inicia um novo ciclo de atendimento, com prazo próprio.
+              {foraDaJanelaDeReabertura
+                ? 'A janela de 48 horas do solicitante já passou; a gestão ainda pode reabrir, com justificativa (RN05). '
+                : 'Disponível por 48 horas após a conclusão (RN09). '}
+              A reabertura preserva todo o histórico e inicia um novo ciclo de atendimento, com prazo
+              próprio.
             </p>
           </div>
           <textarea
@@ -920,6 +940,45 @@ function ChamadoDetalhe() {
               </button>
             ))}
           </div>
+
+          {esperandoMaterial && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                mudarEstado('aguardando_material', { observacao: motivoEspera.trim() });
+              }}
+              className="grid gap-2 border-t pt-3"
+            >
+              <label className="grid gap-1 text-sm">
+                <span className="text-tinta font-medium">Motivo da espera por material</span>
+                <span className="text-xs text-tinta-2">
+                  Obrigatório (RN08): a espera suspende o prazo. Diga o que falta e, se souber,
+                  quando deve chegar.
+                </span>
+                <textarea
+                  required
+                  minLength={10}
+                  rows={2}
+                  autoFocus
+                  value={motivoEspera}
+                  onChange={(e) => setMotivoEspera(e.target.value)}
+                  className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
+                />
+              </label>
+              <div className="flex gap-2">
+                <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
+                  Registrar a espera
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEsperandoMaterial(false)}
+                  className="text-sm text-tinta-2 hover:underline"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
 
           {concluindo && (
             <form

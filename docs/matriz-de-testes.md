@@ -165,6 +165,32 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RN09 | A reabertura exige justificativa | `backend/tests/reabertura.test.js` | exige justificativa |
 | RN09 | O técnico não reabre | `backend/tests/reabertura.test.js` | técnico e terceiros não reabrem |
 | RN09 | O ciclo reaberto ganha prazo novo | `backend/tests/reabertura.test.js` | dá prazo novo ao ciclo reaberto |
+| RN05 | A gestão reabre depois de 48 horas, e o histórico diz que foi fora da janela | `backend/tests/aderenciaAoTermo.test.js` | depois de 48 horas a gestão reabre, e o histórico diz que foi fora da janela |
+| RN05 | O solicitante continua sem reabrir fora da janela, e a mensagem manda procurar a gestão | `backend/tests/aderenciaAoTermo.test.js` | o solicitante continua sem poder, e a mensagem manda procurar a gestão |
+| RN05 | Fora da janela a gestão também precisa de justificativa | `backend/tests/aderenciaAoTermo.test.js` | fora da janela a gestão também precisa de justificativa |
+| RN09 | Dentro da janela a reabertura não fala em exceção | `backend/tests/aderenciaAoTermo.test.js` | dentro da janela nada muda: o histórico não fala em exceção |
+| RN09, RN05 | Na tela, o solicitante reabre dentro de 48 horas | `frontend/testes/ChamadoDetalhe.test.jsx` | dentro de 48 horas o solicitante reabre |
+| RN09, RN05 | Na tela, depois de 48 horas o solicitante não vê o formulário | `frontend/testes/ChamadoDetalhe.test.jsx` | depois de 48 horas o solicitante não vê o formulário |
+| RN05 | Na tela, depois de 48 horas a gestão ainda reabre, e a tela diz por quê | `frontend/testes/ChamadoDetalhe.test.jsx` | depois de 48 horas a gestão ainda reabre, e a tela diz por quê |
+| RN08 | Pedir material sem motivo é recusado e o prazo não é suspenso | `backend/tests/aderenciaAoTermo.test.js` | sem motivo, recusa e o prazo não é suspenso |
+| RN08 | Motivo curto demais também é recusado | `backend/tests/aderenciaAoTermo.test.js` | motivo curto demais também é recusado |
+| RN08 | Com o motivo, o prazo é suspenso e o histórico guarda o motivo | `backend/tests/aderenciaAoTermo.test.js` | com o motivo, suspende o prazo e o histórico guarda o motivo |
+| RN08 | Retomar o atendimento não exige motivo | `backend/tests/aderenciaAoTermo.test.js` | retomar o atendimento não exige motivo: o fim da suspensão fica no histórico |
+| RN08 | Na tela, o botão abre o campo do motivo e não envia nada ainda | `frontend/testes/ChamadoDetalhe.test.jsx` | o botão abre o campo e não envia nada ainda |
+| RN08 | Na tela, o estado vai com o motivo escrito | `frontend/testes/ChamadoDetalhe.test.jsx` | envia o estado com o motivo escrito |
+| RN08 | Na tela, desistir fecha o campo sem enviar | `frontend/testes/ChamadoDetalhe.test.jsx` | desistir fecha o campo sem enviar |
+| RN08 | Na tela, retomar do aguardando material segue num clique só | `frontend/testes/ChamadoDetalhe.test.jsx` | retomar do aguardando material segue num clique só |
+| RN06, RF05 | Atribuir só à equipe avisa os técnicos ativos dela, e só eles | `backend/tests/aderenciaAoTermo.test.js` | avisa os técnicos ativos da equipe, e só eles |
+| RN06, RF05 | O chamado só da equipe aparece na fila de quem é dela e não na de quem é de fora | `backend/tests/aderenciaAoTermo.test.js` | o chamado aparece na fila de quem é da equipe e não na de quem é de fora |
+| RN06 | Quem é da equipe abre o chamado e a tela sabe que pode assumi-lo; quem é de fora recebe 403 | `backend/tests/aderenciaAoTermo.test.js` | quem é da equipe abre o chamado e a tela fica sabendo que pode assumi-lo; quem é de fora recebe 403 |
+| RN06 | Iniciar o atendimento assume o chamado, e o histórico diz | `backend/tests/aderenciaAoTermo.test.js` | iniciar o atendimento assume o chamado: o técnico fica designado e o histórico diz |
+| RN06 | Depois de assumido, o chamado sai da fila do colega | `backend/tests/aderenciaAoTermo.test.js` | depois de assumido, o chamado sai da fila do colega e a tela deixa de oferecer o botão |
+| RN06 | Quem é da equipe só pode iniciar, não esperar material, concluir nem cancelar | `backend/tests/aderenciaAoTermo.test.js` | quem é da equipe só pode iniciar: esperar material, concluir ou cancelar sem assumir é recusado |
+| RN06 | Dois técnicos iniciando juntos: um assume, o outro é recusado | `backend/tests/aderenciaAoTermo.test.js` | dois técnicos iniciando ao mesmo tempo: um assume, o outro é recusado |
+| RN06 | Chamado designado a um técnico da equipe continua sendo só dele | `backend/tests/aderenciaAoTermo.test.js` | chamado designado a um técnico da equipe continua sendo só dele |
+| RN06 | A gestão continua vendo e movendo o chamado da equipe | `backend/tests/aderenciaAoTermo.test.js` | a gestão continua vendo e movendo o chamado da equipe |
+| RN06 | Na tela, o técnico da equipe vê o botão de iniciar e nada mais | `frontend/testes/ChamadoDetalhe.test.jsx` | o técnico da equipe vê o botão para iniciar, e iniciar é o único passo |
+| RN06 | Na tela, sem o aval do servidor o botão não aparece | `frontend/testes/ChamadoDetalhe.test.jsx` | sem o aval do servidor (pode_assumir), a tela não oferece o botão |
 | RF05 | Reatribuir exige justificativa, atribuir pela primeira vez não | `backend/tests/reabertura.test.js` | exige justificativa na reatribuição, mas não na primeira atribuição |
 | RF05 | Sem técnico e sem equipe, a atribuição é recusada e o chamado fica em triagem | `backend/tests/atribuicaoDestino.test.js` | sem técnico e sem equipe, recusa e deixa o chamado em triagem |
 | RF05 | Quem não é técnico (um solicitante) não recebe chamado | `backend/tests/atribuicaoDestino.test.js` | recusa quem não é técnico (um solicitante) |

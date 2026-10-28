@@ -874,10 +874,22 @@ concluem pelo mesmo caminho.
 ## Ciclos de atendimento
 
 Um chamado concluído pode ser reaberto pelo solicitante ou pela gestão em até
-48 horas, com justificativa. A reabertura preserva todo o histórico, move a
+48 horas, com justificativa; **depois das 48 horas só a gestão reabre** (RN05), e o
+histórico diz que foi fora da janela. A reabertura preserva todo o histórico, move a
 descrição do serviço do ciclo anterior para lá e inicia um novo ciclo com
 prazo próprio: o prazo anterior já foi gasto, e o que sinaliza a falha do
 atendimento é a contagem de reaberturas.
+
+**Chamado atribuído só a uma equipe** (sem técnico, RN06 e RF05) é de todos os técnicos
+dela: aparece na fila de cada um, que são avisados, e quem **iniciar o atendimento o assume**
+(fica como técnico designado, e o histórico registra). Antes de assumir, o técnico da equipe só
+pode iniciar; esperar material, concluir ou cancelar são de quem ficou com o chamado. Se dois
+iniciam ao mesmo tempo, um assume e o outro recebe 403. Chamado designado a um técnico continua
+sendo só dele, ainda que tenha equipe.
+
+**Pedir material exige o motivo** (RN08): a espera suspende o prazo, e a suspensão guarda no
+histórico o início, o fim e a justificativa (10 caracteres ou mais). Sem o motivo, a resposta é
+422 (`JUSTIFICATIVA_OBRIGATORIA`) e o prazo não é suspenso; retomar o atendimento não pede nada.
 
 Reatribuir um chamado já distribuído mantém o estado do atendimento e exige
 justificativa. Cancelar um serviço já em execução é exceção administrativa e

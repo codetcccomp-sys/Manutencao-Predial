@@ -326,7 +326,12 @@ async function listar(usuario, filtros = {}) {
     condicoes.push(`solicitante_id = $${params.length}`);
   } else if (usuario.perfil === 'tecnico') {
     params.push(usuario.id);
-    condicoes.push(`tecnico_id = $${params.length}`);
+    // RN06: o técnico vê o que lhe foi designado e o que foi atribuído só à
+    // equipe dele (sem técnico), até que um deles o assuma.
+    condicoes.push(
+      `(tecnico_id = $${params.length}
+        OR (tecnico_id IS NULL AND equipe_id IN (SELECT equipe_id FROM equipe_tecnico WHERE usuario_id = $${params.length})))`
+    );
   }
   // gestor e administrador enxergam todos os chamados.
 
@@ -431,8 +436,23 @@ async function listar(usuario, filtros = {}) {
 }
 
 /**
+ * RN06: chamado atribuído só a uma equipe (sem técnico) é de todos os técnicos
+ * dela, até que um o assuma. Quem inicia o atendimento passa a ser o técnico
+ * designado; antes disso, o chamado não é de ninguém em particular e, por isso,
+ * qualquer um da equipe o enxerga e pode começá-lo.
+ */
+async function daEquipeDoTecnico(executor, chamado, usuario) {
+  if (usuario.perfil !== 'tecnico' || chamado.tecnico_id || !chamado.equipe_id) return false;
+  const { rowCount } = await executor.query(
+    'SELECT 1 FROM equipe_tecnico WHERE equipe_id = $1 AND usuario_id = $2',
+    [chamado.equipe_id, usuario.id]
+  );
+  return rowCount > 0;
+}
+
+/**
  * Quem enxerga o chamado: gestão vê todos; solicitante vê o que abriu;
- * técnico vê o que lhe foi designado. Usado também por anexos e materiais,
+ * técnico vê o que lhe foi designado, ou à equipe dele enquanto ninguém o assumiu. Usado também por anexos e materiais,
  * para que as rotas filhas não reimplementem (e não divirjam d)essa regra.
  */
 async function garantirLeitura(id, usuario) {
@@ -442,7 +462,8 @@ async function garantirLeitura(id, usuario) {
     usuario.perfil === 'administrador' ||
     usuario.perfil === 'gestor' ||
     chamado.solicitante_id === usuario.id ||
-    chamado.tecnico_id === usuario.id;
+    chamado.tecnico_id === usuario.id ||
+    (await daEquipeDoTecnico(pool, chamado, usuario));
 
   if (!podeVer) {
     throw new AppError('Você não tem acesso a este chamado.', 403, 'ACESSO_NEGADO');
@@ -499,7 +520,11 @@ async function buscarPorId(id, usuario) {
     [id]
   );
 
-  return { ...chamado, ...contexto.rows[0], historico: historico.rows };
+  // A tela precisa saber se o técnico pode começar um chamado que é só da equipe
+  // dele; quem decide é o servidor, o mesmo que vai conferir ao mudar o estado.
+  const podeAssumir = await daEquipeDoTecnico(pool, chamado, usuario);
+
+  return { ...chamado, ...contexto.rows[0], historico: historico.rows, pode_assumir: podeAssumir };
 }
 
 // Estados em que o chamado já tem responsável: atribuir de novo aqui é
@@ -560,7 +585,7 @@ async function atribuir(id, { tecnico_id, equipe_id, justificativa }, usuario) {
     throw new AppError('Apenas gestores ou administradores podem atribuir chamados.', 403, 'ACESSO_NEGADO');
   }
 
-  const { chamado, notificacaoId } = await transacao(async (client) => {
+  const { chamado, notificacaoIds } = await transacao(async (client) => {
     const atual = await bloquearChamado(client, id);
 
     // RF05: reatribuir mantém o estado e exige justificativa. Antes, como só
@@ -605,22 +630,35 @@ async function atribuir(id, { tecnico_id, equipe_id, justificativa }, usuario) {
         : 'Chamado atribuído a técnico/equipe.'
     );
 
-    let notificacao;
+    const notificacaoIds = [];
     if (tecnico_id) {
-      notificacao = await client.query(
+      const aviso = await client.query(
         `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
          VALUES ($1, $2, 'atribuicao', $3) RETURNING id`,
         [tecnico_id, id, `Você foi designado para o chamado ${atual.protocolo}.`]
       );
+      notificacaoIds.push(aviso.rows[0].id);
+    } else if (equipe_id) {
+      // RN06: só a equipe foi designada. Sem aviso, ninguém saberia que o
+      // chamado está esperando alguém assumi-lo.
+      const avisos = await client.query(
+        `INSERT INTO notificacao (usuario_id, chamado_id, tipo, mensagem)
+         SELECT u.id, $1, 'atribuicao', $2
+           FROM equipe_tecnico et JOIN usuario u ON u.id = et.usuario_id
+          WHERE et.equipe_id = $3 AND u.ativo
+         RETURNING id`,
+        [id, `O chamado ${atual.protocolo} foi atribuído à sua equipe. Quem iniciar o atendimento o assume.`, equipe_id]
+      );
+      notificacaoIds.push(...avisos.rows.map((r) => r.id));
     }
 
-    return { chamado: rows[0], notificacaoId: notificacao?.rows[0]?.id };
+    return { chamado: rows[0], notificacaoIds };
   });
 
   // Fora da transação: enquanto ela está aberta a notificação ainda pode
   // sumir num rollback, e avisar sobre algo que não aconteceu é pior que
   // não avisar.
-  await notificacoesService.despacharVarios([notificacaoId]);
+  await notificacoesService.despacharVarios(notificacaoIds);
 
   return chamado;
 }
@@ -629,13 +667,26 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
   const { atualizado, notificacaoId } = await transacao(async (client) => {
     const chamado = await bloquearChamado(client, id);
 
+    const daEquipe = await daEquipeDoTecnico(client, chamado, usuario);
     const podeAlterar =
       usuario.perfil === 'administrador' ||
       usuario.perfil === 'gestor' ||
-      chamado.tecnico_id === usuario.id;
+      chamado.tecnico_id === usuario.id ||
+      daEquipe;
 
     if (!podeAlterar) {
       throw new AppError('Você não tem permissão para alterar o estado deste chamado.', 403, 'ACESSO_NEGADO');
+    }
+
+    // RN06: o chamado só da equipe não tem dono. Quem é da equipe pode apenas
+    // começá-lo, e começar é assumir: o resto do atendimento (esperar material,
+    // concluir) é de quem ficou com ele.
+    if (daEquipe && novoEstado !== 'em_andamento') {
+      throw new AppError(
+        'Este chamado foi atribuído à sua equipe e ainda não tem técnico. Inicie o atendimento para assumi-lo.',
+        403,
+        'ACESSO_NEGADO'
+      );
     }
 
     // RN05: cancelar é decisão da gestão. O técnico designado muda o estado
@@ -663,8 +714,23 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
       }
     }
 
+    // RN08: a espera por material suspende o prazo, e suspender o prazo é uma
+    // decisão que precisa de motivo no registro (início, fim e justificativa).
+    if (novoEstado === 'aguardando_material' && (!observacao || observacao.trim().length < 10)) {
+      throw new AppError(
+        'A espera por material suspende o prazo e exige o motivo (ao menos 10 caracteres) (RN08).',
+        422,
+        'JUSTIFICATIVA_OBRIGATORIA'
+      );
+    }
+
     const campos = ['estado = $1'];
     const params = [novoEstado];
+
+    if (daEquipe) {
+      params.push(usuario.id);
+      campos.push(`tecnico_id = $${params.length}`);
+    }
 
     if (novoEstado === 'aguardando_material') {
       campos.push('aguardando_material_desde = now()');
@@ -746,7 +812,9 @@ async function mudarEstado(id, { estado: novoEstado, observacao, servico_realiza
     const observacaoDoHistorico =
       novoEstado === 'concluido'
         ? [observacao?.trim(), 'Uso de EPI confirmado.'].filter(Boolean).join(' ')
-        : observacao;
+        : daEquipe
+          ? [observacao?.trim(), 'Atendimento assumido por técnico da equipe.'].filter(Boolean).join(' ')
+          : observacao;
     await registrarHistorico(client, id, usuario.id, chamado.estado, novoEstado, observacaoDoHistorico);
 
     const notificacao = await client.query(
@@ -1000,7 +1068,8 @@ async function registrarExecucao(id, { diagnostico, tempo_empregado_minutos }, u
   return rows[0];
 }
 
-// RN09: janela de reabertura contada a partir da conclusão.
+// RN09: janela de reabertura contada a partir da conclusão. Vale para o solicitante;
+// a gestão reabre também depois dela (RN05), com justificativa.
 const HORAS_PARA_REABRIR = 48;
 
 /**
@@ -1037,9 +1106,12 @@ async function reabrir(id, { justificativa }, usuario) {
 
     const horasDesdeConclusao =
       (Date.now() - new Date(atual.data_conclusao).getTime()) / 3_600_000;
-    if (horasDesdeConclusao > HORAS_PARA_REABRIR) {
+    // RN05: fora da janela do solicitante, reabrir é decisão da gestão. A
+    // justificativa já é obrigatória e o histórico diz que foi fora da janela.
+    const foraDaJanela = horasDesdeConclusao > HORAS_PARA_REABRIR;
+    if (foraDaJanela && !ehGestao) {
       throw new AppError(
-        `A janela de ${HORAS_PARA_REABRIR} horas para reabertura expirou. Abra um novo chamado referenciando o protocolo ${atual.protocolo}.`,
+        `A janela de ${HORAS_PARA_REABRIR} horas para reabertura expirou. Peça à gestão para reabrir, ou abra um novo chamado referenciando o protocolo ${atual.protocolo}.`,
         409,
         'JANELA_EXPIRADA'
       );
@@ -1076,7 +1148,9 @@ async function reabrir(id, { justificativa }, usuario) {
       usuario.id,
       'concluido',
       'em_triagem',
-      `Chamado reaberto (ciclo ${rows[0].total_reaberturas + 1}). Justificativa: ${justificativa.trim()}` +
+      `Chamado reaberto (ciclo ${rows[0].total_reaberturas + 1})` +
+        (foraDaJanela ? ` fora da janela de ${HORAS_PARA_REABRIR} horas, por decisão da gestão (RN05)` : '') +
+        `. Justificativa: ${justificativa.trim()}` +
         (atual.servico_realizado ? ` | Serviço registrado no ciclo anterior: ${atual.servico_realizado}` : '')
     );
 
