@@ -261,6 +261,14 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RF02 | Planilha com linha errada é recusada inteira | `backend/tests/importacaoLocais.test.js` | recusa o arquivo inteiro quando uma linha está errada |
 | RF02 | Reenviar a planilha não duplica | `backend/tests/importacaoLocais.test.js` | reenviar o mesmo arquivo não duplica nada |
 | RF02, RF11 | Importar a planilha e abrir chamado num dos locais, na tela | `frontend/e2e/fluxo.spec.js` | importar planilha de locais e abrir chamado num deles (RF02/RF11) |
+| RNF03 | Lista de locais longa: desenha os 50 primeiros e libera o resto sob demanda | `frontend/testes/Cadastros.test.jsx` | desenha só os primeiros 50 e libera o resto sob demanda |
+| RNF03 | O filtro de locais alcança o que ainda não foi desenhado | `frontend/testes/Cadastros.test.jsx` | o filtro alcança o que ainda não foi desenhado e a contagem continua sendo da lista inteira |
+| RNF03 | Mudar o filtro de locais volta a mostrar só o começo | `frontend/testes/Cadastros.test.jsx` | mudar o filtro volta a mostrar só o começo |
+| RNF03 | Lista curta de locais não mostra o botão | `frontend/testes/Cadastros.test.jsx` | uma lista curta não mostra o botão |
+| RNF03 | Tabela de contas longa: desenha as 25 primeiras e libera o resto sob demanda | `frontend/testes/Usuarios.test.jsx` | desenha só as primeiras 25 e libera o resto sob demanda |
+| RNF03 | O filtro de contas olha nome e e-mail, e alcança as não desenhadas | `frontend/testes/Usuarios.test.jsx` | o filtro por nome ou e-mail alcança contas que ainda não foram desenhadas |
+| RNF03 | Filtro de contas sem resultado diz isso | `frontend/testes/Usuarios.test.jsx` | filtro sem resultado diz isso, em vez de "nenhum usuário cadastrado" |
+| RNF03 | Com poucas contas não há filtro nem botão | `frontend/testes/Usuarios.test.jsx` | com poucas contas não há filtro nem botão |
 | Equipes | Só a gestão cria equipe | `backend/tests/equipesMateriais.test.js` | gestor cria equipe; solicitante não |
 | Materiais | O técnico designado lança o consumo | `backend/tests/equipesMateriais.test.js` | técnico designado lança consumo no chamado |
 | RF09 | Nota fora de 1 a 5 volta 422, não erro do banco | `backend/tests/equipesMateriais.test.js` | avaliação com nota fora de 1..5 volta 422, e não erro do banco |

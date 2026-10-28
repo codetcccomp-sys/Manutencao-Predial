@@ -1772,6 +1772,48 @@ const MUTACOES = [
     para: '(podeGerenciar || chamado.solicitante_id === usuario.id);',
     spec: 'testes/ChamadoDetalhe.test.jsx',
   },
+  {
+    descricao: 'lista longa de locais: volta a desenhar todos de uma vez',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: 'const locaisVisiveis = locaisFiltrados.slice(0, quantosLocais);',
+    para: 'const locaisVisiveis = locaisFiltrados;',
+    spec: 'testes/Cadastros.test.jsx',
+  },
+  {
+    descricao: 'lista longa de locais: mudar o filtro deixa de voltar ao começo',
+    arquivo: 'src/pages/Cadastros.jsx',
+    de: '                  setFiltroLocal(e.target.value);\n                  setQuantosLocais(PASSO_DA_LISTA);',
+    para: '                  setFiltroLocal(e.target.value);',
+    spec: 'testes/Cadastros.test.jsx',
+  },
+  {
+    descricao: 'lista longa: o botão fica na tela mesmo sem nada a mostrar',
+    arquivo: 'src/components/ui/MostrarMais.jsx',
+    de: 'if (restam <= 0) return null;',
+    para: 'if (false) return null;',
+    spec: 'testes/Cadastros.test.jsx',
+  },
+  {
+    descricao: 'lista longa de contas: volta a desenhar todas de uma vez',
+    arquivo: 'src/pages/Usuarios.jsx',
+    de: 'linhas={usuariosVisiveis}',
+    para: 'linhas={usuarios}',
+    spec: 'testes/Usuarios.test.jsx',
+  },
+  {
+    descricao: 'lista longa de contas: o filtro deixa de olhar o e-mail',
+    arquivo: 'src/pages/Usuarios.jsx',
+    de: 'usuarios.filter((u) => `${u.nome} ${u.email}`.toLowerCase().includes(termo))',
+    para: 'usuarios.filter((u) => u.nome.toLowerCase().includes(termo))',
+    spec: 'testes/Usuarios.test.jsx',
+  },
+  {
+    descricao: 'lista longa de contas: o filtro aparece mesmo com poucas contas',
+    arquivo: 'src/pages/Usuarios.jsx',
+    de: 'usuarios.length > MINIMO_PARA_FILTRAR &&',
+    para: 'true &&',
+    spec: 'testes/Usuarios.test.jsx',
+  },
 ];
 
 /**

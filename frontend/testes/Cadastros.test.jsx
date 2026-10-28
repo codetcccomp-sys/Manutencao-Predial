@@ -292,3 +292,57 @@ describe('Seções dos cadastros', () => {
     expect(opcional.className).not.toMatch(/gray/);
   });
 });
+
+describe('Lista longa de locais', () => {
+  const MUITOS = Array.from({ length: 120 }, (_, i) => ({
+    id: i + 1, unidade: 'Campus', bloco: null, pavimento: null, setor: null, ambiente: `Sala ${i + 1}`, ativo: true,
+  }));
+  const desenhados = () => screen.queryAllByText(/^Campus \/ Sala \d+$/);
+
+  it('desenha só os primeiros 50 e libera o resto sob demanda', async () => {
+    const usuario = userEvent.setup();
+    preparar({ locais: MUITOS });
+    await waitFor(() => expect(screen.getByText('Mostrando 50 de 120 locais.')).toBeInTheDocument());
+    expect(desenhados()).toHaveLength(50);
+
+    await usuario.click(screen.getByRole('button', { name: 'Mostrar mais 50' }));
+    expect(desenhados()).toHaveLength(100);
+
+    await usuario.click(screen.getByRole('button', { name: 'Mostrar mais 20' }));
+    expect(desenhados()).toHaveLength(120);
+    expect(screen.queryByRole('button', { name: /Mostrar mais/ })).toBeNull();
+  });
+
+  it('o filtro alcança o que ainda não foi desenhado e a contagem continua sendo da lista inteira', async () => {
+    const usuario = userEvent.setup();
+    preparar({ locais: MUITOS });
+    await waitFor(() => expect(screen.getByText('Mostrando 50 de 120 locais.')).toBeInTheDocument());
+
+    await usuario.type(filtro(), 'Sala 119');
+
+    expect(desenhados()).toHaveLength(1);
+    expect(screen.getByText('1 de 120 locais.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Mostrar mais/ })).toBeNull();
+  });
+
+  it('mudar o filtro volta a mostrar só o começo', async () => {
+    const usuario = userEvent.setup();
+    preparar({ locais: MUITOS });
+    await waitFor(() => expect(screen.getByText('Mostrando 50 de 120 locais.')).toBeInTheDocument());
+    await usuario.click(screen.getByRole('button', { name: 'Mostrar mais 50' }));
+    expect(desenhados()).toHaveLength(100);
+
+    // "Campus" casa com os 120: se o filtro não voltasse ao começo, continuariam os 100 já liberados.
+    await usuario.type(filtro(), 'Campus');
+
+    expect(desenhados()).toHaveLength(50);
+    expect(screen.getByText('Mostrando 50 de 120 locais.')).toBeInTheDocument();
+  });
+
+  it('uma lista curta não mostra o botão', async () => {
+    preparar();
+    await waitFor(() => expect(screen.getByText('3 de 3 locais.')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Mostrar mais/ })).toBeNull();
+  });
+});
+

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 
 vi.mock('../src/api/client', () => ({
@@ -20,8 +21,8 @@ const PESSOAS = [
   { id: 3, nome: 'Célia', email: 'celia@exemplo.com', perfil: 'gestor', ativo: true },
 ];
 
-function montar() {
-  api.get.mockResolvedValue({ data: { usuarios: PESSOAS } });
+function montar(pessoas = PESSOAS) {
+  api.get.mockResolvedValue({ data: { usuarios: pessoas } });
   api.patch.mockResolvedValue({ data: {} });
   return render(
     <MemoryRouter>
@@ -179,3 +180,55 @@ describe('Anonimização na tela de usuários', () => {
     expect(screen.getAllByRole('button', { name: 'Anonimizar' })).toHaveLength(4);
   });
 });
+
+describe('Lista longa de contas', () => {
+  const MUITAS = Array.from({ length: 60 }, (_, i) => ({
+    id: i + 10, nome: `Pessoa ${i + 1}`, email: `pessoa${i + 1}@exemplo.com`, perfil: 'solicitante', ativo: true,
+  }));
+  // A tabela desenha cada linha duas vezes (monitor e celular): um seletor de perfil por forma.
+  const linhasDesenhadas = () => screen.queryAllByRole('combobox', { name: /^Perfil de Pessoa/ }).length / 2;
+
+  it('desenha só as primeiras 25 e libera o resto sob demanda', async () => {
+    const usuario = userEvent.setup();
+    montar(MUITAS);
+    await screen.findByText('Mostrando 25 de 60 contas.');
+    expect(linhasDesenhadas()).toBe(25);
+
+    await usuario.click(screen.getByRole('button', { name: 'Mostrar mais 25' }));
+    expect(linhasDesenhadas()).toBe(50);
+
+    await usuario.click(screen.getByRole('button', { name: 'Mostrar mais 10' }));
+    expect(linhasDesenhadas()).toBe(60);
+    expect(screen.queryByRole('button', { name: /Mostrar mais/ })).toBeNull();
+  });
+
+  it('o filtro por nome ou e-mail alcança contas que ainda não foram desenhadas', async () => {
+    const usuario = userEvent.setup();
+    montar(MUITAS);
+    await screen.findByText('Mostrando 25 de 60 contas.');
+
+    await usuario.type(screen.getByRole('searchbox', { name: 'Filtrar usuários por nome ou e-mail' }), 'pessoa59@');
+
+    expect(linhasDesenhadas()).toBe(1);
+    expect(screen.queryByRole('button', { name: /Mostrar mais/ })).toBeNull();
+  });
+
+  it('filtro sem resultado diz isso, em vez de "nenhum usuário cadastrado"', async () => {
+    const usuario = userEvent.setup();
+    montar(MUITAS);
+    await screen.findByText('Mostrando 25 de 60 contas.');
+
+    await usuario.type(screen.getByRole('searchbox', { name: 'Filtrar usuários por nome ou e-mail' }), 'zzzz');
+
+    expect(screen.getByText('Nenhuma conta corresponde ao filtro.')).toBeInTheDocument();
+  });
+
+  it('com poucas contas não há filtro nem botão', async () => {
+    montar();
+    await screen.findAllByText('Bruno');
+
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Mostrar mais/ })).toBeNull();
+  });
+});
+
