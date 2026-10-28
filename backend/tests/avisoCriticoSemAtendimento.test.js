@@ -96,6 +96,16 @@ const marcado = async (id) => (await pool.query('SELECT critico_notificado_em FR
 
 let envios;
 beforeAll(async () => {
+  // O teto de e-mails por varredura (LIMITE_ENVIOS) vale para o banco todo: gestor e administrador
+  // de suíte que já terminou seguem ativos até o teardown global e disputam os envios. Quanto mais
+  // suítes antes desta, mais contas, até os três destinatários daqui ficarem fora do teto (a suíte
+  // passava no CI por pouco, e falhou ao entrar mais uma antes dela). A suíte roda em série, então
+  // desativar as dos outros é seguro.
+  await pool.query(
+    `UPDATE usuario SET ativo = FALSE
+      WHERE perfil IN ('gestor', 'administrador') AND email LIKE '%@exemplo.com' AND email NOT LIKE $1`,
+    [`${MARCA}%`]
+  );
   gestorA = await conta('gestor');
   gestorB = await conta('gestor');
   administrador = await conta('administrador');
