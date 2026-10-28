@@ -1730,6 +1730,48 @@ const MUTACOES = [
     para: '',
     spec: 'testes/Avisos.test.jsx',
   },
+  {
+    descricao: 'espera por material: o botão volta a enviar sem pedir o motivo (RN08)',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: "    if (estado === 'aguardando_material') {\n      setConcluindo(false);",
+    para: '    if (false) {\n      setConcluindo(false);',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'espera por material: o motivo deixa de ir como observação',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: "mudarEstado('aguardando_material', { observacao: motivoEspera.trim() });",
+    para: "mudarEstado('aguardando_material');",
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'equipe: o técnico perde o botão de iniciar o chamado só da equipe (RN06)',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'chamado.tecnico_id === usuario.id || chamado.pode_assumir === true;',
+    para: 'chamado.tecnico_id === usuario.id;',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'equipe: qualquer técnico passa a ver o botão sem o aval do servidor',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'chamado.tecnico_id === usuario.id || chamado.pode_assumir === true;',
+    para: 'chamado.tecnico_id === usuario.id || true;',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'reabertura: a gestão perde o formulário depois de 48 horas (RN05)',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '(podeGerenciar || (chamado.solicitante_id === usuario.id && !foraDaJanelaDeReabertura));',
+    para: '(chamado.solicitante_id === usuario.id && !foraDaJanelaDeReabertura);',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'reabertura: o solicitante passa a ver o formulário fora da janela',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: '(podeGerenciar || (chamado.solicitante_id === usuario.id && !foraDaJanelaDeReabertura));',
+    para: '(podeGerenciar || chamado.solicitante_id === usuario.id);',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
 ];
 
 /**

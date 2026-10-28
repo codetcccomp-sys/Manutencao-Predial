@@ -521,20 +521,20 @@ describe('Confirmação antes do que não tem volta', () => {
     expect(screen.queryByRole('button', { name: 'Cancelado' })).toBeNull();
   });
 
-  it('os outros estados seguem num clique só', async () => {
+  it('retomar do aguardando material segue num clique só', async () => {
     const usuario = userEvent.setup();
-    montar({ como: GESTOR, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });
+    montar({ como: GESTOR, dados: chamado({ estado: 'aguardando_material', tecnico_id: TECNICO.id }) });
     await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
 
     // Perguntar em tudo treina a pessoa a responder "sim" sem ler — e aí a
-    // pergunta que importa também passa batida. "Aguardando material" se
-    // desfaz voltando para "em andamento".
-    await usuario.click(screen.getByRole('button', { name: 'Aguardando material' }));
+    // pergunta que importa também passa batida. Pedir material pede o motivo
+    // (RN08, abaixo); voltar para "em andamento" desfaz a espera e não pede nada.
+    await usuario.click(screen.getByRole('button', { name: 'Em andamento' }));
 
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() =>
       expect(api.patch).toHaveBeenCalledWith('/chamados/7/estado', {
-        estado: 'aguardando_material',
+        estado: 'em_andamento',
       })
     );
   });
@@ -683,3 +683,102 @@ describe('Campos de escolha com nome acessível', () => {
     expect(await screen.findByRole('combobox', { name: 'Nota do atendimento' })).toBeInTheDocument();
   });
 });
+
+describe('RN08: a espera por material pede o motivo', () => {
+  const emAndamento = () => chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id });
+
+  it('o botão abre o campo e não envia nada ainda', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: TECNICO, dados: emAndamento() });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    await usuario.click(screen.getByRole('button', { name: 'Aguardando material' }));
+
+    expect(screen.getByLabelText(/Motivo da espera por material/)).toBeInTheDocument();
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('envia o estado com o motivo escrito', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: TECNICO, dados: emAndamento() });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    await usuario.click(screen.getByRole('button', { name: 'Aguardando material' }));
+    await usuario.type(screen.getByLabelText(/Motivo da espera por material/), '  Falta a vedação do registro.  ');
+    await usuario.click(screen.getByRole('button', { name: 'Registrar a espera' }));
+
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith('/chamados/7/estado', {
+        estado: 'aguardando_material',
+        observacao: 'Falta a vedação do registro.',
+      })
+    );
+  });
+
+  it('desistir fecha o campo sem enviar', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: TECNICO, dados: emAndamento() });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    await usuario.click(screen.getByRole('button', { name: 'Aguardando material' }));
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByLabelText(/Motivo da espera por material/)).toBeNull();
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+});
+
+describe('RN06: chamado atribuído só à equipe', () => {
+  const daEquipe = (extra) => chamado({ estado: 'atribuido', tecnico_id: null, equipe_id: 3, ...extra });
+
+  it('o técnico da equipe vê o botão para iniciar, e iniciar é o único passo', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: TECNICO, dados: daEquipe({ pode_assumir: true }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    expect(screen.getByRole('heading', { name: 'Mudar estado' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancelado' })).toBeNull();
+    await usuario.click(screen.getByRole('button', { name: 'Em andamento' }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/chamados/7/estado', { estado: 'em_andamento' }));
+  });
+
+  it('sem o aval do servidor (pode_assumir), a tela não oferece o botão', async () => {
+    montar({ como: TECNICO, dados: daEquipe({ pode_assumir: false }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    expect(screen.queryByRole('heading', { name: 'Mudar estado' })).toBeNull();
+  });
+});
+
+describe('RN05 e RN09: reabertura', () => {
+  const concluidoHa = (horas) =>
+    chamado({
+      estado: 'concluido',
+      tecnico_id: TECNICO.id,
+      data_conclusao: new Date(Date.now() - horas * 3_600_000).toISOString(),
+    });
+
+  it('dentro de 48 horas o solicitante reabre', async () => {
+    montar({ como: SOLICITANTE, dados: concluidoHa(2) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    expect(screen.getByRole('heading', { name: 'Reabrir chamado' })).toBeInTheDocument();
+  });
+
+  it('depois de 48 horas o solicitante não vê o formulário', async () => {
+    montar({ como: SOLICITANTE, dados: concluidoHa(60) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    expect(screen.queryByRole('heading', { name: 'Reabrir chamado' })).toBeNull();
+  });
+
+  it('depois de 48 horas a gestão ainda reabre, e a tela diz por quê', async () => {
+    montar({ como: GESTOR, dados: concluidoHa(60) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    expect(screen.getByRole('heading', { name: 'Reabrir chamado' })).toBeInTheDocument();
+    expect(screen.getByText(/A janela de 48 horas do solicitante já passou/)).toBeInTheDocument();
+  });
+});
+

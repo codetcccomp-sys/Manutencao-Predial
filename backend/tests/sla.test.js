@@ -165,7 +165,7 @@ describe('Suspensão por falta de material', () => {
     await request(app)
       .patch(`/chamados/${chamado.id}/estado`)
       .set(comoGestor())
-      .send({ estado: 'aguardando_material' });
+      .send({ estado: 'aguardando_material', observacao: 'Falta a vedação do registro; pedido feito ao almoxarifado.' });
 
     const antes = await pool.query('SELECT prazo_estimado FROM chamado WHERE id = $1', [chamado.id]);
 
