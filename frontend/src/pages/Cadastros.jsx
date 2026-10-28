@@ -6,6 +6,10 @@ import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import ExpedienteEFeriados from '../components/ExpedienteEFeriados';
 import RegrasDeDistribuicao from '../components/RegrasDeDistribuicao';
+import MostrarMais from '../components/ui/MostrarMais';
+
+// Quantos itens uma lista longa desenha de cada vez.
+const PASSO_DA_LISTA = 50;
 
 const ABAS = [
   { id: 'locais', rotulo: 'Locais' },
@@ -75,6 +79,9 @@ function Cadastros() {
 
   const [novoLocal, setNovoLocal] = useState(LOCAL_VAZIO);
   const [filtroLocal, setFiltroLocal] = useState('');
+  // Quantos locais desenhar: uma instituição pode ter milhares, e desenhar todos de uma vez custa
+  // dezenas de milhares de elementos. O filtro vale para a lista inteira.
+  const [quantosLocais, setQuantosLocais] = useState(PASSO_DA_LISTA);
   const [importando, setImportando] = useState(false);
   const [relatorio, setRelatorio] = useState(null);
   const [problemas, setProblemas] = useState([]);
@@ -114,6 +121,7 @@ function Cadastros() {
   const locaisFiltrados = termo
     ? locais.filter((l) => rotuloLocal(l).toLowerCase().includes(termo))
     : locais;
+  const locaisVisiveis = locaisFiltrados.slice(0, quantosLocais);
 
   async function executar(acao, mensagem) {
     setErro('');
@@ -334,7 +342,10 @@ function Cadastros() {
               <input
                 type="search"
                 value={filtroLocal}
-                onChange={(e) => setFiltroLocal(e.target.value)}
+                onChange={(e) => {
+                  setFiltroLocal(e.target.value);
+                  setQuantosLocais(PASSO_DA_LISTA);
+                }}
                 placeholder="Filtrar locais"
                 className="min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm sm:w-64"
               />
@@ -347,7 +358,7 @@ function Cadastros() {
               {locaisFiltrados.length === 0 && (
                 <li className="text-tinta-2">Nenhum local corresponde ao filtro.</li>
               )}
-              {locaisFiltrados.map((l) => (
+              {locaisVisiveis.map((l) => (
                 <li
                   key={l.id}
                   className={`flex items-center justify-between gap-3 border rounded px-3 py-2 ${
@@ -371,6 +382,13 @@ function Cadastros() {
                 </li>
               ))}
             </ul>
+            <MostrarMais
+              mostrando={locaisVisiveis.length}
+              total={locaisFiltrados.length}
+              passo={PASSO_DA_LISTA}
+              onMais={() => setQuantosLocais((n) => n + PASSO_DA_LISTA)}
+              nome="locais"
+            />
           </div>
         </>
       )}

@@ -8,6 +8,7 @@ import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import Botao from '../components/ui/Botao';
 import { Esqueleto, Regiao } from '../components/ui/Estados';
 import Confirmacao from '../components/ui/Confirmacao';
+import MostrarMais from '../components/ui/MostrarMais';
 import CadastrosPendentes from '../components/CadastrosPendentes';
 import ExigenciaDoisFatores from '../components/ExigenciaDoisFatores';
 import ErrosDoSistema from '../components/ErrosDoSistema';
@@ -27,6 +28,10 @@ const PERFIL_COR = {
   administrador: 'bg-green-100 text-sucesso',
 };
 
+// Quantas contas a tabela desenha de cada vez (cada linha vira duas: tabela e cartão, no celular).
+const PASSO_DA_LISTA = 25;
+// Abaixo disto o filtro só atrapalharia.
+const MINIMO_PARA_FILTRAR = 12;
 const FORMULARIO_VAZIO = { nome: '', email: '', senha: '', perfil: 'tecnico' };
 
 function Usuarios() {
@@ -34,6 +39,8 @@ function Usuarios() {
   const ehAdministrador = usuario.perfil === 'administrador';
 
   const [usuarios, setUsuarios] = useState([]);
+  const [filtro, setFiltro] = useState('');
+  const [quantos, setQuantos] = useState(PASSO_DA_LISTA);
   const [novo, setNovo] = useState(FORMULARIO_VAZIO);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -136,6 +143,13 @@ function Usuarios() {
     }
   }
 
+  // O filtro vale para a lista inteira; só o desenho é adiado (MostrarMais).
+  const termo = filtro.trim().toLowerCase();
+  const usuariosFiltrados = termo
+    ? usuarios.filter((u) => `${u.nome} ${u.email}`.toLowerCase().includes(termo))
+    : usuarios;
+  const usuariosVisiveis = usuariosFiltrados.slice(0, quantos);
+
   return (
     <div className="grid gap-6">
       <div>
@@ -220,7 +234,22 @@ function Usuarios() {
           colunas vazava para fora em vez de rolar dentro do overflow-x-auto,
           levando a página inteira junto no celular. */}
       <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 min-w-0">
-        <h2 className="font-medium text-navy mb-3">Cadastrados</h2>
+        <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-medium text-navy">Cadastrados</h2>
+          {usuarios.length > MINIMO_PARA_FILTRAR && (
+            <input
+              type="search"
+              aria-label="Filtrar usuários por nome ou e-mail"
+              value={filtro}
+              onChange={(e) => {
+                setFiltro(e.target.value);
+                setQuantos(PASSO_DA_LISTA);
+              }}
+              placeholder="Filtrar por nome ou e-mail"
+              className="min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm sm:w-64"
+            />
+          )}
+        </div>
 
         <Regiao carregando={carregando}>
         {carregando ? (
@@ -229,8 +258,12 @@ function Usuarios() {
         <Tabela
           legenda="Usuários cadastrados no sistema"
           chaveDaLinha={(u) => u.id}
-          linhas={usuarios}
-          vazio={<p className="text-sm text-tinta-2">Nenhum usuário cadastrado.</p>}
+          linhas={usuariosVisiveis}
+          vazio={
+            <p className="text-sm text-tinta-2">
+              {filtro.trim() ? 'Nenhuma conta corresponde ao filtro.' : 'Nenhum usuário cadastrado.'}
+            </p>
+          }
           colunas={[
             {
               chave: 'nome',
@@ -333,6 +366,13 @@ function Usuarios() {
         />
         )}
         </Regiao>
+        <MostrarMais
+          mostrando={usuariosVisiveis.length}
+          total={usuariosFiltrados.length}
+          passo={PASSO_DA_LISTA}
+          onMais={() => setQuantos((n) => n + PASSO_DA_LISTA)}
+          nome="contas"
+        />
       </div>
 
       <ErrosDoSistema />

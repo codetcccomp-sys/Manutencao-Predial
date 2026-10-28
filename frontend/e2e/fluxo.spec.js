@@ -246,6 +246,9 @@ test('importar planilha de locais e abrir chamado num deles (RF02/RF11)', async 
 
   // O acento tem de ter sobrevivido a build, requisição, banco e volta — é
   // onde a codificação costuma quebrar sem ninguém notar.
+  // A lista desenha os primeiros 50 locais; o filtro alcança o resto, e num banco que já acumulou
+  // locais os recém-criados podem estar além deles.
+  await page.getByPlaceholder('Filtrar locais').fill(unidade);
   await expect(page.getByText(`${unidade} / A / Térreo / Recepção`)).toBeVisible();
 
   // E o local importado serve para o que existe: abrir chamado nele.
