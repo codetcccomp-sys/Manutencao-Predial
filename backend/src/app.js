@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const { errorHandler, AppError } = require('./middlewares/errorHandler');
 const { NOME_SISTEMA } = require('./config/marca');
 
@@ -73,6 +74,14 @@ function origemPermitida(origin) {
 // `Cross-Origin-Resource-Policy: same-origin` não se aplica às chamadas do
 // frontend, que passam pelo CORS. A CSP da interface vive em frontend/vercel.json.
 app.use(helmet());
+
+// Comprime o JSON das listas (RNF03). Medido no volume de teste: a lista de locais com
+// os inativos (2.000 linhas) vai de 245 kB para 13 kB em gzip e a de contas (305), de 65 kB
+// para 3 kB; em 4G lento, só o tempo de baixar a primeira passava de 3 s. Fica antes do CORS
+// e das rotas para valer para todas. Abaixo de 1 kB (padrão da biblioteca) não comprime, e
+// quem não manda Accept-Encoding recebe como antes. É aqui, e não na borda, porque a API
+// não deve depender de a Vercel decidir comprimir: ela só garante o que está no código.
+app.use(compression());
 
 app.use(
   cors({

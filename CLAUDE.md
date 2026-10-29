@@ -147,6 +147,12 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   de 100 por minuto. Só o administrador lê (`GET /operacao/erros`, tela de Usuários). Mexeu no que ela
   guarda? Mude `docs/lgpd.md` e o aviso de privacidade junto. A migração só vale em produção depois de
   `npm run migrate` lá: antes disso gravar falha em silêncio e vai só para o console.
+- **Medida de desempenho (RNF03) só vale com build de produção.** Com `NODE_ENV=development` no shell,
+  o `vite build` empacota o React de desenvolvimento: o StrictMode dobra toda chamada à API e as telas
+  ficam mais lentas (o documento de projeto chegou a sair com tempo inflado por isso). Confira com
+  `grep -c "Invalid hook call" dist/assets/index-*.js`: tem de dar 0. A API comprime as respostas
+  (`compression` em `app.js`, `tests/compressao.test.js`; a lista de locais cai de 245 kB para 13 kB): sem
+  isso, em 4G lento a tela de Cadastros passa de 3 s só pelo tempo de baixar.
 - Telas de gestão são sob demanda (`telaSobDemanda` em `App.jsx`); a fila, o chamado e o formulário de
   abertura ficam no arquivo principal porque o técnico os lê sem conexão. Tela offline nova não entra na lista
   sob demanda (um teste confere). O `AnuncioDeRota` espera o `h1` que chega depois.

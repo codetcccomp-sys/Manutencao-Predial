@@ -269,6 +269,11 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RNF03 | O filtro de contas olha nome e e-mail, e alcança as não desenhadas | `frontend/testes/Usuarios.test.jsx` | o filtro por nome ou e-mail alcança contas que ainda não foram desenhadas |
 | RNF03 | Filtro de contas sem resultado diz isso | `frontend/testes/Usuarios.test.jsx` | filtro sem resultado diz isso, em vez de "nenhum usuário cadastrado" |
 | RNF03 | Com poucas contas não há filtro nem botão | `frontend/testes/Usuarios.test.jsx` | com poucas contas não há filtro nem botão |
+| RNF03 | A API comprime a lista longa quando o cliente aceita gzip, com o mesmo conteúdo | `backend/tests/compressao.test.js` | comprime uma lista longa quando o cliente aceita gzip, e o conteúdo é o mesmo |
+| RNF03 | A lista comprimida pesa menos de um quinto da crua | `backend/tests/compressao.test.js` | encolhe a lista a menos de um quinto do tamanho |
+| RNF03 | Sem Accept-Encoding a resposta continua crua | `backend/tests/compressao.test.js` | não comprime para quem não aceita compressão |
+| RNF03 | A resposta comprimida avisa as caches com Vary: Accept-Encoding | `backend/tests/compressao.test.js` | avisa as caches que a resposta varia conforme o Accept-Encoding |
+| RNF03 | Resposta pequena não é comprimida | `backend/tests/compressao.test.js` | deixa como está a resposta pequena, que não compensa comprimir |
 | Equipes | Só a gestão cria equipe | `backend/tests/equipesMateriais.test.js` | gestor cria equipe; solicitante não |
 | Materiais | O técnico designado lança o consumo | `backend/tests/equipesMateriais.test.js` | técnico designado lança consumo no chamado |
 | RF09 | Nota fora de 1 a 5 volta 422, não erro do banco | `backend/tests/equipesMateriais.test.js` | avaliação com nota fora de 1..5 volta 422, e não erro do banco |
