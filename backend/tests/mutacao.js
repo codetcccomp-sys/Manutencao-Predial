@@ -1206,6 +1206,13 @@ const MUTACOES = [
     para: '(false ? ` fora da janela',
     spec: 'tests/aderenciaAoTermo.test.js',
   },
+  {
+    descricao: 'a API deixa de comprimir as respostas (lista de locais volta a ter 250 kB na rede)',
+    arquivo: 'src/app.js',
+    de: 'app.use(compression());',
+    para: '// app.use(compression());',
+    spec: 'tests/compressao.test.js',
+  },
 ];
 
 const BANCO_DESCARTAVEL = 'smp_mutacao';
