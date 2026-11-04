@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter, Route, Routes } from 'react-router';
 
 import AnuncioDeRota from '../src/components/AnuncioDeRota';
-import { NOME_DO_SISTEMA, tituloDaRota } from '../src/dominio/titulosDeRota';
+import { NOME_DO_SISTEMA, descricaoDaRota, tituloDaRota } from '../src/dominio/titulosDeRota';
 
 /**
  * Título e foco na troca de tela (WCAG 2.4.2 e 2.4.3).
@@ -19,7 +19,7 @@ import { NOME_DO_SISTEMA, tituloDaRota } from '../src/dominio/titulosDeRota';
  */
 
 describe('título de cada rota', () => {
-  it('toda rota do App.jsx tem título próprio, e as desconhecidas ficam com o nome do sistema', () => {
+  it('toda rota do App.jsx tem título próprio, e o endereço que não existe vira "Página não encontrada"', () => {
     const app = fs.readFileSync(path.join(__dirname, '..', 'src', 'App.jsx'), 'utf8');
     const rotas = [...app.matchAll(/<Route\s+path="([^"]+)"/g)].map((m) => m[1]);
     expect(rotas.length).toBeGreaterThan(10);
@@ -30,7 +30,24 @@ describe('título de cada rota', () => {
       expect(titulo, `rota ${rota}`).not.toBe(NOME_DO_SISTEMA);
       expect(titulo.endsWith(` — ${NOME_DO_SISTEMA}`), `rota ${rota}`).toBe(true);
     }
-    expect(tituloDaRota('/nao-existe')).toBe(NOME_DO_SISTEMA);
+    expect(tituloDaRota('/nao-existe')).toBe(`Página não encontrada — ${NOME_DO_SISTEMA}`);
+  });
+
+  it('toda rota do App.jsx tem descrição própria, e as telas internas só dizem que são restritas', () => {
+    const app = fs.readFileSync(path.join(__dirname, '..', 'src', 'App.jsx'), 'utf8');
+    const rotas = [...app.matchAll(/<Route\s+path="([^"]+)"/g)].map((m) => m[1]).filter((r) => r !== '*');
+
+    for (const rota of rotas) {
+      const descricao = descricaoDaRota(rota.replace(':id', '7'));
+      expect(descricao.length, `rota ${rota}`).toBeGreaterThan(30);
+      // Cabe na linha de resultado de um buscador e de uma prévia de link.
+      expect(descricao.length, `rota ${rota}`).toBeLessThanOrEqual(160);
+    }
+    for (const interna of ['/', '/chamados/novo', '/chamados/12', '/relatorios', '/usuarios', '/cadastros', '/conta']) {
+      expect(descricaoDaRota(interna), interna).toMatch(/restrita/i);
+    }
+    expect(descricaoDaRota('/termos')).not.toMatch(/restrita/i);
+    expect(descricaoDaRota('/nao-existe')).toMatch(/não existe/);
   });
 
   it('"Novo chamado" não é confundido com um chamado de id "novo"', () => {
@@ -81,11 +98,39 @@ describe('título da aba ao trocar de tela', () => {
   });
 });
 
+describe('descrição da página', () => {
+  it('troca o texto da meta description com a rota', async () => {
+    const usuario = userEvent.setup();
+    const meta = document.createElement('meta');
+    meta.setAttribute('name', 'description');
+    meta.setAttribute('content', 'texto do index.html');
+    document.head.appendChild(meta);
+    try {
+      render(
+        <MemoryRouter initialEntries={['/login']}>
+          <AnuncioDeRota />
+          <Routes>
+            <Route path="*" element={<Link to="/privacidade">Privacidade</Link>} />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(meta.getAttribute('content')).toBe(descricaoDaRota('/login'));
+
+      await usuario.click(screen.getByRole('link', { name: 'Privacidade' }));
+
+      expect(meta.getAttribute('content')).toBe(descricaoDaRota('/privacidade'));
+      expect(meta.getAttribute('content')).not.toBe(descricaoDaRota('/login'));
+    } finally {
+      meta.remove();
+    }
+  });
+});
+
 describe('foco ao trocar de tela', () => {
   it('na primeira carga, atualiza o título mas não mexe no foco', () => {
     abrir('/primeira');
-    // Rota sem título próprio no mapa: o ponto é que o efeito rodou e o foco ficou onde estava.
-    expect(document.title).toBe(NOME_DO_SISTEMA);
+    // Rota fora do mapa: o ponto é que o efeito rodou e o foco ficou onde estava.
+    expect(document.title).toBe(`Página não encontrada — ${NOME_DO_SISTEMA}`);
     expect(document.activeElement).toBe(document.body);
   });
 

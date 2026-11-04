@@ -38,6 +38,8 @@ test('a página sai com os cabeçalhos de segurança', async ({ page }) => {
   expect(h['x-frame-options']).toBe('DENY');
   expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');
   expect(h['permissions-policy']).toContain('camera=()');
+  // Sistema de uso interno: nenhuma tela entra em índice de busca (o robots.txt só orienta).
+  expect(h['x-robots-tag']).toBe('noindex, nofollow');
 });
 
 test('com a CSP em vigor, as telas funcionam e o navegador não relata violação', async ({ page }) => {

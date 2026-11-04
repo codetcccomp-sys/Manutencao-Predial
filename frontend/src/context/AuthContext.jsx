@@ -143,6 +143,15 @@ export function AuthProvider({ children }) {
   );
 }
 
+/**
+ * Quem está logado, se houver, SEM exigir o provedor: para as páginas públicas
+ * (privacidade, termos, cookies, suporte), que mudam o caminho de volta conforme
+ * haja sessão e também são renderizadas fora do `AuthProvider` nos testes.
+ */
+export function useUsuarioSeHouver() {
+  return useContext(AuthContext)?.usuario ?? null;
+}
+
 export function useAuth() {
   const contexto = useContext(AuthContext);
   if (!contexto) {

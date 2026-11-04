@@ -6,6 +6,7 @@ import EscolhaUnica from '../components/ui/EscolhaUnica';
 import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
+import LinkVoltar from '../components/ui/LinkVoltar';
 import { PERGUNTAS_DE_SITUACAO, fatoresDaSituacao } from '../dominio/situacao';
 import { rotuloEquipamento, rotuloLocal } from '../dominio/preventiva';
 
@@ -124,7 +125,11 @@ function NovoChamado() {
         local_id: Number(form.local_id),
         ...(form.equipamento_id ? { equipamento_id: Number(form.equipamento_id) } : {}),
       });
-      navigate(`/chamados/${data.chamado.id}`);
+      // A confirmação vai junto: o chamado abre noutra tela, e sem ela a pessoa só vê a
+      // página mudar. O protocolo é o que ela guarda para perguntar depois.
+      navigate(`/chamados/${data.chamado.id}`, {
+        state: { aviso: data.chamado.protocolo ? `Chamado aberto. O protocolo é ${data.chamado.protocolo}.` : 'Chamado aberto.' },
+      });
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível abrir o chamado.');
     } finally {
@@ -137,6 +142,9 @@ function NovoChamado() {
     // olho perder o começo da próxima. Os 32rem continuam valendo mesmo com o
     // invólucro agora em 1280px.
     <div className="max-w-2xl">
+      <div className="mb-3">
+        <LinkVoltar>Voltar</LinkVoltar>
+      </div>
       <CabecalhoDePagina
         titulo="Abrir novo chamado"
         descricao="Quanto mais específico o título e o local, mais rápido a triagem encaminha."

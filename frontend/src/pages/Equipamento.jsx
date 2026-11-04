@@ -7,6 +7,7 @@ import Cartao from '../components/ui/Cartao';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import { BadgeEstado } from '../components/ui/Badge';
 import { Esqueleto } from '../components/ui/Estados';
+import LinkVoltar from '../components/ui/LinkVoltar';
 import CodigoQR from '../components/ui/CodigoQR';
 import { descreverPeriodicidade, enderecoDeAbertura, formatarDia } from '../dominio/preventiva';
 
@@ -51,6 +52,7 @@ function Equipamento() {
 
   return (
     <div className="grid gap-6">
+      <LinkVoltar>Voltar</LinkVoltar>
       <CabecalhoDePagina
         titulo={equipamento.nome}
         descricao={`Código ${equipamento.codigo}${equipamento.ativo ? '' : ' · desativado'}`}

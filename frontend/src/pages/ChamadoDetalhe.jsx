@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { BadgeAtraso, BadgeEstado, BadgePrioridade } from '../components/ui/Badge';
@@ -10,6 +10,7 @@ import {
   rotuloEstado,
   rotuloPrioridade,
 } from '../dominio/rotulos';
+import LinkVoltar from '../components/ui/LinkVoltar';
 import { LIMITE_BYTES, formatarTamanho, prepararAnexo } from '../dominio/prepararAnexo';
 import { formatarDia } from '../dominio/preventiva';
 import { minutosSemAtendimento, tempoEmPalavras } from '../dominio/atendimento';
@@ -57,6 +58,12 @@ function ChamadoDetalhe() {
   const { usuario } = useAuth();
   const [chamado, setChamado] = useState(null);
   const [erro, setErro] = useState('');
+  // A confirmação do que deu certo (item 11 do levantamento de usabilidade): sem ela, quem
+  // conclui ou atribui só via a tela recarregar, sem saber se o clique valeu. Vem
+  // também de quem abriu o chamado, que chega aqui logo depois de "Abrir chamado".
+  const local = useLocation();
+  const navegar = useNavigate();
+  const [aviso, setAviso] = useState(local.state?.aviso ?? '');
   const [tecnicoId, setTecnicoId] = useState('');
   const [tecnicos, setTecnicos] = useState([]);
   const [nota, setNota] = useState(5);
@@ -90,6 +97,21 @@ function ChamadoDetalhe() {
   const [confirmando, setConfirmando] = useState(false);
 
   const podeGerenciar = ['administrador', 'gestor'].includes(usuario.perfil);
+
+  // Uma ação nova apaga o resultado da anterior, de erro ou de sucesso: os dois
+  // juntos na tela contariam duas histórias.
+  function iniciarAcao() {
+    setErro('');
+    setAviso('');
+  }
+
+  // A confirmação que veio na navegação (abrir chamado) some do histórico depois
+  // de lida: recarregar a página não deve repeti-la.
+  useEffect(() => {
+    if (local.state?.aviso) navegar(local.pathname + local.search, { replace: true, state: null });
+    // Só na chegada: o estado some na própria navegação.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const carregar = useCallback(() => {
     // Devolve a promessa: quem chama na montagem precisa saber se o chamado
@@ -164,7 +186,7 @@ function ChamadoDetalhe() {
   // Categoria e local só interessam a quem vai de fato editar: carregar as
   // duas listas em toda visita custaria duas consultas por chamado aberto.
   function abrirEdicao() {
-    setErro('');
+    iniciarAcao();
     setEdicao({
       titulo: chamado.titulo,
       descricao: chamado.descricao,
@@ -185,7 +207,7 @@ function ChamadoDetalhe() {
 
   async function salvarEdicao(e) {
     e.preventDefault();
-    setErro('');
+    iniciarAcao();
     try {
       await api.patch(`/chamados/${id}`, {
         titulo: edicao.titulo.trim(),
@@ -194,6 +216,7 @@ function ChamadoDetalhe() {
         local_id: Number(edicao.local_id),
       });
       setEditando(false);
+      setAviso('Correção salva.');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível salvar a correção.');
@@ -202,7 +225,7 @@ function ChamadoDetalhe() {
 
   async function comentar(e) {
     e.preventDefault();
-    setErro('');
+    iniciarAcao();
     setEnviandoComentario(true);
     try {
       const { data } = await api.post(`/chamados/${id}/comentarios`, {
@@ -213,6 +236,7 @@ function ChamadoDetalhe() {
       // texto se a rede falhasse no meio.
       setComentarios((atuais) => [...atuais, data.comentario]);
       setNovoComentario('');
+      setAviso('Comentário enviado.');
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível enviar o comentário.');
     } finally {
@@ -221,13 +245,20 @@ function ChamadoDetalhe() {
   }
 
   async function mudarEstado(estado, extras = {}) {
-    setErro('');
+    iniciarAcao();
     try {
       await api.patch(`/chamados/${id}/estado`, { estado, ...extras });
       setConcluindo(false);
       setServicoRealizado('');
       setEsperandoMaterial(false);
       setMotivoEspera('');
+      setAviso(
+        estado === 'concluido'
+          ? 'Chamado concluído.'
+          : estado === 'cancelado'
+            ? 'Chamado cancelado.'
+            : `Estado atualizado para “${rotuloEstado(estado)}”.`
+      );
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível atualizar o estado.');
@@ -282,12 +313,13 @@ function ChamadoDetalhe() {
 
   async function salvarExecucao(e) {
     e.preventDefault();
-    setErro('');
+    iniciarAcao();
     try {
       await api.patch(`/chamados/${id}/execucao`, {
         diagnostico: diagnostico.trim(),
         ...(tempoEmpregado ? { tempo_empregado_minutos: Number(tempoEmpregado) } : {}),
       });
+      setAviso('Execução registrada.');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível registrar a execução.');
@@ -296,13 +328,14 @@ function ChamadoDetalhe() {
 
   async function atribuir(e) {
     e.preventDefault();
-    setErro('');
+    iniciarAcao();
     try {
       await api.patch(`/chamados/${id}/atribuir`, {
         tecnico_id: Number(tecnicoId),
         ...(ehReatribuicao ? { justificativa: justificativaAtribuicao.trim() } : {}),
       });
       setJustificativaAtribuicao('');
+      setAviso(ehReatribuicao ? 'Chamado reatribuído.' : 'Chamado atribuído.');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível atribuir o chamado.');
@@ -311,10 +344,11 @@ function ChamadoDetalhe() {
 
   async function reabrir(e) {
     e.preventDefault();
-    setErro('');
+    iniciarAcao();
     try {
       await api.post(`/chamados/${id}/reabertura`, { justificativa: justificativaReabertura.trim() });
       setJustificativaReabertura('');
+      setAviso('Chamado reaberto.');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível reabrir o chamado.');
@@ -323,9 +357,10 @@ function ChamadoDetalhe() {
 
   async function avaliar(e) {
     e.preventDefault();
-    setErro('');
+    iniciarAcao();
     try {
       await api.post(`/chamados/${id}/avaliacao`, { nota: Number(nota) });
+      setAviso('Avaliação enviada. Obrigado!');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível registrar a avaliação.');
@@ -364,7 +399,7 @@ function ChamadoDetalhe() {
 
   async function priorizar(e) {
     e.preventDefault();
-    setErro('');
+    iniciarAcao();
     try {
       await api.patch(`/chamados/${id}/priorizacao`, {
         urgencia: Number(fatores.urgencia),
@@ -374,6 +409,7 @@ function ChamadoDetalhe() {
         ...(justificativa.trim() ? { justificativa: justificativa.trim() } : {}),
       });
       setJustificativa('');
+      setAviso('Priorização registrada.');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível registrar a priorização.');
@@ -384,7 +420,7 @@ function ChamadoDetalhe() {
     const escolhido = e.target.files?.[0];
     if (!escolhido) return;
 
-    setErro('');
+    iniciarAcao();
     setEnviandoAnexo('preparando');
 
     try {
@@ -403,6 +439,7 @@ function ChamadoDetalhe() {
       const dados = new FormData();
       dados.append('arquivo', arquivo);
       await api.post(`/chamados/${id}/anexos`, dados);
+      setAviso('Anexo enviado.');
       carregarAnexos();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível enviar o anexo.');
@@ -419,7 +456,7 @@ function ChamadoDetalhe() {
   // Busca pelo axios e entrega o blob ao navegador: um erro de permissão vira
   // mensagem na tela, não uma aba com JSON cru.
   async function baixarAnexo(anexo) {
-    setErro('');
+    iniciarAcao();
     try {
       const { data } = await api.get(`/chamados/${id}/anexos/${anexo.id}/conteudo`, {
         responseType: 'blob',
@@ -436,9 +473,10 @@ function ChamadoDetalhe() {
   }
 
   async function removerAnexo(anexoId) {
-    setErro('');
+    iniciarAcao();
     try {
       await api.delete(`/chamados/${id}/anexos/${anexoId}`);
+      setAviso('Anexo removido.');
       carregarAnexos();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível remover o anexo.');
@@ -501,7 +539,10 @@ function ChamadoDetalhe() {
 
   return (
     <div className="grid gap-6">
+      <LinkVoltar>Voltar à lista de chamados</LinkVoltar>
+
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
+      {aviso && <Aviso tipo="sucesso">{aviso}</Aviso>}
 
       <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6">
         <p className="text-xs text-tinta-2">{chamado.protocolo}</p>

@@ -439,3 +439,45 @@ provedores são empresas estrangeiras, e o envio de e-mail passa pelo Gmail, cuj
 servidores não controlamos. Se isso configura transferência, é decisão de quem
 responde juridicamente; (c) trocar o e-mail do contato por um institucional.
 Nada disto foi revisado por quem responde juridicamente.
+
+---
+
+## 8. Cookies, termos de uso e suporte, na tela
+
+Três páginas públicas completam o aviso de privacidade, e **andam com ele**: quem
+muda o que o sistema guarda no aparelho, as condições de uso ou o canal de contato muda
+aqui e na página.
+
+| Página | Arquivo | O que diz | O que não pode prometer |
+| --- | --- | --- | --- |
+| `/cookies` | `frontend/src/pages/Cookies.jsx` | O que fica no aparelho: o cookie `conserva_sessao` (HttpOnly), `smp_usuario` (localStorage), `smp_recarga_de_tela` (sessionStorage) e o cache do service worker; o controle que apaga as consultas guardadas | Que há faixa de consentimento: não há, porque nada ali é opcional |
+| `/termos` | `frontend/src/pages/TermosDeUso.jsx` | Para que serve, quem usa, o que se espera de cada pessoa, que **não é canal de emergência**, que prazos são metas de acompanhamento e que, sem conexão, o que se tenta registrar não é salvo | Foro, multa, indenização, disponibilidade garantida ou instituição nomeada |
+| `/suporte` | `frontend/src/pages/Suporte.jsx` | Um e-mail (o do projeto, `dominio/contato.js`) com roteiro do que contar, e o que tentar antes | Prazo de resposta, chat ou canal de mensagem instantânea |
+
+**Consentimento.** Tudo o que o sistema grava no aparelho é estritamente necessário ao
+serviço que a pessoa pediu ao entrar (manter a sessão, desenhar a tela, abrir sem conexão).
+Não há cookie de análise, de publicidade nem de rastreamento, e **o Google Analytics não é
+usado**; por isso a faixa de consentimento seria um falso controle. O que existe é o
+controle que de fato muda algo: apagar as consultas guardadas no aparelho (útil em
+aparelho compartilhado; também apagadas ao entrar e ao sair). Se um dia entrar qualquer
+ferramenta que não seja estritamente necessária (análise de audiência, mapa, vídeo
+incorporado), o consentimento prévio, com opção de recusar tão simples quanto a de aceitar,
+passa a ser obrigatório **antes** de ela ser ligada, e a página de cookies muda junto. O
+teste `frontend/testes/PaginasDeInformacao.test.jsx` falha se aparecer código de análise
+na página ou nas dependências.
+
+**O único terceiro na tela é o Google**, e só quando o acesso por ele está ligado
+(`GOOGLE_CLIENT_ID`): a tela de entrada carrega o componente de `accounts.google.com`, que
+pode gravar cookies próprios. As telas internas não o carregam. A página de cookies diz isso.
+
+**Indexação.** O sistema é de uso interno: nenhuma tela entra em buscador (`noindex,
+nofollow` na meta `robots` do `index.html` e no cabeçalho `X-Robots-Tag` de
+`frontend/vercel.json`, repetido em `demo/frontend/vercel.json`). O `robots.txt` orienta os
+robôs a não rastrear as telas internas nem a API, e deixa rastreáveis as públicas para que
+eles leiam o `noindex`. **Isso é pedido a robôs, não controle de acesso**: quem controla é o
+login, e a API recusa sem sessão. Rota nova atrás do login entra no `robots.txt` (o teste
+`frontend/testes/Indexacao.test.js` confere). Para a instituição decidir: se quiser que o
+aviso de privacidade apareça em buscas, troca-se o `noindex` dessa página.
+
+**Para a instituição revisar quando existir:** os termos de uso (foro, responsabilidades e
+hipóteses de suspensão) e o e-mail de suporte, que hoje é o do projeto.

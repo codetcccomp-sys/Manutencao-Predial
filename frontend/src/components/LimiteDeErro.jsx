@@ -37,6 +37,15 @@ class LimiteDeErro extends Component {
         <Botao onClick={() => window.location.reload()} className="justify-self-start">
           Recarregar a página
         </Botao>
+        {/* Link comum, e não do roteador: esta tela aparece quando algo já quebrou, e uma
+            navegação completa recomeça o aplicativo do zero. */}
+        <p className="text-sm text-tinta-2">
+          Se o problema continuar, veja{' '}
+          <a href="/suporte" className="font-medium text-navy underline">
+            ajuda e suporte
+          </a>
+          .
+        </p>
       </div>
     );
   }

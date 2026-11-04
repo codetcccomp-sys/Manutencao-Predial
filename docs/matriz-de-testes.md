@@ -297,7 +297,7 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Acessibilidade | O diálogo de confirmação aberto também passa no axe | `frontend/e2e/acessibilidade.spec.js` | o diálogo de confirmação aberto não tem violação de acessibilidade |
 | Acessibilidade | Ao trocar de tela, o título da aba muda e o foco vai ao h1, num navegador de verdade | `frontend/e2e/acessibilidade.spec.js` | o título da aba acompanha a tela e o foco vai para o título da página |
 | Acessibilidade | O atalho para o conteúdo leva o foco para dentro do main | `frontend/e2e/acessibilidade.spec.js` | o atalho "Pular para o conteúdo" leva o foco para dentro do conteúdo |
-| Acessibilidade | Toda rota do App.jsx tem título próprio | `frontend/testes/AnuncioDeRota.test.jsx` | toda rota do App.jsx tem título próprio, e as desconhecidas ficam com o nome do sistema |
+| Acessibilidade | Toda rota do App.jsx tem título próprio | `frontend/testes/AnuncioDeRota.test.jsx` | toda rota do App.jsx tem título próprio, e o endereço que não existe vira "Página não encontrada" |
 | Acessibilidade | Trocar de caminho leva o foco ao h1 | `frontend/testes/AnuncioDeRota.test.jsx` | ao trocar de caminho, leva o foco ao h1 da tela nova |
 | Acessibilidade | Trocar só a query não tira o foco de onde a pessoa estava | `frontend/testes/AnuncioDeRota.test.jsx` | trocar só a query (?aba=) na mesma tela não tira o foco de onde a pessoa estava |
 | Acessibilidade | As seções da preventiva dizem qual está aberta, sem prometer setas | `frontend/testes/Preventiva.test.jsx` | as seções são botões com estado, e não um tablist que promete setas que não existem |
@@ -443,3 +443,58 @@ protocolo do chamado, horário).
   Inclusão, art. 63).
 - **Execuções locais de `pwa.spec.js`:** falham no ambiente em que a matriz foi montada e
   passam no CI; a causa exata não foi encontrada.
+
+## 13. Páginas de informação, indexação e ações à vista
+
+Usabilidade e conformidade da casca do sistema: endereço inexistente, títulos e
+descrições, o que os buscadores veem, termos, cookies, suporte e os botões que ficam à vista.
+Detalhes em `docs/lgpd.md` (seção 8) e no README.
+
+| Tema | Regra | Arquivo | Teste |
+| --- | --- | --- | --- |
+| 404 | Endereço inexistente tem página própria, e sem sessão leva à entrada | `frontend/testes/PaginasDeInformacao.test.jsx` | diz o que houve e oferece o caminho de volta à tela de entrada, sem sessão |
+| 404 | Com sessão, o caminho de volta é o início | `frontend/testes/PaginasDeInformacao.test.jsx` | com sessão, o caminho de volta é o início do sistema |
+| 404 | O endereço digitado não é repetido na tela | `frontend/testes/PaginasDeInformacao.test.jsx` | não repete na tela o endereço digitado |
+| 404 | O App tem a rota coringa, fora do login: endereço inexistente não cai na entrada | `frontend/testes/EnderecoInexistente.test.jsx` | sem sessão, mostra a página não encontrada e não manda para o login |
+| 404 | Endereço que parece de uma tela interna também cai nela | `frontend/testes/EnderecoInexistente.test.jsx` | endereço que parece de uma tela interna, mas não é, também cai nela |
+| Termos | As páginas de informação abrem sem sessão | `frontend/testes/EnderecoInexistente.test.jsx` | as páginas de informação abrem sem sessão |
+| 404 | No navegador, a página aparece sem redirecionar para o login | `frontend/e2e/paginas.spec.js` | sem sessão, mostra a página própria e leva à tela de entrada |
+| Título | Toda rota tem título, e o endereço inexistente vira "Página não encontrada" | `frontend/testes/AnuncioDeRota.test.jsx` | toda rota do App.jsx tem título próprio, e o endereço que não existe vira "Página não encontrada" |
+| Descrição | Toda rota tem descrição; as internas só dizem que são restritas | `frontend/testes/AnuncioDeRota.test.jsx` | toda rota do App.jsx tem descrição própria, e as telas internas só dizem que são restritas |
+| Descrição | A meta troca com a rota | `frontend/testes/AnuncioDeRota.test.jsx` | troca o texto da meta description com a rota |
+| Descrição | No navegador, cada página pública tem título e descrição próprios | `frontend/e2e/paginas.spec.js` | cada página pública tem título e descrição próprios |
+| Indexação | O HTML pede `noindex` e traz a descrição | `frontend/testes/Indexacao.test.js` | o index.html pede para não indexar e traz a descrição |
+| Indexação | O cabeçalho `X-Robots-Tag` vale na produção e na demonstração | `frontend/testes/Indexacao.test.js` | o cabeçalho X-Robots-Tag vale em todas as rotas, na produção e na demonstração |
+| Indexação | O robots.txt cobre toda rota atrás do login e a API | `frontend/testes/Indexacao.test.js` | afasta os robôs de toda rota atrás do login, e da API |
+| Indexação | As telas públicas ficam rastreáveis, para o robô ler o `noindex` | `frontend/testes/Indexacao.test.js` | deixa rastreáveis as telas públicas, para o robô ler o noindex delas |
+| Indexação | O robots.txt diz que não substitui a autenticação | `frontend/testes/Indexacao.test.js` | diz que orienta robôs e não substitui a autenticação |
+| Indexação | No navegador, `noindex` no cabeçalho e no HTML | `frontend/e2e/paginas.spec.js` | toda tela sai com noindex, no cabeçalho e no HTML |
+| Indexação | O robots.txt é servido como texto | `frontend/e2e/paginas.spec.js` | o robots.txt é servido como texto e afasta os robôs das telas internas |
+| Termos | Estrutura e seções em ordem | `frontend/testes/PaginasDeInformacao.test.jsx` | é uma página com um título e seções em ordem, dentro de <main> |
+| Termos | Diz que não é canal de emergência | `frontend/testes/PaginasDeInformacao.test.jsx` | diz que não é canal de emergência e manda para os serviços públicos |
+| Termos | Não promete foro, multa, garantia nem escrita sem conexão | `frontend/testes/PaginasDeInformacao.test.jsx` | não promete o que o sistema não faz: nada de foro, multa, garantia de prazo ou escrita sem conexão |
+| Cookies | A lista é a do código | `frontend/testes/PaginasDeInformacao.test.jsx` | lista o que o código de fato guarda no aparelho |
+| Cookies | Diz que não há análise nem publicidade, e por isso não há faixa | `frontend/testes/PaginasDeInformacao.test.jsx` | diz que não há análise de audiência nem publicidade, e por isso não há faixa de consentimento |
+| Cookies | A promessa é verdadeira: sem código de análise | `frontend/testes/PaginasDeInformacao.test.jsx` | e a promessa é verdadeira: nenhum código de análise nem de publicidade na página nem nas dependências |
+| Cookies | O controle apaga as consultas guardadas e confirma | `frontend/testes/PaginasDeInformacao.test.jsx` | o controle apaga as consultas guardadas no aparelho e confirma |
+| Cookies | O Google é de terceiro e só aparece na entrada | `frontend/testes/PaginasDeInformacao.test.jsx` | avisa que o componente do Google é de terceiro e só aparece na entrada |
+| Cookies | No navegador: nenhum cookie antes de entrar, e depois só o da sessão | `frontend/e2e/paginas.spec.js` | antes de entrar não há cookie algum, e depois só o da sessão, HttpOnly |
+| Cookies | No navegador, o controle confirma o que apagou | `frontend/e2e/paginas.spec.js` | o controle da página de cookies confirma o que apagou |
+| Suporte | O e-mail abre com roteiro do que contar | `frontend/testes/PaginasDeInformacao.test.jsx` | oferece o e-mail do projeto com um roteiro do que contar |
+| Suporte | O rascunho nunca leva a senha | `frontend/testes/PaginasDeInformacao.test.jsx` | o rascunho nunca leva a senha, e o texto manda não enviá-la |
+| Suporte | É honesto sobre prazo e emergência | `frontend/testes/PaginasDeInformacao.test.jsx` | é honesta sobre o prazo e sobre emergência |
+| Suporte | Sem canal comercial nem de terceiros | `frontend/testes/PaginasDeInformacao.test.jsx` | não adiciona canal comercial nem de terceiros |
+| Navegação | Sem sessão: Entrar e Criar conta; com sessão: início | `frontend/testes/PaginasDeInformacao.test.jsx` | quem já está logado volta para o início, e não para a tela de entrada |
+| Ações | "Novo chamado" no cabeçalho para quem pode abrir | `frontend/testes/LayoutAcoes.test.jsx` | o perfil %s o vê em qualquer tela, e ele leva ao formulário |
+| Ações | O técnico não o vê | `frontend/testes/LayoutAcoes.test.jsx` | o técnico não o vê: a API recusa a abertura para esse perfil |
+| Ações | Não repete o botão da tela inicial e do formulário | `frontend/testes/LayoutAcoes.test.jsx` | não repete o botão que a tela inicial e o formulário já têm |
+| Ações | Rodapé com as páginas de informação | `frontend/testes/LayoutAcoes.test.jsx` | leva às quatro páginas de informação |
+| Ações | No navegador: o botão e a confirmação da abertura com o protocolo | `frontend/e2e/paginas.spec.js` | "Novo chamado" está no cabeçalho de qualquer tela e a abertura confirma com o protocolo |
+| Voltar | O detalhe do chamado leva de volta à lista | `frontend/testes/ChamadoDetalhe.test.jsx` | há um caminho de volta para a lista |
+| Voltar | O formulário de abertura tem caminho de volta | `frontend/testes/NovoChamado.test.jsx` | o formulário tem um caminho de volta |
+| Confirmação | Abrir o chamado leva o protocolo à tela dele | `frontend/testes/NovoChamado.test.jsx` | leva o protocolo para a tela do chamado, para a pessoa saber que abriu |
+| Confirmação | Mudar o estado confirma, e a confirmação sai quando outra ação começa | `frontend/testes/ChamadoDetalhe.test.jsx` | mudar o estado diz qual é o novo estado, e some quando outra ação começa |
+| Confirmação | Comentar confirma | `frontend/testes/ChamadoDetalhe.test.jsx` | comentar confirma o envio |
+| Confirmação | O aviso da abertura aparece uma vez e sai do histórico | `frontend/testes/ChamadoDetalhe.test.jsx` | o aviso que veio da abertura do chamado aparece uma vez e sai do histórico |
+| Tablet | As telas públicas e as internas cabem em 768 px | `frontend/e2e/paginas.spec.js` | cabe numa tela de tablet |
+

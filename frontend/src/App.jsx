@@ -8,6 +8,10 @@ import Cadastro from './pages/Cadastro';
 import RecuperarSenha from './pages/RecuperarSenha';
 import RedefinirSenha from './pages/RedefinirSenha';
 import Privacidade from './pages/Privacidade';
+import TermosDeUso from './pages/TermosDeUso';
+import Cookies from './pages/Cookies';
+import Suporte from './pages/Suporte';
+import NaoEncontrada from './pages/NaoEncontrada';
 import { telaSobDemanda } from './dominio/telaSobDemanda';
 import Inicio from './pages/Inicio';
 import NovoChamado from './pages/NovoChamado';
@@ -34,6 +38,9 @@ function App() {
           <Route path="/recuperar-senha" element={<RecuperarSenha />} />
           <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           <Route path="/privacidade" element={<Privacidade />} />
+          <Route path="/termos" element={<TermosDeUso />} />
+          <Route path="/cookies" element={<Cookies />} />
+          <Route path="/suporte" element={<Suporte />} />
 
           <Route
             element={
@@ -53,6 +60,9 @@ function App() {
             <Route path="/etiquetas" element={<Etiquetas />} />
             <Route path="/conta" element={<MinhaConta />} />
           </Route>
+
+          {/* Endereço que não existe: página própria, fora do login. */}
+          <Route path="*" element={<NaoEncontrada />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
