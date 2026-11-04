@@ -537,3 +537,5 @@ Detalhes em `docs/lgpd.md` (seção 8) e no README.
 | Monitoramento | A tela é contada pelo modelo da rota, nunca pelo caminho | `frontend/testes/AnuncioDeRota.test.jsx` | registra a abertura pelo MODELO da rota, nunca pelo caminho com o identificador |
 | Monitoramento | Endereço inexistente vira "outra" na telemetria | `frontend/testes/AnuncioDeRota.test.jsx` | um endereço que não existe vira "outra", sem repetir o que foi digitado |
 | Monitoramento | O erro que derruba a tela chega à administração, e a tela aponta o suporte | `frontend/testes/LimiteDeErroTelemetria.test.jsx` | avisa a administração e mostra a mensagem com o caminho para o suporte |
+| Monitoramento | Sem a tabela (migração 031 não aplicada), responde 204 e não 500 | `backend/tests/telemetria.test.js` | sem a tabela (migração 031 ainda não aplicada), responde 204 em vez de 500 |
+| Monitoramento | Outro erro de banco continua sendo erro | `backend/tests/telemetria.test.js` | um erro de banco que não é a tabela ausente continua sendo erro |

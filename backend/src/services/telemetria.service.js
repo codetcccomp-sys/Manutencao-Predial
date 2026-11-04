@@ -127,6 +127,28 @@ async function registrar({ telas, acoes, desempenho } = {}) {
   ];
   if (linhas.length === 0) return 0;
 
+  try {
+    await gravar(linhas);
+  } catch (err) {
+    // 42P01: a tabela não existe porque a migração 031 ainda não rodou neste banco. Telemetria nunca
+    // pode virar erro 500 para quem só abriu uma tela (e um erro por envio de cada aparelho encheria
+    // `erro_aplicacao`): avisa no console e segue, como o registro de erros faz (erros.service.js).
+    if (err.code === '42P01') {
+      console.warn('[telemetria] tabela telemetria_diaria ausente: rode `npm run migrate` (migração 031).');
+      return 0;
+    }
+    throw err;
+  }
+
+  if (Math.random() < CHANCE_LIMPEZA) {
+    await pool
+      .query(`DELETE FROM telemetria_diaria WHERE dia < (now() AT TIME ZONE $1)::date - ${RETENCAO_DIAS}`, [FUSO])
+      .catch(() => {});
+  }
+  return linhas.length;
+}
+
+async function gravar(linhas) {
   await pool.query(
     `INSERT INTO telemetria_diaria (dia, tipo, chave, n, soma, ruins, maximo)
      SELECT (now() AT TIME ZONE $1)::date, x.tipo, x.chave, x.n, x.soma, x.ruins, x.maximo
@@ -147,13 +169,6 @@ async function registrar({ telas, acoes, desempenho } = {}) {
       linhas.map((l) => l.maximo),
     ]
   );
-
-  if (Math.random() < CHANCE_LIMPEZA) {
-    await pool
-      .query(`DELETE FROM telemetria_diaria WHERE dia < (now() AT TIME ZONE $1)::date - ${RETENCAO_DIAS}`, [FUSO])
-      .catch(() => {});
-  }
-  return linhas.length;
 }
 
 /**

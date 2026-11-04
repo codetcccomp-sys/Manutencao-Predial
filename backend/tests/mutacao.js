@@ -1263,6 +1263,20 @@ const MUTACOES = [
     spec: 'tests/telemetria.test.js',
   },
   {
+    descricao: 'monitoramento: sem a tabela, a telemetria volta a responder 500',
+    arquivo: 'src/services/telemetria.service.js',
+    de: "if (err.code === '42P01') {",
+    para: 'if (false) {',
+    spec: 'tests/telemetria.test.js',
+  },
+  {
+    descricao: 'monitoramento: a telemetria passa a engolir qualquer erro de banco',
+    arquivo: 'src/services/telemetria.service.js',
+    de: "if (err.code === '42P01') {",
+    para: 'if (true) {',
+    spec: 'tests/telemetria.test.js',
+  },
+  {
     descricao: 'monitoramento: a telemetria perde o teto por cliente',
     arquivo: 'src/routes/telemetria.routes.js',
     de: 'if (janela.n > MAX_POR_JANELA) {',

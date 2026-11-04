@@ -110,6 +110,41 @@ describe('Uso: telas e ações', () => {
     expect(resposta.body.erro.codigo).toBe('TELEMETRIA_INVALIDA');
   });
 
+  it('sem a tabela (migração 031 ainda não aplicada), responde 204 em vez de 500', async () => {
+    const original = pool.query.bind(pool);
+    const espiao = jest.spyOn(pool, 'query').mockImplementation((sql, ...resto) => {
+      if (String(sql).includes('INSERT INTO telemetria_diaria')) {
+        return Promise.reject(Object.assign(new Error('relation "telemetria_diaria" does not exist'), { code: '42P01' }));
+      }
+      return original(sql, ...resto);
+    });
+    const aviso = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const resposta = await enviar({ telas: { '/': 1 } });
+
+      expect(resposta.status).toBe(204);
+      expect(aviso).toHaveBeenCalledWith(expect.stringContaining('npm run migrate'));
+    } finally {
+      espiao.mockRestore();
+      aviso.mockRestore();
+    }
+  });
+
+  it('um erro de banco que não é a tabela ausente continua sendo erro', async () => {
+    const original = pool.query.bind(pool);
+    const espiao = jest.spyOn(pool, 'query').mockImplementation((sql, ...resto) => {
+      if (String(sql).includes('INSERT INTO telemetria_diaria')) return Promise.reject(Object.assign(new Error('falhou'), { code: '57P01' }));
+      return original(sql, ...resto);
+    });
+    const aviso = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect((await enviar({ telas: { '/': 1 } })).status).toBe(500);
+    } finally {
+      espiao.mockRestore();
+      aviso.mockRestore();
+    }
+  });
+
   it('um corpo vazio não grava nada e não é erro', async () => {
     expect((await enviar({})).status).toBe(204);
   });
