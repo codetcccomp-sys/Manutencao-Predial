@@ -9,8 +9,9 @@ import { limparDadosOffline } from '../pwa';
  * Cookies e armazenamento: o que o sistema guarda NO APARELHO, e como apagar.
  *
  * A lista é a do código, conferida: um cookie de sessão, duas chaves de
- * armazenamento do navegador e o cache do service worker. Nada de análise de
- * audiência, publicidade ou rastreamento. Por isso não há banner de
+ * armazenamento do navegador e o cache do service worker. Nada de publicidade,
+ * rastreamento ou ferramenta de terceiros; a medição de uso e desempenho é própria e
+ * não guarda nada no aparelho. Por isso não há banner de
  * consentimento: tudo o que existe é estritamente necessário ao serviço que a
  * pessoa pediu ao entrar, e pedir "aceite" por algo que não tem como recusar
  * seria um falso controle. Se um dia entrar qualquer ferramenta que não seja
@@ -64,9 +65,9 @@ function Cookies() {
       introducao="Esta página diz o que o Conserva Predial guarda no seu aparelho enquanto você o usa, para quê e por quanto tempo."
     >
       <Aviso tipo="info">
-        Usamos só o que o sistema precisa para funcionar. <strong>Não há cookie de publicidade, de
-        análise de audiência nem de rastreamento</strong>, e não usamos o Google Analytics. Por isso não
-        há faixa de consentimento: não há nada que dê para aceitar ou recusar sem desligar o próprio
+        Usamos só o que o sistema precisa para funcionar. <strong>Não há cookie de publicidade nem de
+        rastreamento</strong>, e não usamos o Google Analytics nem outra ferramenta de terceiros. Por isso
+        não há faixa de consentimento: não há nada que dê para aceitar ou recusar sem desligar o próprio
         sistema.
       </Aviso>
 
@@ -82,6 +83,16 @@ function Cookies() {
             </li>
           ))}
         </ul>
+      </Secao>
+
+      <Secao titulo="Medição de uso e desempenho">
+        <p>
+          O sistema mede, por conta própria, quantas vezes cada tela abre, quais ações são feitas e quanto
+          a página leva para carregar, para a administração melhorar o que está lento. É feito{' '}
+          <strong>sem cookie, sem nada guardado no seu aparelho e sem identificar ninguém</strong>: só
+          contadores por dia. Se você ligou &ldquo;Não rastrear&rdquo; no navegador, essa medição não
+          acontece. Falhas de tela também são avisadas à administração, sem o seu nome.
+        </p>
       </Secao>
 
       <Secao titulo="Entrar com o Google">

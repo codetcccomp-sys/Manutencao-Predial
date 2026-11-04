@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router';
-import { descricaoDaRota, tituloDaRota } from '../dominio/titulosDeRota';
+import { descricaoDaRota, padraoDaRota, tituloDaRota } from '../dominio/titulosDeRota';
+import { registrarTela } from '../monitoramento';
 
 /**
  * O que o navegador faz sozinho ao trocar de página e uma SPA não faz.
@@ -28,6 +29,8 @@ export default function AnuncioDeRota() {
     document.title = tituloDaRota(pathname);
     // O `index.html` já traz a meta de descrição (e a de `noindex`); aqui só o texto troca.
     document.querySelector('meta[name="description"]')?.setAttribute('content', descricaoDaRota(pathname));
+    // Uma abertura de tela para a contagem de uso, pelo MODELO da rota e nunca pelo caminho real.
+    registrarTela(padraoDaRota(pathname));
 
     if (anterior.current === pathname) return;
     anterior.current = pathname;

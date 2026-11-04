@@ -7,7 +7,10 @@ vi.mock('../src/api/client', () => ({
   default: { get: vi.fn(), post: vi.fn() },
 }));
 
+vi.mock('../src/monitoramento', () => ({ registrarAcao: vi.fn() }));
+
 import api from '../src/api/client';
+import { registrarAcao } from '../src/monitoramento';
 import NovoChamado from '../src/pages/NovoChamado';
 import { PERGUNTAS_DE_SITUACAO } from '../src/dominio/situacao';
 
@@ -172,6 +175,8 @@ describe('Confirmação da abertura', () => {
     await usuario.click(screen.getByRole('button', { name: 'Abrir chamado' }));
 
     expect(await screen.findByText('Chamado aberto. O protocolo é SMP-20261104-ABC123.')).toBeInTheDocument();
+    // E conta o uso, só pelo nome da ação.
+    expect(registrarAcao).toHaveBeenCalledWith('chamado_aberto');
   });
 
   it('o formulário tem um caminho de volta', async () => {

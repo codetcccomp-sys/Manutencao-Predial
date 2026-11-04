@@ -12,6 +12,7 @@ import MostrarMais from '../components/ui/MostrarMais';
 import CadastrosPendentes from '../components/CadastrosPendentes';
 import ExigenciaDoisFatores from '../components/ExigenciaDoisFatores';
 import ErrosDoSistema from '../components/ErrosDoSistema';
+import UsoEDesempenho from '../components/UsoEDesempenho';
 import { MINIMO_SENHA } from '../dominio/senha';
 
 const PERFIS = [
@@ -375,6 +376,7 @@ function Usuarios() {
         />
       </div>
 
+      <UsoEDesempenho />
       <ErrosDoSistema />
 
       <Confirmacao

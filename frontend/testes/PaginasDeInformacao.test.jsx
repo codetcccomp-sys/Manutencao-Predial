@@ -99,12 +99,12 @@ describe('Cookies e armazenamento', () => {
     expect(ler('frontend/src/dominio/telaSobDemanda.js')).toContain("MARCA = 'smp_recarga_de_tela'");
   });
 
-  it('diz que não há análise de audiência nem publicidade, e por isso não há faixa de consentimento', () => {
+  it('diz que não há publicidade nem ferramenta de terceiros, e por isso não há faixa de consentimento', () => {
     abrir(Cookies);
     const texto = document.body.textContent.replace(/\s+/g, ' ');
 
-    expect(texto).toMatch(/Não há cookie de publicidade, de análise de audiência nem de rastreamento/);
-    expect(texto).toMatch(/não usamos o Google Analytics/);
+    expect(texto).toMatch(/Não há cookie de publicidade nem de rastreamento/);
+    expect(texto).toMatch(/não usamos o Google Analytics nem outra ferramenta de terceiros/);
     expect(texto).toMatch(/Por isso não há faixa de consentimento/);
   });
 
@@ -127,6 +127,14 @@ describe('Cookies e armazenamento', () => {
     expect(limparDadosOffline).toHaveBeenCalledTimes(1);
     expect(await screen.findByText(/foram apagadas/)).toBeInTheDocument();
     expect(screen.getByText(/foram apagadas/).closest('[role="status"]')).not.toBeNull();
+  });
+
+  it('diz que a medição é própria, sem cookie nem nada guardado no aparelho, e respeita "Não rastrear"', () => {
+    abrir(Cookies);
+    const medicao = screen.getByRole('heading', { name: 'Medição de uso e desempenho' }).closest('section');
+
+    expect(medicao).toHaveTextContent(/sem cookie, sem nada guardado no seu aparelho e sem identificar ninguém/);
+    expect(medicao).toHaveTextContent(/Não rastrear/);
   });
 
   it('avisa que o componente do Google é de terceiro e só aparece na entrada', () => {

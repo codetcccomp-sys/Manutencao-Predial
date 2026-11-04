@@ -153,6 +153,11 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   `grep -c "Invalid hook call" dist/assets/index-*.js`: tem de dar 0. A API comprime as respostas
   (`compression` em `app.js`, `tests/compressao.test.js`; a lista de locais cai de 245 kB para 13 kB): sem
   isso, em 4G lento a tela de Cadastros passa de 3 s só pelo tempo de baixar.
+- **Monitoramento é próprio e anônimo** (`frontend/src/monitoramento/`, `telemetria_diaria`, migração 031): a tela
+  vai pelo **modelo** da rota (`/chamados/:id`), nunca pelo caminho; nada fica no aparelho; "Não rastrear" desliga.
+  Tela nova entra em `TELAS` e ação nova (`registrarAcao('...')`) em `ACOES`, em `telemetria.service.js` (um teste
+  confere); coluna nova na tabela exige decisão de privacidade (um teste barra) e mudar a página de cookies, o
+  aviso de privacidade e `docs/lgpd.md`. A migração só vale em produção depois de `npm run migrate` lá.
 - **Páginas de informação** (`/privacidade`, `/termos`, `/cookies`, `/suporte`, 404) descrevem o que o
   sistema faz, como o aviso de privacidade: mudou o que se guarda no aparelho ou o contato? Mude a
   página e `docs/lgpd.md` (seção 8). Nenhum cookie nem script de análise entra sem consentimento prévio

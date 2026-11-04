@@ -56,6 +56,19 @@ describe('Aviso de privacidade', () => {
     expect(within(dados).getByText(/sem nome, e-mail nem IP/)).toBeInTheDocument();
   });
 
+  it('diz que mede o uso por contadores, sem identificar ninguém, e que "Não rastrear" é respeitado', () => {
+    abrir();
+    const dados = screen.getByRole('heading', { name: 'Que dados guardamos' }).closest('section');
+    const prazo = screen.getByRole('heading', { name: 'Por quanto tempo' }).closest('section');
+
+    expect(within(dados).getByText(/Uso e desempenho:/)).toBeInTheDocument();
+    expect(within(dados).getByText(/não dá para saber quem fez o quê/)).toBeInTheDocument();
+    expect(within(dados).getByText(/ligou “Não rastrear”/)).toBeInTheDocument();
+    expect(within(prazo).getByText(/Contadores de uso e desempenho: em 90 dias/)).toBeInTheDocument();
+    // O erro da tela também passou a ser guardado, e o aviso diz.
+    expect(within(dados).getByText(/no servidor ou na sua tela/)).toBeInTheDocument();
+  });
+
   it('diz onde os dados ficam, inclusive o e-mail, que sai por um serviço de fora', () => {
     abrir();
     const onde = screen.getByRole('heading', { name: 'Onde os dados ficam' }).closest('section');

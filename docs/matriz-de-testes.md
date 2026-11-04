@@ -474,7 +474,8 @@ Detalhes em `docs/lgpd.md` (seção 8) e no README.
 | Termos | Diz que não é canal de emergência | `frontend/testes/PaginasDeInformacao.test.jsx` | diz que não é canal de emergência e manda para os serviços públicos |
 | Termos | Não promete foro, multa, garantia nem escrita sem conexão | `frontend/testes/PaginasDeInformacao.test.jsx` | não promete o que o sistema não faz: nada de foro, multa, garantia de prazo ou escrita sem conexão |
 | Cookies | A lista é a do código | `frontend/testes/PaginasDeInformacao.test.jsx` | lista o que o código de fato guarda no aparelho |
-| Cookies | Diz que não há análise nem publicidade, e por isso não há faixa | `frontend/testes/PaginasDeInformacao.test.jsx` | diz que não há análise de audiência nem publicidade, e por isso não há faixa de consentimento |
+| Cookies | Diz que não há publicidade nem terceiros, e por isso não há faixa | `frontend/testes/PaginasDeInformacao.test.jsx` | diz que não há publicidade nem ferramenta de terceiros, e por isso não há faixa de consentimento |
+| Cookies | Diz que a medição é própria, sem cookie nem nada no aparelho, e respeita "Não rastrear" | `frontend/testes/PaginasDeInformacao.test.jsx` | diz que a medição é própria, sem cookie nem nada guardado no aparelho, e respeita "Não rastrear" |
 | Cookies | A promessa é verdadeira: sem código de análise | `frontend/testes/PaginasDeInformacao.test.jsx` | e a promessa é verdadeira: nenhum código de análise nem de publicidade na página nem nas dependências |
 | Cookies | O controle apaga as consultas guardadas e confirma | `frontend/testes/PaginasDeInformacao.test.jsx` | o controle apaga as consultas guardadas no aparelho e confirma |
 | Cookies | O Google é de terceiro e só aparece na entrada | `frontend/testes/PaginasDeInformacao.test.jsx` | avisa que o componente do Google é de terceiro e só aparece na entrada |
@@ -498,3 +499,43 @@ Detalhes em `docs/lgpd.md` (seção 8) e no README.
 | Confirmação | O aviso da abertura aparece uma vez e sai do histórico | `frontend/testes/ChamadoDetalhe.test.jsx` | o aviso que veio da abertura do chamado aparece uma vez e sai do histórico |
 | Tablet | As telas públicas e as internas cabem em 768 px | `frontend/e2e/paginas.spec.js` | cabe numa tela de tablet |
 
+| Monitoramento | A telemetria soma aberturas e ações ao dia | `backend/tests/telemetria.test.js` | soma as aberturas de tela e as ações ao dia, e duas gravações se somam |
+| Monitoramento | O dia gravado é o de Brasília, não o de UTC | `backend/tests/telemetria.test.js` | o dia gravado é o do fuso da instituição, e não o de UTC |
+| Monitoramento | Só nomes de listas fechadas: o que o cliente inventa é ignorado | `backend/tests/telemetria.test.js` | só grava nomes da lista fechada: o que o cliente inventa é ignorado, e a tabela não cresce |
+| Monitoramento | Estrutura errada é recusada (400) | `backend/tests/telemetria.test.js` | recusa estrutura errada: %s |
+| Monitoramento | Soma, quantidade, pior valor e o que passou do limite | `backend/tests/telemetria.test.js` | guarda soma, quantidade, pior valor e quantos passaram do limite |
+| Monitoramento | O valor no limite ainda é "bom" | `backend/tests/telemetria.test.js` | o valor exatamente no limite ainda é "bom" |
+| Monitoramento | Valor impossível é descartado | `backend/tests/telemetria.test.js` | descarta o valor impossível, negativo ou que não é número |
+| Monitoramento | Erro da tela entra com a tela pelo modelo, sem e-mail nem endereço | `backend/tests/telemetria.test.js` | entra em erro_aplicacao com a tela pelo modelo da rota, sem e-mail e sem endereço real |
+| Monitoramento | Tela fora da lista vira "outra" | `backend/tests/telemetria.test.js` | uma tela que não está na lista vira "outra": o endereço com identificador nunca é guardado |
+| Monitoramento | Só o administrador lê o resumo | `backend/tests/telemetria.test.js` | só o administrador lê o resumo |
+| Monitoramento | O resumo traz médias, percentual acima do limite e ações | `backend/tests/telemetria.test.js` | traz aberturas, média e percentual acima do limite por tela, e as ações |
+| Monitoramento | A janela é de 7 dias, limitada a 90 | `backend/tests/telemetria.test.js` | a janela é de 7 dias por padrão e limitada a 90 |
+| Monitoramento | Não mostra o que está fora da janela | `backend/tests/telemetria.test.js` | não mostra o que está fora da janela |
+| Monitoramento | Apaga o que passou de 90 dias | `backend/tests/telemetria.test.js` | apaga o que passou de 90 dias numa gravação qualquer |
+| Monitoramento | A tabela não tem coluna de pessoa | `backend/tests/telemetria.test.js` | só tem as colunas de contagem, nenhuma de pessoa, sessão, IP ou aparelho |
+| Monitoramento | Teto por cliente | `backend/tests/telemetria.test.js` | passado o teto do minuto, o mesmo cliente recebe 429, e outro continua passando |
+| Monitoramento | As listas acompanham o aplicativo | `backend/tests/telemetria.test.js` | toda rota do frontend está em TELAS, e TELAS não tem rota que o frontend não conhece |
+| Monitoramento | Toda ação registrada está em ACOES | `backend/tests/telemetria.test.js` | toda ação que o frontend registra está em ACOES |
+| Monitoramento | Junta e manda tudo de uma vez, zerando | `frontend/testes/telemetria.test.js` | junta aberturas, ações e medidas, e manda tudo de uma vez, zerando em seguida |
+| Monitoramento | "Não rastrear" desliga uso e desempenho, não o erro | `frontend/testes/telemetria.test.js` | "Não rastrear" desliga o uso e o desempenho, mas não o erro da tela |
+| Monitoramento | No máximo cinco erros por carga | `frontend/testes/telemetria.test.js` | no máximo cinco por carga: um laço que falha não vira enxurrada |
+| Monitoramento | A tela vai pelo modelo da rota | `frontend/testes/telemetria.test.js` | o que não existe vira "outra", sem repetir o endereço |
+| Monitoramento | O CLS é a pior janela de deslocamentos | `frontend/testes/telemetria.test.js` | o CLS é a pior janela de deslocamentos, e ignora o que veio de uma ação da pessoa |
+| Monitoramento | FCP na hora, LCP, CLS e INP ao esconder, uma vez | `frontend/testes/telemetria.test.js` | manda FCP na hora e LCP, CLS e INP quando a página é escondida, uma vez só |
+| Monitoramento | Em teste, o aplicativo não envia nada | `frontend/testes/telemetria.test.js` | as funções que as telas chamam são inofensivas sob o Vitest |
+| Monitoramento | A telemetria não toca no aparelho nem no endereço | `frontend/testes/telemetria.test.js` | não guarda nada no aparelho nem lê o que identifica a pessoa ou o endereço |
+| Monitoramento | A telemetria só fala com a própria origem | `frontend/testes/telemetria.test.js` | só fala com a própria origem |
+| Monitoramento | O painel só consulta ao abrir | `frontend/testes/UsoEDesempenho.test.jsx` | só consulta a API quando o painel é aberto |
+| Monitoramento | O painel mostra médias e % acima do limite | `frontend/testes/UsoEDesempenho.test.jsx` | mostra por tela as aberturas e a média de cada medida, com quantas passaram do limite |
+| Monitoramento | O painel diz que não há dado de pessoa | `frontend/testes/UsoEDesempenho.test.jsx` | diz que não há dado de pessoa e que "Não rastrear" é respeitado |
+| Monitoramento | O aviso de privacidade diz que mede o uso | `frontend/testes/Privacidade.test.jsx` | diz que mede o uso por contadores, sem identificar ninguém, e que "Não rastrear" é respeitado |
+| Monitoramento | No navegador: aberturas pelo modelo da rota | `frontend/e2e/telemetria.spec.js` | manda as aberturas de tela pelo modelo da rota, e nunca pelo endereço real |
+| Monitoramento | No navegador: "Não rastrear" corta o envio | `frontend/e2e/telemetria.spec.js` | quem liga "Não rastrear" não é medido |
+| Monitoramento | No navegador: erro de tela chega à administração | `frontend/e2e/telemetria.spec.js` | um erro de tela chega à administração com a tela pelo modelo da rota |
+| Monitoramento | No navegador: o administrador lê o que foi medido | `frontend/e2e/telemetria.spec.js` | o administrador lê o que foi medido no painel de uso e desempenho |
+| Monitoramento | A tela é contada pelo modelo da rota, nunca pelo caminho | `frontend/testes/AnuncioDeRota.test.jsx` | registra a abertura pelo MODELO da rota, nunca pelo caminho com o identificador |
+| Monitoramento | Endereço inexistente vira "outra" na telemetria | `frontend/testes/AnuncioDeRota.test.jsx` | um endereço que não existe vira "outra", sem repetir o que foi digitado |
+| Monitoramento | O erro que derruba a tela chega à administração, e a tela aponta o suporte | `frontend/testes/LimiteDeErroTelemetria.test.jsx` | avisa a administração e mostra a mensagem com o caminho para o suporte |
+| Monitoramento | Sem a tabela (migração 031 não aplicada), responde 204 e não 500 | `backend/tests/telemetria.test.js` | sem a tabela (migração 031 ainda não aplicada), responde 204 em vez de 500 |
+| Monitoramento | Outro erro de banco continua sendo erro | `backend/tests/telemetria.test.js` | um erro de banco que não é a tabela ausente continua sendo erro |

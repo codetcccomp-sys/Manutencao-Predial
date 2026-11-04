@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import api, { baixarArquivo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { registrarAcao } from '../monitoramento';
 import { useEntrada } from '../animacao/useEntrada';
 import NumeroAnimado from '../animacao/NumeroAnimado';
 import { reduzMovimento } from '../animacao/movimento';
@@ -159,6 +160,7 @@ function Relatorios() {
     setBaixando(formato);
     try {
       await baixarArquivo(caminho, { ...(de ? { de } : {}), ...(ate ? { ate } : {}) });
+      registrarAcao('relatorio_baixado');
     } catch (err) {
       setErro(err.message);
     } finally {

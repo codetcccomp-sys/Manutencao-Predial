@@ -166,6 +166,7 @@ app.use('/regras-distribuicao', require('./routes/distribuicao.routes'));
 app.use('/configuracoes', require('./routes/configuracao.routes'));
 app.use('/tarefas', require('./routes/tarefas.routes'));
 app.use('/operacao', require('./routes/operacao.routes'));
+app.use('/telemetria', require('./routes/telemetria.routes'));
 
 app.use((req, res) => {
   res.status(404).json({ erro: { mensagem: 'Rota não encontrada.' } });
