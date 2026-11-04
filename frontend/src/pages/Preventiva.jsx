@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { registrarAcao } from '../monitoramento';
 import Aviso from '../components/ui/Aviso';
 import Botao from '../components/ui/Botao';
 import Cartao from '../components/ui/Cartao';
@@ -163,7 +164,10 @@ function Preventiva() {
         }),
       'Plano cadastrado. O chamado de cada execução é gerado sozinho, na data.'
     );
-    if (ok) setPlano(PLANO_VAZIO);
+    if (ok) {
+      setPlano(PLANO_VAZIO);
+      registrarAcao('plano_cadastrado');
+    }
   }
 
   async function criarEquipamento(e) {
@@ -182,7 +186,10 @@ function Preventiva() {
         }),
       'Equipamento cadastrado.'
     );
-    if (ok) setEquipamento(EQUIPAMENTO_VAZIO);
+    if (ok) {
+      setEquipamento(EQUIPAMENTO_VAZIO);
+      registrarAcao('equipamento_cadastrado');
+    }
   }
 
   const termo = filtro.trim().toLowerCase();

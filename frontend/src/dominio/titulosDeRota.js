@@ -53,6 +53,14 @@ export function tituloDaRota(pathname) {
   return `${achada ? achada[1] : NAO_ENCONTRADA[0]} — ${NOME_DO_SISTEMA}`;
 }
 
+/**
+ * O MODELO da rota (`/chamados/:id`), ou `outra` para o que não existe. É o que a telemetria registra
+ * no lugar do caminho: o endereço real de um chamado ou de um equipamento carrega o identificador dele.
+ */
+export function padraoDaRota(pathname) {
+  return achar(pathname)?.[0] ?? 'outra';
+}
+
 /** O texto de `<meta name="description">` da rota. */
 export function descricaoDaRota(pathname) {
   const achada = achar(pathname);

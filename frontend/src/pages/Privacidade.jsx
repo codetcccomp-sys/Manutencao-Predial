@@ -23,7 +23,7 @@ import { CONTATO } from '../dominio/contato';
  *   anonimiza nada sozinho além do que está listado em "Por quanto tempo".
  */
 
-const ATUALIZADO_EM = '12 de outubro de 2026';
+const ATUALIZADO_EM = '4 de novembro de 2026';
 
 function Privacidade() {
   return (
@@ -57,8 +57,15 @@ function Privacidade() {
             barrar cadastros em massa.
           </li>
           <li>
-            <strong>Erros do sistema:</strong> quando algo falha por defeito nosso, guardamos a rota, o
-            código e a mensagem técnica do erro, sem nome, e-mail nem IP, para corrigir o defeito.
+            <strong>Erros do sistema:</strong> quando algo falha por defeito nosso, no servidor ou na
+            sua tela, guardamos a rota, o código e a mensagem técnica do erro, sem nome, e-mail nem IP,
+            para corrigir o defeito.
+          </li>
+          <li>
+            <strong>Uso e desempenho:</strong> contadores por dia de quantas vezes cada tela abre, de
+            quais ações são feitas e de quanto a página leva para carregar. São números, sem o seu nome,
+            sem IP e sem cookie: não dá para saber quem fez o quê. Se você ligou “Não rastrear” no
+            navegador, nada disso é medido.
           </li>
           <li>
             <strong>Verificação em duas etapas, se você ligar:</strong> a chave do aplicativo
@@ -106,7 +113,7 @@ function Privacidade() {
         <ul className={LISTA}>
           <li>Tentativas de entrar e pedidos de cadastro (o IP): apagadas em 24 horas. Pedidos de troca de senha: em 7 dias.</li>
           <li>Pedido de cadastro recusado: apagado na hora da recusa.</li>
-          <li>Erros técnicos do sistema: apagados em 30 dias.</li>
+          <li>Erros técnicos do sistema: apagados em 30 dias. Contadores de uso e desempenho: em 90 dias.</li>
           <li>
             Contas e chamados (com histórico, comentários, fotos e avaliações): ficam guardados. O
             projeto prevê guardar os chamados por 5 anos depois de concluídos e anonimizar as contas 2

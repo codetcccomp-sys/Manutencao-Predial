@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import Aviso from './ui/Aviso';
 import Botao from './ui/Botao';
+import { registrarErro } from '../monitoramento';
 
 /**
  * Pega o erro de uma tela e diz o que fazer, em vez de deixar a página em branco.
@@ -21,9 +22,11 @@ class LimiteDeErro extends Component {
   }
 
   componentDidCatch(erro) {
-    // Só o console: a tela já diz o essencial, e o relatório dos erros de servidor
-    // (/operacao/erros) é de quem falha no servidor, não no aparelho de cada um.
+    // O console, para quem está com o aparelho na mão, e um aviso à administração (tela pelo MODELO da
+    // rota, mensagem sem e-mail, ninguém identificado): sem isto o defeito de uma tela só chegava a quem
+    // o via, e quem o via raramente escrevia (monitoramento/telemetria.js).
     console.error('[tela] não foi possível mostrar a tela:', erro);
+    registrarErro(erro);
   }
 
   render() {

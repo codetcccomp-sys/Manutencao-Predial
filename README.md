@@ -350,6 +350,14 @@ em `docs/lgpd.md` (seção 8).
   por leitor de tela). Abrir o chamado leva o protocolo para a tela dele.
 - **Suporte:** um e-mail (`dominio/contato.js`), com roteiro do que contar. Sem chat e sem
   canal de terceiros, de propósito.
+- **Monitoramento próprio, sem terceiros e sem pessoa** (`frontend/src/monitoramento/`, migração
+  031, `services/telemetria.service.js`): contadores por dia de aberturas de tela (pelo **modelo** da
+  rota), ações e desempenho da carga (FCP, LCP, CLS, INP); os erros que derrubam uma tela vão para
+  `erro_aplicacao` (método `TELA`). Nada é guardado no aparelho, "Não rastrear" desliga a medição,
+  e o administrador lê tudo em **Usuários ▸ Uso e desempenho**. `POST /telemetria` e
+  `/telemetria/erro` são públicos (uma falha na tela de entrada também precisa chegar), com teto por
+  cliente e nomes de listas fechadas; `GET /operacao/telemetria` é só do administrador. Tela ou
+  ação nova entra nas listas `TELAS` e `ACOES` do serviço (um teste confere).
 
 ## Como rodar
 

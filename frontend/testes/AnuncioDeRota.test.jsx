@@ -1,12 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { useEffect, useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter, Route, Routes } from 'react-router';
 
+vi.mock('../src/monitoramento', () => ({ registrarTela: vi.fn() }));
+
 import AnuncioDeRota from '../src/components/AnuncioDeRota';
+import { registrarTela } from '../src/monitoramento';
 import { NOME_DO_SISTEMA, descricaoDaRota, tituloDaRota } from '../src/dominio/titulosDeRota';
 
 /**
@@ -231,5 +234,35 @@ describe('foco ao trocar de tela', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Chegou' })).toBeInTheDocument();
     expect(document.activeElement).toBe(screen.getByLabelText('Campo'));
+  });
+});
+
+describe('contagem de uso da tela', () => {
+  it('registra a abertura pelo MODELO da rota, nunca pelo caminho com o identificador', async () => {
+    const usuario = userEvent.setup();
+    registrarTela.mockClear();
+    render(
+      <MemoryRouter initialEntries={['/chamados/4821']}>
+        <AnuncioDeRota />
+        <Routes>
+          <Route path="*" element={<Link to="/equipamentos/17">Equipamento</Link>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await usuario.click(screen.getByRole('link', { name: 'Equipamento' }));
+
+    expect(registrarTela.mock.calls.map(([tela]) => tela)).toEqual(['/chamados/:id', '/equipamentos/:id']);
+  });
+
+  it('um endereço que não existe vira "outra", sem repetir o que foi digitado', () => {
+    registrarTela.mockClear();
+    render(
+      <MemoryRouter initialEntries={['/segredo/maria@exemplo.com']}>
+        <AnuncioDeRota />
+      </MemoryRouter>
+    );
+
+    expect(registrarTela).toHaveBeenCalledWith('outra');
+    expect(JSON.stringify(registrarTela.mock.calls)).not.toContain('maria');
   });
 });

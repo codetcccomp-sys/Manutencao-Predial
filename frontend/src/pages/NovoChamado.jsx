@@ -7,6 +7,7 @@ import Botao from '../components/ui/Botao';
 import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import LinkVoltar from '../components/ui/LinkVoltar';
+import { registrarAcao } from '../monitoramento';
 import { PERGUNTAS_DE_SITUACAO, fatoresDaSituacao } from '../dominio/situacao';
 import { rotuloEquipamento, rotuloLocal } from '../dominio/preventiva';
 
@@ -125,6 +126,7 @@ function NovoChamado() {
         local_id: Number(form.local_id),
         ...(form.equipamento_id ? { equipamento_id: Number(form.equipamento_id) } : {}),
       });
+      registrarAcao('chamado_aberto');
       // A confirmação vai junto: o chamado abre noutra tela, e sem ela a pessoa só vê a
       // página mudar. O protocolo é o que ela guarda para perguntar depois.
       navigate(`/chamados/${data.chamado.id}`, {

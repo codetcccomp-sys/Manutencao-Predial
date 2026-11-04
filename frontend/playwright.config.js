@@ -69,6 +69,8 @@ export default defineConfig({
       timeout: 60_000,
       env: {
         PORT: '3333',
+        // Cada teste fecha uma página e a telemetria manda o que juntou: todas saem do mesmo IP.
+        TELEMETRIA_MAX_POR_MINUTO: '100000',
         NODE_ENV: 'test',
         JWT_SECRET: process.env.JWT_SECRET ?? 'segredo_de_teste_e2e',
         JWT_EXPIRES_IN: '1h',

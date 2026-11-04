@@ -17,7 +17,10 @@ vi.mock('../src/context/AuthContext', () => ({
   useAuth: () => ({ usuario: usuarioAtual.valor }),
 }));
 
+vi.mock('../src/monitoramento', () => ({ registrarAcao: vi.fn() }));
+
 import api from '../src/api/client';
+import { registrarAcao } from '../src/monitoramento';
 import ChamadoDetalhe from '../src/pages/ChamadoDetalhe';
 import { conferirCabecalhos } from './apoio/cabecalhos';
 
@@ -793,6 +796,7 @@ describe('Confirmação do que deu certo', () => {
 
     const aviso = await screen.findByRole('status');
     expect(aviso).toHaveTextContent('Estado atualizado para “Em andamento”.');
+    expect(registrarAcao).toHaveBeenCalledWith('estado_alterado');
 
     // Uma ação nova apaga o resultado da anterior: não ficam duas histórias na tela.
     api.post.mockRejectedValueOnce({ response: { data: { erro: { mensagem: 'Texto recusado.' } } } });
@@ -812,6 +816,7 @@ describe('Confirmação do que deu certo', () => {
     await usuario.click(screen.getByRole('button', { name: 'Comentar' }));
 
     expect(await screen.findByText('Comentário enviado.')).toBeInTheDocument();
+    expect(registrarAcao).toHaveBeenCalledWith('comentario_enviado');
   });
 
   it('o aviso que veio da abertura do chamado aparece uma vez e sai do histórico', async () => {

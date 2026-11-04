@@ -11,6 +11,7 @@ import {
   rotuloPrioridade,
 } from '../dominio/rotulos';
 import LinkVoltar from '../components/ui/LinkVoltar';
+import { registrarAcao } from '../monitoramento';
 import { LIMITE_BYTES, formatarTamanho, prepararAnexo } from '../dominio/prepararAnexo';
 import { formatarDia } from '../dominio/preventiva';
 import { minutosSemAtendimento, tempoEmPalavras } from '../dominio/atendimento';
@@ -237,6 +238,7 @@ function ChamadoDetalhe() {
       setComentarios((atuais) => [...atuais, data.comentario]);
       setNovoComentario('');
       setAviso('Comentário enviado.');
+      registrarAcao('comentario_enviado');
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível enviar o comentário.');
     } finally {
@@ -252,6 +254,7 @@ function ChamadoDetalhe() {
       setServicoRealizado('');
       setEsperandoMaterial(false);
       setMotivoEspera('');
+      registrarAcao(estado === 'concluido' ? 'chamado_concluido' : 'estado_alterado');
       setAviso(
         estado === 'concluido'
           ? 'Chamado concluído.'
@@ -336,6 +339,7 @@ function ChamadoDetalhe() {
       });
       setJustificativaAtribuicao('');
       setAviso(ehReatribuicao ? 'Chamado reatribuído.' : 'Chamado atribuído.');
+      registrarAcao('chamado_atribuido');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível atribuir o chamado.');
@@ -349,6 +353,7 @@ function ChamadoDetalhe() {
       await api.post(`/chamados/${id}/reabertura`, { justificativa: justificativaReabertura.trim() });
       setJustificativaReabertura('');
       setAviso('Chamado reaberto.');
+      registrarAcao('chamado_reaberto');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível reabrir o chamado.');
@@ -361,6 +366,7 @@ function ChamadoDetalhe() {
     try {
       await api.post(`/chamados/${id}/avaliacao`, { nota: Number(nota) });
       setAviso('Avaliação enviada. Obrigado!');
+      registrarAcao('avaliacao_enviada');
       carregar();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível registrar a avaliação.');
@@ -440,6 +446,7 @@ function ChamadoDetalhe() {
       dados.append('arquivo', arquivo);
       await api.post(`/chamados/${id}/anexos`, dados);
       setAviso('Anexo enviado.');
+      registrarAcao('anexo_enviado');
       carregarAnexos();
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível enviar o anexo.');

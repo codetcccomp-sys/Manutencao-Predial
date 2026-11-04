@@ -58,7 +58,8 @@ pessoa indiretamente, como o endereço de rede.
 | `notificacao` | destinatário e mensagem | Sino e e-mail |
 | `equipe_tecnico` | quem está em qual equipe | Distribuição |
 | `tentativa_login` | **e-mail e IP** de cada tentativa | Bloquear força bruta |
-| `erro_aplicacao` | rota (sem query string), código e mensagem do erro de servidor, com e-mails mascarados; **sem usuário, IP nem corpo** | Achar defeito (a Vercel Hobby guarda os logs por 1 hora) |
+| `erro_aplicacao` | rota (sem query string), código e mensagem do erro, com e-mails mascarados; **sem usuário, IP nem corpo**. Do servidor (5xx) e da tela (método `TELA`, a tela pelo modelo da rota) | Achar defeito (a Vercel Hobby guarda os logs por 1 hora) |
+| `telemetria_diaria` | **só contadores** por dia: aberturas por tela (pelo modelo da rota), ações e medidas de desempenho (soma, quantidade, pior valor); **nenhuma coluna de pessoa, sessão, IP ou aparelho** | Saber o que se usa e o que está lento (migração 031) |
 | `tentativa_cadastro` | **IP** de cada pedido de cadastro, sem o e-mail | Conter cadastro em massa (a fila de pendentes e a CPU da função) |
 | `recuperacao_senha` | **IP** de quem pediu, hash do token | Rastrear pedido de troca de senha |
 | `usuario`, `codigo_recuperacao_2fa` | chave do aplicativo autenticador e data de ativação; códigos de recuperação em hash | Verificação em duas etapas (só de quem liga) |
@@ -77,6 +78,12 @@ nada além do login.
 **`tentativa_login` guarda o e-mail de quem tentou entrar e errou** — inclusive
 de quem não tem conta. É dado pessoal de gente que nunca se cadastrou.
 
+**`telemetria_diaria` não é dado pessoal**, e é desenhada para continuar não sendo:
+um número por (dia, o quê, onde), sem como voltar a uma pessoa. A tela vai pelo
+**modelo** da rota (`/chamados/:id`), nunca pelo endereço real; quem grava confere
+cada nome contra uma lista fechada; e nada é guardado no aparelho (seção 8). Um teste
+(`backend/tests/telemetria.test.js`) falha se a tabela ganhar uma coluna.
+
 ---
 
 ## 2. Por quanto tempo
@@ -88,7 +95,8 @@ O que o sistema **já apaga sozinho**, sem ninguém pedir:
 | Tentativas de login | **24 horas** | `middlewares/rateLimit.js` |
 | Pedidos de cadastro (só o IP) | **24 horas** | `middlewares/rateLimit.js` |
 | Pedidos de redefinição de senha | **7 dias** | `services/recuperacao.service.js` |
-| Erros de servidor | **30 dias** | `services/erros.service.js` |
+| Erros de servidor e de tela | **30 dias** | `services/erros.service.js` |
+| Contadores de uso e desempenho | **90 dias** | `services/telemetria.service.js` |
 
 O que **nunca é apagado**, por decisão de projeto:
 
@@ -470,6 +478,28 @@ na página ou nas dependências.
 (`GOOGLE_CLIENT_ID`): a tela de entrada carrega o componente de `accounts.google.com`, que
 pode gravar cookies próprios. As telas internas não o carregam. A página de cookies diz isso.
 
+**Monitoramento próprio, sem terceiros.** O sistema mede o que se usa, quão rápido abre e o que
+quebra, e guarda só **contadores por dia** (`telemetria_diaria`, migração 031) e os erros da tela
+em `erro_aplicacao`. O Google Analytics e qualquer ferramenta de terceiros **não** são usados, e
+nenhuma tela interna carrega script de fora.
+
+| O quê | Como | Onde |
+| --- | --- | --- |
+| Aberturas de tela | Uma contagem por **modelo** de rota, a cada troca de tela | `monitoramento/`, `AnuncioDeRota` |
+| Desempenho | FCP, LCP, CLS e INP da carga da página, pela API do navegador; vai uma vez por visita, ao esconder a página | `monitoramento/vitais.js` |
+| Ações | Só o **nome** (`chamado_aberto`, `relatorio_baixado`...), nunca o conteúdo nem o número do chamado | `registrarAcao` nas telas |
+| Erros da tela | Mensagem (e-mail mascarado no servidor), tela pelo modelo da rota e pilha; no máximo 5 por carga | `LimiteDeErro`, `window.onerror` |
+
+Por que isso dispensa consentimento: não há cookie, identificador, IP gravado, nem nada no aparelho
+(os números ficam em memória até o envio); o dado que chega ao banco não permite voltar a uma pessoa.
+Mesmo assim, **quem liga "Não rastrear" (DNT) ou o Controle de Privacidade Global no navegador não é
+medido** (uso e desempenho); só o erro da tela segue, porque não identifica ninguém e é como o
+defeito chega a quem o conserta. O teste `frontend/testes/telemetria.test.js` falha se o código da
+telemetria passar a ler `localStorage`, `document.cookie`, `userAgent`, o endereço da página ou a
+falar com outra origem. O administrador lê tudo em **Usuários ▸ Uso e desempenho**.
+Se a instituição quiser análise de audiência de terceiros, é decisão dela e passa a exigir
+consentimento prévio (acima).
+
 **Indexação.** O sistema é de uso interno: nenhuma tela entra em buscador (`noindex,
 nofollow` na meta `robots` do `index.html` e no cabeçalho `X-Robots-Tag` de
 `frontend/vercel.json`, repetido em `demo/frontend/vercel.json`). O `robots.txt` orienta os
@@ -479,5 +509,5 @@ login, e a API recusa sem sessão. Rota nova atrás do login entra no `robots.tx
 `frontend/testes/Indexacao.test.js` confere). Para a instituição decidir: se quiser que o
 aviso de privacidade apareça em buscas, troca-se o `noindex` dessa página.
 
-**Para a instituição revisar quando existir:** os termos de uso (foro, responsabilidades e
+**Para a instituição revisar quando existir:** o prazo de 90 dias dos contadores e os termos de uso (foro, responsabilidades e
 hipóteses de suspensão) e o e-mail de suporte, que hoje é o do projeto.

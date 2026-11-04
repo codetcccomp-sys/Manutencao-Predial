@@ -4,6 +4,7 @@ const { asyncHandler } = require('../utils/asyncHandler');
 const execucoes = require('../services/execucoes.service');
 const erros = require('../services/erros.service');
 const armazenamentoUso = require('../services/armazenamentoUso.service');
+const telemetria = require('../services/telemetria.service');
 
 const router = Router();
 
@@ -35,6 +36,16 @@ router.get(
   authorize('administrador'),
   asyncHandler(async (req, res) => {
     res.json(await erros.listar({ limite: req.query.limite }));
+  })
+);
+
+// Uso e desempenho (migração 031): contadores por dia, sem pessoa. Só o administrador, como os
+// erros: é leitura de operação, e a gestão não precisa dela para o que faz.
+router.get(
+  '/telemetria',
+  authorize('administrador'),
+  asyncHandler(async (req, res) => {
+    res.json(await telemetria.resumo({ dias: req.query.dias }));
   })
 );
 
