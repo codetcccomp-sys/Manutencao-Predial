@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import Avisos from './Avisos';
 import LimiteDeErro from './LimiteDeErro';
 import Marca from './ui/Marca';
+import Rodape from './Rodape';
 import { rotuloPerfil } from '../dominio/rotulos';
 
 /**
@@ -48,6 +49,11 @@ function Layout() {
   const restrito = Boolean(usuario?.dois_fatores_pendente);
   const podeVerRelatorios = ['administrador', 'gestor'].includes(usuario?.perfil) && !restrito;
   const ehAdministrador = usuario?.perfil === 'administrador' && !restrito;
+  // Quem pode abrir chamado (a API recusa o técnico). Na tela inicial, que já traz o
+  // botão no alto, e no próprio formulário, o do cabeçalho seria o mesmo duas vezes.
+  const podeAbrirChamado = ['solicitante', 'gestor', 'administrador'].includes(usuario?.perfil) && !restrito;
+  const mostraNovoChamado =
+    podeAbrirChamado && !['/', '/chamados/novo'].includes(localizacao.pathname);
 
   return (
     <div className="min-h-screen bg-fundo">
@@ -89,6 +95,17 @@ function Layout() {
               {podeVerRelatorios && <ItemDeMenu para="/cadastros">Cadastros</ItemDeMenu>}
               {ehAdministrador && <ItemDeMenu para="/usuarios">Usuários</ItemDeMenu>}
             </nav>
+
+            {/* A ação principal do sistema fica à vista em qualquer tela, e não só na
+                inicial. Branco sobre o azul do cabeçalho (11,6:1). */}
+            {mostraNovoChamado && (
+              <Link
+                to="/chamados/novo"
+                className="alvo-toque shrink-0 rounded bg-white px-3 py-1 text-sm font-medium text-navy hover:bg-fundo"
+              >
+                + Novo chamado
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
@@ -152,6 +169,8 @@ function Layout() {
           </LimiteDeErro>
         </div>
       </main>
+
+      <Rodape />
     </div>
   );
 }

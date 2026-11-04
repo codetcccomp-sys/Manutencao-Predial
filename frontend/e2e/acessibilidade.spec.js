@@ -48,7 +48,7 @@ test.afterAll(async () => {
   await cenario?.encerrar();
 });
 
-const PUBLICAS = ['/login', '/cadastro', '/recuperar-senha', '/privacidade'];
+const PUBLICAS = ['/login', '/cadastro', '/recuperar-senha', '/privacidade', '/termos', '/cookies', '/suporte', '/isto-nao-existe'];
 
 for (const rota of PUBLICAS) {
   test(`${rota} não tem violação de acessibilidade`, async ({ page }) => {

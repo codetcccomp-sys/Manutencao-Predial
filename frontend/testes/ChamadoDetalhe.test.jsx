@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useLocation } from 'react-router';
 
 vi.mock('react-router', async () => {
   const real = await vi.importActual('react-router');
@@ -782,3 +782,67 @@ describe('RN05 e RN09: reabertura', () => {
   });
 });
 
+
+describe('Confirmação do que deu certo', () => {
+  it('mudar o estado diz qual é o novo estado, e some quando outra ação começa', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: TECNICO, dados: chamado({ estado: 'atribuido', tecnico_id: TECNICO.id }) });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    await usuario.click(screen.getByRole('button', { name: 'Em andamento' }));
+
+    const aviso = await screen.findByRole('status');
+    expect(aviso).toHaveTextContent('Estado atualizado para “Em andamento”.');
+
+    // Uma ação nova apaga o resultado da anterior: não ficam duas histórias na tela.
+    api.post.mockRejectedValueOnce({ response: { data: { erro: { mensagem: 'Texto recusado.' } } } });
+    await usuario.type(screen.getByPlaceholderText('Escreva um comentário'), 'Chego em dez minutos.');
+    await usuario.click(screen.getByRole('button', { name: 'Comentar' }));
+    expect(await screen.findByText('Texto recusado.')).toBeInTheDocument();
+    expect(screen.queryByText('Estado atualizado para “Em andamento”.')).toBeNull();
+  });
+
+  it('comentar confirma o envio', async () => {
+    const usuario = userEvent.setup();
+    montar({ como: SOLICITANTE });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+    api.post.mockResolvedValueOnce({ data: { comentario: { id: 9, texto: 'Obrigada!', data: new Date().toISOString(), usuario_id: SOLICITANTE.id, usuario_nome: 'Maria', usuario_perfil: 'solicitante' } } });
+
+    await usuario.type(screen.getByPlaceholderText('Escreva um comentário'), 'Obrigada!');
+    await usuario.click(screen.getByRole('button', { name: 'Comentar' }));
+
+    expect(await screen.findByText('Comentário enviado.')).toBeInTheDocument();
+  });
+
+  it('o aviso que veio da abertura do chamado aparece uma vez e sai do histórico', async () => {
+    usuarioAtual.valor = SOLICITANTE;
+    api.get.mockImplementation(async (caminho) => {
+      if (caminho === '/chamados/7') return { data: { chamado: chamado() } };
+      if (caminho === '/chamados/7/comentarios') return { data: { comentarios: [] } };
+      return { data: { anexos: [] } };
+    });
+    // Mostra o estado de navegação que ficou no histórico: se o aviso continuasse nele,
+    // recarregar a página o repetiria.
+    function Sonda() {
+      return <output data-testid="estado-do-historico">{JSON.stringify(useLocation().state)}</output>;
+    }
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/chamados/7', state: { aviso: 'Chamado aberto. O protocolo é SMP-1.' } }]}>
+        <Sonda />
+        <ChamadoDetalhe />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Chamado aberto. O protocolo é SMP-1.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('estado-do-historico')).toHaveTextContent('null'));
+    // E a tela segue mostrando o que já tinha lido.
+    expect(screen.getByText('Chamado aberto. O protocolo é SMP-1.')).toBeInTheDocument();
+  });
+
+  it('há um caminho de volta para a lista', async () => {
+    montar({ como: GESTOR });
+    await screen.findByRole('heading', { level: 1, name: 'Infiltração no auditório' });
+
+    expect(screen.getByRole('link', { name: /Voltar à lista de chamados/ })).toHaveAttribute('href', '/');
+  });
+});

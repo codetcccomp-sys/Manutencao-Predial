@@ -153,6 +153,13 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   `grep -c "Invalid hook call" dist/assets/index-*.js`: tem de dar 0. A API comprime as respostas
   (`compression` em `app.js`, `tests/compressao.test.js`; a lista de locais cai de 245 kB para 13 kB): sem
   isso, em 4G lento a tela de Cadastros passa de 3 s só pelo tempo de baixar.
+- **Páginas de informação** (`/privacidade`, `/termos`, `/cookies`, `/suporte`, 404) descrevem o que o
+  sistema faz, como o aviso de privacidade: mudou o que se guarda no aparelho ou o contato? Mude a
+  página e `docs/lgpd.md` (seção 8). Nenhum cookie nem script de análise entra sem consentimento prévio
+  e sem mudar a página de cookies (um teste falha se aparecer). Rota nova ganha título **e descrição**
+  em `titulosDeRota.js`, e, se for atrás do login, uma linha `Disallow` em `frontend/public/robots.txt`
+  (`Indexacao.test.js`). Todo site sai com `noindex` (HTML e `X-Robots-Tag`; o `vercel.json` da demo
+  repete o da produção, e um teste confere): é pedido a robôs, não controle de acesso.
 - Telas de gestão são sob demanda (`telaSobDemanda` em `App.jsx`); a fila, o chamado e o formulário de
   abertura ficam no arquivo principal porque o técnico os lê sem conexão. Tela offline nova não entra na lista
   sob demanda (um teste confere). O `AnuncioDeRota` espera o `h1` que chega depois.

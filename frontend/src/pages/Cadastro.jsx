@@ -106,6 +106,15 @@ function Cadastro() {
           >
             aviso de privacidade{' '}<span className="sr-only">(abre em outra aba)</span>
           </a>
+          . Ao criar a conta, você concorda com os{' '}
+          <a
+            href="/termos"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-navy underline"
+          >
+            termos de uso{' '}<span className="sr-only">(abre em outra aba)</span>
+          </a>
           .
         </p>
 

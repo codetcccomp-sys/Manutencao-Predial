@@ -229,6 +229,23 @@ function Login() {
               Aviso de privacidade{' '}<span className="sr-only">(abre em outra aba)</span>
             </a>
           </p>
+          <p className="flex flex-wrap justify-center gap-x-4">
+            {[
+              ['/termos', 'Termos de uso'],
+              ['/cookies', 'Cookies'],
+              ['/suporte', 'Ajuda e suporte'],
+            ].map(([caminho, rotulo]) => (
+              <a
+                key={caminho}
+                href={caminho}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="alvo-toque inline-block py-1 font-medium text-navy hover:underline"
+              >
+                {rotulo}{' '}<span className="sr-only">(abre em outra aba)</span>
+              </a>
+            ))}
+          </p>
         </div>
       </form>
     </main>

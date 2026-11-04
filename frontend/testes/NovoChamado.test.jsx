@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 
 vi.mock('../src/api/client', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -139,5 +139,45 @@ describe('Situação do chamado (urgência, impacto e risco)', () => {
 
     expect(urgencia.getByRole('radio', { name: 'Nesta semana' })).toBeChecked();
     expect(urgencia.getByRole('radio', { name: 'Hoje' })).not.toBeChecked();
+  });
+});
+
+describe('Confirmação da abertura', () => {
+  function Detalhe() {
+    const { state } = useLocation();
+    return <p>{state?.aviso ?? 'sem aviso'}</p>;
+  }
+
+  it('leva o protocolo para a tela do chamado, para a pessoa saber que abriu', async () => {
+    const usuario = userEvent.setup();
+    api.get.mockImplementation(async (caminho) => {
+      if (caminho === '/categorias') return { data: { categorias: [{ id: 10, nome: 'elétrica' }] } };
+      if (caminho === '/locais') return { data: { locais: [{ id: 1, unidade: 'Prédio A' }] } };
+      return { data: { equipamentos: [] } };
+    });
+    api.post.mockReset();
+    api.post.mockResolvedValue({ data: { chamado: { id: 123, protocolo: 'SMP-20261104-ABC123' } } });
+    render(
+      <MemoryRouter initialEntries={['/chamados/novo']}>
+        <Routes>
+          <Route path="/chamados/novo" element={<NovoChamado />} />
+          <Route path="/chamados/:id" element={<Detalhe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await preencherOResto(usuario);
+    await usuario.click(within(grupo(PERGUNTAS_DE_SITUACAO[0].pergunta)).getByRole('radio', { name: 'Risco para pessoas agora' }));
+    await usuario.click(within(grupo(PERGUNTAS_DE_SITUACAO[1].pergunta)).getByRole('radio', { name: 'Uma sala ou um serviço não pode ser usado' }));
+    await usuario.click(within(grupo(PERGUNTAS_DE_SITUACAO[2].pergunta)).getByRole('radio', { name: 'Agora, não pode esperar' }));
+    await usuario.click(screen.getByRole('button', { name: 'Abrir chamado' }));
+
+    expect(await screen.findByText('Chamado aberto. O protocolo é SMP-20261104-ABC123.')).toBeInTheDocument();
+  });
+
+  it('o formulário tem um caminho de volta', async () => {
+    abrir();
+    await screen.findByRole('option', { name: 'Prédio A' });
+
+    expect(screen.getByRole('link', { name: /Voltar/ })).toHaveAttribute('href', '/');
   });
 });

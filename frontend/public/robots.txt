@@ -1,0 +1,20 @@
+# Conserva Predial é um sistema de uso interno: não há nada aqui para buscadores.
+#
+# Este arquivo ORIENTA robôs que o respeitam; não protege nada. Quem protege é o
+# login: sem sessão, nenhuma tela interna mostra dado. O pedido de não indexar
+# vale também pela meta `robots` e pelo cabeçalho X-Robots-Tag (vercel.json), e é
+# por isso que as telas públicas (entrada, cadastro, privacidade, termos, cookies
+# e suporte) ficam rastreáveis: o robô precisa abri-las para ver o `noindex`.
+#
+# Telas internas e a API: não rastrear. Toda rota nova atrás do login entra
+# nesta lista (um teste confere).
+User-agent: *
+Disallow: /api/
+Disallow: /chamados/
+Disallow: /relatorios
+Disallow: /usuarios
+Disallow: /cadastros
+Disallow: /preventiva
+Disallow: /equipamentos/
+Disallow: /etiquetas
+Disallow: /conta

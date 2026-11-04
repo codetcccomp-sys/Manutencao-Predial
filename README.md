@@ -331,6 +331,26 @@ O que o código faz, e onde procurar:
 - **Dados pessoais**: retenção, base legal e procedimento de remoção em
   [docs/lgpd.md](docs/lgpd.md).
 
+## Páginas de informação, indexação e suporte
+
+Cinco páginas ficam fora do login: `/privacidade`, `/termos`, `/cookies`, `/suporte` e a de
+endereço inexistente (a 404, `pages/NaoEncontrada.jsx`, que leva ao início ou à tela de
+entrada conforme haja sessão). As quatro primeiras compartilham a casca
+`components/ui/PaginaDeTexto.jsx` e estão no rodapé das telas internas
+(`components/Rodape.jsx`). O que cada uma diz de propósito, e o que não pode prometer, está
+em `docs/lgpd.md` (seção 8).
+
+- **Título e descrição por tela:** `dominio/titulosDeRota.js` (a descrição vai para a meta
+  `description` em `AnuncioDeRota`). Rota nova precisa dos dois; um teste confere.
+- **Não indexar:** meta `robots` no `index.html`, cabeçalho `X-Robots-Tag` em `vercel.json`
+  (produção e demonstração) e `public/robots.txt`. É pedido a robôs, **não** controle de
+  acesso. Rota nova atrás do login entra no `robots.txt`.
+- **Confirmação de sucesso:** abrir chamado, mudar estado, atribuir, executar, comentar,
+  avaliar, reabrir, anexar e priorizar dizem que deu certo (`Aviso tipo="sucesso"`, anunciado
+  por leitor de tela). Abrir o chamado leva o protocolo para a tela dele.
+- **Suporte:** um e-mail (`dominio/contato.js`), com roteiro do que contar. Sem chat e sem
+  canal de terceiros, de propósito.
+
 ## Como rodar
 
 Requisitos: Node 22 ou 24 (o CI testa as duas; a Vercel roda 24) e PostgreSQL 16+ (o CI e a produção rodam a 17).

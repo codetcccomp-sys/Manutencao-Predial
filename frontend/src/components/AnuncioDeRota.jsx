@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router';
-import { tituloDaRota } from '../dominio/titulosDeRota';
+import { descricaoDaRota, tituloDaRota } from '../dominio/titulosDeRota';
 
 /**
  * O que o navegador faz sozinho ao trocar de página e uma SPA não faz.
@@ -12,7 +12,7 @@ import { tituloDaRota } from '../dominio/titulosDeRota';
  * leitor de tela não ouve que mudou de tela.
  *
  * Aqui, a cada troca de CAMINHO (trocar só `?aba=` na mesma tela não conta), o
- * título é atualizado e o foco vai para o `h1`, que o leitor lê. A primeira
+ * título e a descrição da página são atualizados e o foco vai para o `h1`, que o leitor lê. A primeira
  * carga não mexe no foco: levá-lo ao título de uma página recém-aberta tiraria
  * a pessoa do campo que o navegador já tinha escolhido.
  *
@@ -26,6 +26,8 @@ export default function AnuncioDeRota() {
 
   useEffect(() => {
     document.title = tituloDaRota(pathname);
+    // O `index.html` já traz a meta de descrição (e a de `noindex`); aqui só o texto troca.
+    document.querySelector('meta[name="description"]')?.setAttribute('content', descricaoDaRota(pathname));
 
     if (anterior.current === pathname) return;
     anterior.current = pathname;

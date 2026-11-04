@@ -21,10 +21,27 @@
          terminar numa faixa cinza acima da barra azul. -->
     <meta name="theme-color" content="#1f3864" />
 
+    <!--
+      Descrição da página (o texto troca a cada rota: ver AnuncioDeRota) e pedido
+      de que nenhuma tela entre em índice de busca. É um sistema de uso interno:
+      o que há aqui é dado da instituição. O `noindex` vale também por cabeçalho
+      (X-Robots-Tag, em vercel.json) e é um pedido a robôs que o respeitam, não
+      controle de acesso: quem controla o acesso é o login.
+    -->
+    <meta
+      name="description"
+      content="Conserva Predial: sistema de pedidos e acompanhamento de manutenção predial."
+    />
+    <meta name="robots" content="noindex, nofollow" />
+
     <title>Conserva Predial — Sistema de Manutenção</title>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      O Conserva Predial precisa de JavaScript para funcionar. Ative-o no navegador e recarregue a
+      página.
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
