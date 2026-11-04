@@ -455,6 +455,9 @@ Detalhes em `docs/lgpd.md` (seção 8) e no README.
 | 404 | Endereço inexistente tem página própria, e sem sessão leva à entrada | `frontend/testes/PaginasDeInformacao.test.jsx` | diz o que houve e oferece o caminho de volta à tela de entrada, sem sessão |
 | 404 | Com sessão, o caminho de volta é o início | `frontend/testes/PaginasDeInformacao.test.jsx` | com sessão, o caminho de volta é o início do sistema |
 | 404 | O endereço digitado não é repetido na tela | `frontend/testes/PaginasDeInformacao.test.jsx` | não repete na tela o endereço digitado |
+| 404 | O App tem a rota coringa, fora do login: endereço inexistente não cai na entrada | `frontend/testes/EnderecoInexistente.test.jsx` | sem sessão, mostra a página não encontrada e não manda para o login |
+| 404 | Endereço que parece de uma tela interna também cai nela | `frontend/testes/EnderecoInexistente.test.jsx` | endereço que parece de uma tela interna, mas não é, também cai nela |
+| Termos | As páginas de informação abrem sem sessão | `frontend/testes/EnderecoInexistente.test.jsx` | as páginas de informação abrem sem sessão |
 | 404 | No navegador, a página aparece sem redirecionar para o login | `frontend/e2e/paginas.spec.js` | sem sessão, mostra a página própria e leva à tela de entrada |
 | Título | Toda rota tem título, e o endereço inexistente vira "Página não encontrada" | `frontend/testes/AnuncioDeRota.test.jsx` | toda rota do App.jsx tem título próprio, e o endereço que não existe vira "Página não encontrada" |
 | Descrição | Toda rota tem descrição; as internas só dizem que são restritas | `frontend/testes/AnuncioDeRota.test.jsx` | toda rota do App.jsx tem descrição própria, e as telas internas só dizem que são restritas |
