@@ -10,8 +10,8 @@ router.use(authenticate);
 const CAMPOS = {
   codigo: { tipo: 'string', maxLength: 40, aparar: true },
   nome: { tipo: 'string', minLength: 2, maxLength: 150, aparar: true },
-  categoria_id: { tipo: 'number' },
-  local_id: { tipo: 'number' },
+  categoria_id: { tipo: 'inteiro' },
+  local_id: { tipo: 'inteiro' },
   fabricante: { tipo: 'string', maxLength: 100 },
   modelo: { tipo: 'string', maxLength: 100 },
   numero_serie: { tipo: 'string', maxLength: 100 },

@@ -147,6 +147,26 @@ async function limparRegrasDeTeste(client, { padrao = PADRAO_DE_TESTE, ambiente 
   return rowCount;
 }
 
+/**
+ * Apaga as versões de SLA gravadas por contas de teste (RN12, migração 032).
+ *
+ * Toda suíte que altera um prazo pela API deixa uma versão em `sla_versao`,
+ * assinada pela conta de teste que a fez. Sem isto a conta ficaria protegida
+ * para sempre (ela é autora de algo), e o histórico de prazos do banco de
+ * desenvolvimento cresceria a cada rodada.
+ */
+async function limparVersoesDeSlaDeTeste(client, { padrao = PADRAO_DE_TESTE, ambiente = process.env } = {}) {
+  recusarSeNaoForBancoDeTeste(ambiente);
+
+  const { rowCount } = await client.query(
+    `DELETE FROM sla_versao v
+      USING usuario u
+      WHERE u.id = v.alterado_por AND u.email LIKE $1`,
+    [padrao]
+  );
+  return rowCount;
+}
+
 // O que aponta para a conta e some junto com ela: ruído que a própria conta
 // gerou (avisos, pedidos de recuperação de senha, vínculo com equipe). Tudo o
 // mais que aponte para `usuario` — chamado, comentário, anexo, histórico, e o
@@ -223,6 +243,7 @@ module.exports = {
   limparChamadosDeTeste,
   limparPlanosDeTeste,
   limparRegrasDeTeste,
+  limparVersoesDeSlaDeTeste,
   limparUsuariosDeTeste,
   contasSemeadas,
   apagarChamados,

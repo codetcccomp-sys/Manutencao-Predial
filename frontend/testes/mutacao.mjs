@@ -19,6 +19,7 @@
  */
 import { execSync } from 'child_process';
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 
 const MUTACOES = [
   {
@@ -38,8 +39,8 @@ const MUTACOES = [
   {
     descricao: 'interceptor deixa de excetuar o /auth/login',
     arquivo: 'src/api/client.js',
-    de: "const ehTentativaDeLogin = error.config?.url?.includes('/auth/login');",
-    para: 'const ehTentativaDeLogin = false;',
+    de: "const ehTentativaDeLogin = url.includes('/auth/login') || url.includes('/auth/google');",
+    para: "const ehTentativaDeLogin = false;",
     spec: 'testes/client.test.js',
   },
   {
@@ -533,8 +534,8 @@ const MUTACOES = [
   {
     descricao: 'abas de cadastros voltam a alargar a página no celular',
     arquivo: 'src/pages/Cadastros.jsx',
-    de: '<div className="flex gap-2 border-b overflow-x-auto">',
-    para: '<div className="flex gap-2 border-b">',
+    de: "className=\"flex gap-2 border-b overflow-x-auto\">",
+    para: "className=\"flex gap-2 border-b\">",
     motor: 'playwright',
     spec: 'e2e/layout.spec.js',
   },
@@ -643,8 +644,8 @@ const MUTACOES = [
   {
     descricao: 'login ignora o pedido de segundo fator',
     arquivo: 'src/context/AuthContext.jsx',
-    de: '      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio };',
-    para: '',
+    de: "      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio, email: data.email };\n      return iniciarSessao(data);\n    },\n    [iniciarSessao]\n  );\n\n  const confirmarCodigo",
+    para: "      return iniciarSessao(data);\n    },\n    [iniciarSessao]\n  );\n\n  const confirmarCodigo",
     spec: 'testes/DuasEtapas.test.jsx',
   },
   {
@@ -755,8 +756,8 @@ const MUTACOES = [
   {
     descricao: 'google: duas etapas pelo Google viram sessão sem o código',
     arquivo: 'src/context/AuthContext.jsx',
-    de: "      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio };\n      return iniciarSessao(data);\n    },\n    [iniciarSessao]\n  );\n\n  // Devolve",
-    para: "      return iniciarSessao(data);\n    },\n    [iniciarSessao]\n  );\n\n  // Devolve",
+    de: "      if (data.aguardando_aprovacao) return { aguardandoAprovacao: true };\n      if (data.requer_2fa) return { requer2fa: true, desafio: data.desafio, email: data.email };\n",
+    para: "      if (data.aguardando_aprovacao) return { aguardandoAprovacao: true };\n",
     spec: 'testes/LoginGoogle.test.jsx',
   },
   {
@@ -935,8 +936,8 @@ const MUTACOES = [
   {
     descricao: 'EPI: a caixa herda a marcação da vez anterior',
     arquivo: 'src/pages/ChamadoDetalhe.jsx',
-    de: '      setEpiConfirmado(false);\n      setConcluindo(true);',
-    para: '      setConcluindo(true);',
+    de: "      setEpiConfirmado(false);\n      setEsperandoMaterial(false);\n      setConcluindo(true);",
+    para: "      setEsperandoMaterial(false);\n      setConcluindo(true);",
     spec: 'testes/ChamadoDetalhe.test.jsx',
   },
   {
@@ -1070,9 +1071,9 @@ const MUTACOES = [
   },
   {
     descricao: 'LGPD: os links soltos do aviso voltam a ter menos de 24px de altura',
-    arquivo: 'src/pages/Privacidade.jsx',
-    de: 'const LINK_SOLTO = `${LINK} alvo-toque inline-block py-1`;',
-    para: 'const LINK_SOLTO = LINK;',
+    arquivo: 'src/components/ui/PaginaDeTexto.jsx',
+    de: "export const LINK_SOLTO = `${LINK} alvo-toque inline-block py-1`;",
+    para: "export const LINK_SOLTO = LINK;",
     motor: 'playwright',
     spec: 'e2e/privacidade.spec.js',
   },
@@ -1471,22 +1472,22 @@ const MUTACOES = [
   {
     descricao: 'acessibilidade: sem h1 o foco deixa de ir para o main',
     arquivo: 'src/components/AnuncioDeRota.jsx',
-    de: "document.querySelector('h1') ?? document.querySelector('main')",
-    para: "document.querySelector('h1')",
+    de: "    if (!principal) return undefined;\n    focar(principal);",
+    para: "    if (!principal) return undefined;",
     spec: 'testes/AnuncioDeRota.test.jsx',
   },
   {
     descricao: 'acessibilidade: uma rota fica sem título próprio',
     arquivo: 'src/dominio/titulosDeRota.js',
-    de: "  ['/etiquetas', 'Etiquetas'],\n",
-    para: '',
+    de: "  ['/etiquetas', 'Etiquetas', RESTRITA],\n",
+    para: "",
     spec: 'testes/AnuncioDeRota.test.jsx',
   },
   {
     descricao: 'acessibilidade: "Novo chamado" passa depois de "Chamado" e vira o chamado "novo"',
     arquivo: 'src/dominio/titulosDeRota.js',
-    de: "  ['/chamados/novo', 'Novo chamado'],\n  ['/chamados/:id', 'Chamado'],\n",
-    para: "  ['/chamados/:id', 'Chamado'],\n  ['/chamados/novo', 'Novo chamado'],\n",
+    de: "  ['/chamados/novo', 'Novo chamado', RESTRITA],\n  ['/chamados/:id', 'Chamado', RESTRITA],\n",
+    para: "  ['/chamados/:id', 'Chamado', RESTRITA],\n  ['/chamados/novo', 'Novo chamado', RESTRITA],\n",
     spec: 'testes/AnuncioDeRota.test.jsx',
   },
   {
@@ -1536,8 +1537,8 @@ const MUTACOES = [
   {
     descricao: 'acessibilidade: o select da nota perde o nome acessível',
     arquivo: 'src/pages/ChamadoDetalhe.jsx',
-    de: 'aria-label="Nota do atendimento"',
-    para: '',
+    de: '            Nota do atendimento\n            <select value={nota}',
+    para: '            <select value={nota}',
     spec: 'testes/ChamadoDetalhe.test.jsx',
   },
   // --- Erros do sistema, avisos em segundo plano, telas sob demanda ------------
@@ -1996,7 +1997,186 @@ const MUTACOES = [
     para: 'if (dados) return undefined;',
     spec: 'testes/UsoEDesempenho.test.jsx',
   },
+  // --- Reanálise de novembro: RF09 (confirmar a solução) e RN12 (versões do SLA) ---
+  {
+    descricao: "RF09: o comentário da avaliação deixa de ser enviado",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "{ nota: Number(nota), ...(texto ? { comentario: texto } : {}) }",
+    para: "{ nota: Number(nota) }",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: o comentário da avaliação vai sem aparar",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "const texto = comentarioAvaliacao.trim();",
+    para: "const texto = comentarioAvaliacao;",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: comentário vazio passa a ser enviado como texto vazio",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "...(texto ? { comentario: texto } : {})",
+    para: "comentario: texto",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: a tela deixa de dizer que avaliar é confirmar a solução",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "'Ao enviar, você confirma que o serviço foi feito. Se o problema continua, não avalie: reabra o chamado.'",
+    para: "'Dê uma nota ao atendimento.'",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: a confirmação de sucesso volta a falar só da avaliação",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "'Solução confirmada e avaliação enviada. Obrigado!'",
+    para: "'Avaliação enviada. Obrigado!'",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: quem já avaliou reencontra a nota zerada",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "          setNota(data.chamado.avaliacao.nota);\n",
+    para: "",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: quem já avaliou reencontra o comentário vazio",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "          setComentarioAvaliacao(data.chamado.avaliacao.comentario ?? '');\n",
+    para: "",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: quem já avaliou vê o formulário como se fosse a primeira vez",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "{chamado.avaliacao ? 'Sua avaliação' : 'Confirmar a solução e avaliar'}",
+    para: "{'Confirmar a solução e avaliar'}",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: a data da confirmação some do formulário de quem avaliou",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "`Solução confirmada em ${new Date(chamado.avaliacao.data).toLocaleString('pt-BR')}. Você pode ajustar a nota ou o comentário.`",
+    para: "'Você pode ajustar a nota ou o comentário.'",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: a gestão e o técnico deixam de ver a avaliação do solicitante",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "{!podeAvaliar && chamado.avaliacao && (",
+    para: "{false && (",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: o cartão da avaliação aparece mesmo sem avaliação",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "{!podeAvaliar && chamado.avaliacao && (",
+    para: "{!podeAvaliar && (",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: o comentário do solicitante some do cartão da avaliação",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "{chamado.avaliacao.comentario && (",
+    para: "{false && (",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: a nota volta a não ter palavra",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "3: '3 – Regular'",
+    para: "3: '3 estrela(s)'",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RF09: a nota 2 deixa de dizer \"Ruim\" no cartão da gestão",
+    arquivo: "src/pages/ChamadoDetalhe.jsx",
+    de: "2: '2 – Ruim'",
+    para: "2: '2 – Dois'",
+    spec: "testes/ChamadoDetalhe.test.jsx",
+  },
+  {
+    descricao: "RN12: o histórico do SLA consulta mesmo fechado",
+    arquivo: "src/components/HistoricoDoSla.jsx",
+    de: "    if (!aberto) return undefined;\n",
+    para: "",
+    spec: "testes/HistoricoDoSla.test.jsx",
+  },
+  {
+    descricao: "RN12: o histórico do SLA aberto não se atualiza quando um prazo muda",
+    arquivo: "src/components/HistoricoDoSla.jsx",
+    de: "  }, [aberto, versao]);",
+    para: "  }, [aberto]);",
+    spec: "testes/HistoricoDoSla.test.jsx",
+  },
+  {
+    descricao: "RN12: falha ao carregar o histórico do SLA vira lista vazia",
+    arquivo: "src/components/HistoricoDoSla.jsx",
+    de: ".catch(() => vivo && setErro(true));",
+    para: ".catch(() => vivo && setVersoes([]));",
+    spec: "testes/HistoricoDoSla.test.jsx",
+  },
+  {
+    descricao: "RN12: a versão sem autor conhecido ganha um autor inventado",
+    arquivo: "src/components/HistoricoDoSla.jsx",
+    de: "{v.alterado_por ? `, por ${v.alterado_por}` : ''}",
+    para: "{`, por ${v.alterado_por}`}",
+    spec: "testes/HistoricoDoSla.test.jsx",
+  },
+  {
+    descricao: "RN12: a versão do SLA deixa de dizer quem alterou",
+    arquivo: "src/components/HistoricoDoSla.jsx",
+    de: "{v.alterado_por ? `, por ${v.alterado_por}` : ''}",
+    para: "{''}",
+    spec: "testes/HistoricoDoSla.test.jsx",
+  },
+  {
+    descricao: "RN12: a versão antiga do SLA aparece como se estivesse em vigor",
+    arquivo: "src/components/HistoricoDoSla.jsx",
+    de: "                {v.vigente_ate\n",
+    para: "                {false\n",
+    spec: "testes/HistoricoDoSla.test.jsx",
+  },
+  {
+    descricao: "RN12: a régua (úteis ou corridas) some da versão do SLA",
+    arquivo: "src/components/HistoricoDoSla.jsx",
+    de: " h {CONTAGEM[v.contagem] ?? v.contagem}",
+    para: " h",
+    spec: "testes/HistoricoDoSla.test.jsx",
+  },
+  {
+    descricao: "RN12: a tela de Relatórios deixa de mostrar o histórico de prazos",
+    arquivo: "src/pages/Relatorios.jsx",
+    de: "              <HistoricoDoSla versao={alteracoesDeSla} />\n",
+    para: "",
+    spec: "testes/Operacao.test.jsx",
+  },
+  {
+    descricao: "RN12: alterar um prazo não atualiza o histórico aberto na tela de Relatórios",
+    arquivo: "src/pages/Relatorios.jsx",
+    de: "      setAlteracoesDeSla((n) => n + 1);\n",
+    para: "",
+    spec: "testes/Operacao.test.jsx",
+  },
+  {
+    descricao: "usabilidade: alterar um prazo volta a recarregar a tela inteira e a desmontar os campos",
+    arquivo: "src/pages/Relatorios.jsx",
+    de: "      const { data } = await api.get('/sla');\n      setDados((atual) => (atual ? { ...atual, sla: data.sla } : atual));",
+    para: "      carregar();",
+    spec: "testes/Operacao.test.jsx",
+  },
 ];
+
+// A lista sai sozinha para `testes/mutacoesEmDia.test.js`, que confere a cada
+// rodada da suíte que nenhum trecho "de" sumiu do código: mutação desatualizada
+// não roda, e a trava que ela vigiava fica sem vigia sem ninguém perceber.
+export { MUTACOES };
+
+const chamadoDireto = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (chamadoDireto) executar();
+
+function executar() {
 
 /**
  * Restauração à prova de interrupção.
@@ -2073,3 +2253,4 @@ console.log(
     : `\n${decoradas} mutação(ões) passaram despercebidas — há teste decorativo aí.`
 );
 process.exit(decoradas === 0 ? 0 : 1);
+}

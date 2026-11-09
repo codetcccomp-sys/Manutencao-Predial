@@ -115,38 +115,45 @@ describe('Expediente e feriados', () => {
   });
 });
 
+
+// As respostas mínimas para a tela de Relatórios abrir; `historico` responde /sla/historico.
+function respostasDeRelatorios(historico = []) {
+    api.get.mockImplementation(async (caminho) => {
+    if (caminho === '/sla') {
+      return { data: { sla: [{ prioridade: 'media', prazo_horas: 72, contagem: 'corridas' }] } };
+    }
+    if (caminho === '/relatorios/resumo') {
+      return {
+        data: {
+          totais: { total: 0, em_aberto: 0, concluidos: 0, cancelados: 0 },
+          por_estado: [],
+          por_categoria: [],
+          por_prioridade: [],
+          por_local: [],
+        },
+      };
+    }
+    if (caminho === '/relatorios/desempenho') {
+      return {
+        data: {
+          geral: {},
+          marcos: {},
+          por_categoria: [],
+          avaliacoes: {},
+          prazo: { percentual_no_prazo: null, concluidos_no_prazo: 0, concluidos_com_prazo: 0, em_aberto: 0, em_aberto_atrasados: 0 },
+        },
+      };
+    }
+    if (caminho === '/relatorios/tecnicos') return { data: { tecnicos: [] } };
+    if (caminho === '/sla/historico') return { data: { versoes: historico } };
+    throw new Error('fora do teste');
+  });
+}
+
 describe('Régua do prazo nos relatórios', () => {
   it('trocar para horas úteis grava a contagem da prioridade', async () => {
     const usuario = userEvent.setup();
-    api.get.mockImplementation(async (caminho) => {
-      if (caminho === '/sla') {
-        return { data: { sla: [{ prioridade: 'media', prazo_horas: 72, contagem: 'corridas' }] } };
-      }
-      if (caminho === '/relatorios/resumo') {
-        return {
-          data: {
-            totais: { total: 0, em_aberto: 0, concluidos: 0, cancelados: 0 },
-            por_estado: [],
-            por_categoria: [],
-            por_prioridade: [],
-            por_local: [],
-          },
-        };
-      }
-      if (caminho === '/relatorios/desempenho') {
-        return {
-          data: {
-            geral: {},
-            marcos: {},
-            por_categoria: [],
-            avaliacoes: {},
-            prazo: { percentual_no_prazo: null, concluidos_no_prazo: 0, concluidos_com_prazo: 0, em_aberto: 0, em_aberto_atrasados: 0 },
-          },
-        };
-      }
-      if (caminho === '/relatorios/tecnicos') return { data: { tecnicos: [] } };
-      throw new Error('fora do teste');
-    });
+    respostasDeRelatorios();
     api.patch.mockResolvedValue({ data: {} });
 
     render(
@@ -164,5 +171,33 @@ describe('Régua do prazo nos relatórios', () => {
         name: 'ajustar expediente e feriados',
       })
     ).toHaveAttribute('href', '/cadastros?aba=expediente');
+  });
+  // RN12: o histórico de versões fica junto dos campos de prazo, e uma alteração
+  // feita com ele aberto aparece sem recarregar a página.
+  it('o histórico de prazos abre na tela de Relatórios e se atualiza quando um prazo muda', async () => {
+    const usuario = userEvent.setup();
+    respostasDeRelatorios([
+      { id: 1, prioridade: 'media', prazo_horas: 72, contagem: 'corridas', vigente_desde: '2026-09-17T12:00:00Z', vigente_ate: null, alterado_por: null },
+    ]);
+    api.patch.mockResolvedValue({ data: {} });
+    render(
+      <MemoryRouter>
+        <Relatorios />
+      </MemoryRouter>
+    );
+
+    await usuario.click(await screen.findByText('Histórico de alterações dos prazos'));
+    expect(await screen.findByText('Média: 72 h corridas')).toBeInTheDocument();
+    const consultas = () => api.get.mock.calls.filter(([caminho]) => caminho === '/sla/historico').length;
+    const antes = consultas();
+
+    const regua = screen.getByLabelText('Contagem do prazo Média');
+    await usuario.selectOptions(regua, 'uteis');
+
+    await waitFor(() => expect(consultas()).toBe(antes + 1));
+    // Alterar um prazo não recarrega a tela: o campo em que a pessoa estava
+    // continua sendo o mesmo, com o foco e a posição da página.
+    expect(regua.isConnected).toBe(true);
+    expect(screen.queryByText('Carregando...')).toBeNull();
   });
 });

@@ -53,7 +53,8 @@ pessoa indiretamente, como o endereço de rede.
 | `chamado` | quem abriu, quem atende, textos livres | O registro da manutenção |
 | `comentario` | autor e texto livre | Conversa do chamado (RN03) |
 | `historico_chamado` | quem mudou o estado e quando | Auditoria do fluxo (§2.4) |
-| `avaliacao` | nota e comentário | RF09. Ligada ao chamado, não à pessoa |
+| `avaliacao` | nota, comentário (opcional, texto livre) e data da confirmação da solução | RF09. Ligada ao chamado, não à pessoa. O texto do comentário não é copiado para o histórico |
+| `sla_versao` | quem alterou cada prazo e quando | RN12: versão e vigência da política de prazos (migração 032) |
 | `anexo` | autor, nome do arquivo e **o arquivo** | Foto do problema |
 | `notificacao` | destinatário e mensagem | Sino e e-mail |
 | `equipe_tecnico` | quem está em qual equipe | Distribuição |

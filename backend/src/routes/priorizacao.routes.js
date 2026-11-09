@@ -15,9 +15,9 @@ router.post(
   '/simular',
   authorize('administrador', 'gestor'),
   validate({
-    urgencia: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
-    impacto: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
-    risco: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    urgencia: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 4 },
+    impacto: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 4 },
+    risco: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 4 },
   }),
   priorizacaoController.simular
 );
@@ -31,13 +31,13 @@ router.post(
   authorize('administrador'),
   validate({
     versao: { obrigatorio: true, tipo: 'string', minLength: 1, maxLength: 20 },
-    peso_urgencia: { obrigatorio: true, tipo: 'number', min: 1, max: 10 },
-    peso_impacto: { obrigatorio: true, tipo: 'number', min: 1, max: 10 },
-    peso_risco: { obrigatorio: true, tipo: 'number', min: 1, max: 10 },
-    limiar_media: { obrigatorio: true, tipo: 'number', min: 1, max: 120 },
-    limiar_alta: { obrigatorio: true, tipo: 'number', min: 1, max: 120 },
-    limiar_critica: { obrigatorio: true, tipo: 'number', min: 1, max: 120 },
-    risco_critico_minimo: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    peso_urgencia: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 10 },
+    peso_impacto: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 10 },
+    peso_risco: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 10 },
+    limiar_media: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 120 },
+    limiar_alta: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 120 },
+    limiar_critica: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 120 },
+    risco_critico_minimo: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 4 },
     observacao: { tipo: 'string', maxLength: 500 },
   }),
   priorizacaoController.criar

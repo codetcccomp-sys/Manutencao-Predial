@@ -2,7 +2,9 @@ const request = require('supertest');
 const app = require('../src/app');
 const pool = require('../src/config/db');
 const { garantirLocal } = require('./apoio/local');
-const { TAMANHO_MAXIMO_BYTES } = require('../src/services/anexos.service');
+const anexosService = require('../src/services/anexos.service');
+
+const { TAMANHO_MAXIMO_BYTES } = anexosService;
 
 const { ipDaSuite } = require('./apoio/ip');
 
@@ -152,6 +154,19 @@ describe('Envio de anexos', () => {
       .get(`/chamados/${chamadoId}/anexos`)
       .set('Authorization', `Bearer ${solicitante.token}`);
     expect(depois.status).toBe(200);
+  });
+
+  // Direto no serviço: o que se prova é o que chega ao banco, e o formulário
+  // multipart do teste não carrega esses bytes de forma confiável.
+  it('nome de arquivo com caractere de controle é gravado sem ele, e nunca vazio', async () => {
+    const arquivo = (nome) => ({ originalname: nome, mimetype: 'image/png', size: PNG_VALIDO.length, buffer: PNG_VALIDO });
+
+    const comControle = await anexosService.anexar(chamadoId, solicitante.usuario.id, arquivo('fo\u0000to\r\n do \u007fvazamento.png'));
+    const soControle = await anexosService.anexar(chamadoId, solicitante.usuario.id, arquivo('\u0000\u0001\n'));
+
+    expect(comControle.nome_arquivo).toBe('foto do vazamento.png');
+    expect(soControle.nome_arquivo).toBe('arquivo');
+    await pool.query('DELETE FROM anexo WHERE id = ANY($1)', [[comControle.id, soControle.id]]);
   });
 
   it('recusa requisição sem arquivo', async () => {

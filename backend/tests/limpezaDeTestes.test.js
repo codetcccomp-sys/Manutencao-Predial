@@ -4,6 +4,7 @@ const {
   limparChamadosDeTeste,
   limparPlanosDeTeste,
   limparRegrasDeTeste,
+  limparVersoesDeSlaDeTeste,
   limparUsuariosDeTeste,
   contasSemeadas,
   recusarSeNaoForBancoDeTeste,
@@ -182,6 +183,37 @@ describe('Limpeza das regras de distribuição de teste', () => {
     await pool.query('DELETE FROM equipe WHERE id = ANY($1::int[])', [
       [doTesteRegra.equipe_id, deForaRegra.equipe_id],
     ]);
+  });
+});
+
+describe('Versões de SLA de teste (RN12)', () => {
+  test('apaga a versão assinada por conta de teste e preserva a de fora e a sem autor', async () => {
+    const autorDeTeste = await inserirPessoa(`sla@${DOMINIO}`);
+    const autorDeFora = await inserirPessoa(`sla-${marca}@fora.exemplo.org`);
+    const inserir = async (autor) =>
+      (
+        await pool.query(
+          "INSERT INTO sla_versao (prioridade, prazo_horas, contagem, alterado_por) VALUES ('baixa', 99, 'corridas', $1) RETURNING id",
+          [autor]
+        )
+      ).rows[0].id;
+    const [doTesteVersao, deForaVersao, semAutor] = [await inserir(autorDeTeste), await inserir(autorDeFora), await inserir(null)];
+
+    const client = await pool.connect();
+    try {
+      expect(await limparVersoesDeSlaDeTeste(client, { padrao: PADRAO })).toBe(1);
+    } finally {
+      client.release();
+    }
+
+    const restantes = (
+      await pool.query('SELECT id FROM sla_versao WHERE id = ANY($1::int[]) ORDER BY id', [
+        [doTesteVersao, deForaVersao, semAutor],
+      ])
+    ).rows.map((r) => r.id);
+    expect(restantes).toEqual([deForaVersao, semAutor]);
+    await pool.query('DELETE FROM sla_versao WHERE id = ANY($1::int[])', [[deForaVersao, semAutor]]);
+    await pool.query('DELETE FROM usuario WHERE id = ANY($1::int[])', [[autorDeTeste, autorDeFora]]);
   });
 });
 

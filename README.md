@@ -88,7 +88,7 @@ incômodo de ser feio.
 
 | Perfil | O que enxerga | O que faz |
 | --- | --- | --- |
-| `solicitante` | os chamados que abriu | abre chamado, anexa arquivo, avalia o atendimento concluído |
+| `solicitante` | os chamados que abriu | abre chamado, anexa arquivo, confirma a solução e avalia o atendimento concluído |
 | `tecnico` | os chamados designados a ele | inicia, espera material e conclui; lança material consumido; anexa arquivo. **Não cancela** (RN05) |
 | `gestor` | todos os chamados | tudo acima, mais triagem, priorização, atribuição, cancelamento, cadastros e relatórios |
 | `administrador` | todos os chamados | tudo acima, mais gestão de usuários (criar, mudar perfil, desativar, anonimizar) e a regra de priorização |
@@ -200,8 +200,39 @@ para contar e vale a régua corrida. Preventivas não usam SLA: o prazo delas é
 fim do dia previsto.
 
 Rotas: `PATCH /sla/:prioridade` (`prazo_horas` e/ou `contagem`),
-`GET PUT /sla/expediente` (a semana inteira de uma vez),
+`GET /sla/historico` (gestão), `GET PUT /sla/expediente` (a semana inteira de uma vez),
 `GET POST /sla/feriados`, `DELETE /sla/feriados/:data`.
+
+**Versões do SLA (RN12).** A tabela `sla` guarda só o que vale hoje, e é dela que
+a função `prazo_sla` lê. Cada alteração feita pela tela ou pela API grava também
+uma linha em `sla_versao` (migração 032): prioridade, prazo, régua, desde quando
+vale e quem alterou. Reenviar o mesmo valor não cria versão. A tela de Relatórios
+mostra a lista em "Histórico de alterações dos prazos", com o intervalo em que
+cada versão valeu; a versão aplicada a um chamado é a que estava em vigor na
+abertura dele (o prazo em si continua gravado no chamado). Duas ressalvas:
+alterar `sla` por SQL direto não passa pelo serviço e **não deixa versão**; e,
+enquanto a migração 032 não rodar num banco, o prazo é alterado normalmente e o
+histórico fica vazio.
+
+## Entrada malformada
+
+Recusa do cliente é 4xx; 5xx é defeito do sistema, gravado em `erro_aplicacao` e
+mostrado ao administrador. Para que um endereço digitado errado não encha esse
+painel, a forma da entrada é conferida antes de qualquer consulta
+(`backend/src/middlewares/entrada.js`, `backend/tests/entradaMalformada.test.js`):
+
+- **Identificador da rota** (`:id`, `:anexoId`, `:materialId`, `:usuarioId`) tem de
+  ser um inteiro de 1 a 2.147.483.647, sem sinal nem zero à esquerda. O resto
+  responde 404 `IDENTIFICADOR_INVALIDO`. Vale em todo roteador: o `app.js` os monta
+  por `montar`, que aplica `idsInteiros`.
+- **Campo inteiro no corpo** usa `tipo: 'inteiro'` no `validate`: `2.5` e
+  `99999999999` voltam 422. `tipo: 'number'` fica para o que tem casa decimal (a
+  quantidade de material).
+- **Filtro de consulta** numérico ou de lista fechada passa por `filtroInteiro` e
+  `filtroDeLista`: `?estado=zzz` responde 422 `FILTRO_INVALIDO`, em vez de devolver
+  a lista sem filtro. Filtro repetido ou aninhado (`?busca=a&busca=b`) responde 400.
+- **Caractere nulo** (`%00` no endereço, `\u0000` no corpo) responde 400: o
+  PostgreSQL não o guarda em texto.
 
 ## Alerta de primeiro atendimento
 
@@ -637,7 +668,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `PATCH` | `/chamados/:id/estado` | gestão ou técnico designado; **cancelar, só a gestão** (RN05) |
 | `PATCH` | `/chamados/:id/execucao` | gestão ou técnico designado |
 | `POST` | `/chamados/:id/reabertura` | solicitante do chamado ou gestão, em até 48h |
-| `POST` | `/chamados/:id/avaliacao` | solicitante, chamado concluído |
+| `POST` | `/chamados/:id/avaliacao` | solicitante, chamado concluído. `nota` inteira de 1 a 5 e `comentario` opcional (até 1000 caracteres). Avaliar é confirmar a solução (RF09): entra na linha do tempo e volta em `chamado.avaliacao` |
 | `GET POST` | `/chamados/:id/comentarios` | quem tem acesso ao chamado; em chamado encerrado, só leitura |
 | `GET POST DELETE` | `/chamados/:id/materiais` | gestão ou técnico designado (leitura: quem vê o chamado) |
 | `GET POST DELETE` | `/chamados/:id/anexos` | quem tem acesso ao chamado |
@@ -654,6 +685,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `GET POST PATCH` | `/equipes`, `/materiais` | leitura autenticada, escrita para gestão |
 | `POST DELETE` | `/equipes/:id/tecnicos`, `/equipes/:id/tecnicos/:usuarioId` | gestor, administrador |
 | `GET PATCH` | `/sla`, `/sla/:prioridade` | leitura autenticada, escrita para gestão |
+| `GET` | `/sla/historico` | gestor, administrador: versões da política de prazos (RN12) |
 | `GET` | `/regras-priorizacao/vigente` | qualquer autenticado: quem abre um chamado pode saber por qual critério ele será classificado |
 | `GET POST` | `/regras-priorizacao`, `/regras-priorizacao/simular` | gestor, administrador (o `POST /regras-priorizacao`, que publica versão nova, só o administrador) |
 | `GET POST PATCH` | `/regras-distribuicao`, `/regras-distribuicao/:id` | gestor, administrador |

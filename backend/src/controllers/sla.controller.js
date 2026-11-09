@@ -6,7 +6,11 @@ const listar = asyncHandler(async (req, res) => {
 });
 
 const atualizar = asyncHandler(async (req, res) => {
-  res.json({ sla: await slaService.atualizar(req.params.prioridade, req.body) });
+  res.json({ sla: await slaService.atualizar(req.params.prioridade, req.body, req.usuario.id) });
+});
+
+const historico = asyncHandler(async (req, res) => {
+  res.json({ versoes: await slaService.historico() });
 });
 
 const expediente = asyncHandler(async (req, res) => {
@@ -33,6 +37,7 @@ const removerFeriado = asyncHandler(async (req, res) => {
 module.exports = {
   listar,
   atualizar,
+  historico,
   expediente,
   definirExpediente,
   feriados,

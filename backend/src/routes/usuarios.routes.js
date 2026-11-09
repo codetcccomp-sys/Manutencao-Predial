@@ -33,6 +33,7 @@ router.patch(
   validate({
     nome: { aparar: true, tipo: 'string', minLength: 3 },
     perfil: { enum: ['solicitante', 'tecnico', 'gestor', 'administrador'] },
+    ativo: { tipo: 'boolean' },
   }),
   usuariosController.atualizar
 );

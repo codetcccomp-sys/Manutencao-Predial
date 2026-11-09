@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { montarCenario, entrar, responderSituacao } from './apoio.js';
+import { montarCenario, entrar, responderSituacao, conferirQueCabeNaTela } from './apoio.js';
 
 /**
  * O caminho que o sistema existe para percorrer: alguém abre um chamado, a
@@ -169,6 +169,43 @@ test('chamado encerrado guarda a conversa mas não aceita comentário novo', asy
   await expect(page.getByText(`Dito antes de encerrar ${cenario.marca}`)).toBeVisible();
   await expect(page.getByPlaceholder('Escreva um comentário')).toHaveCount(0);
   await expect(page.getByText(/não recebe novos comentários/)).toBeVisible();
+});
+
+// RF09: o solicitante confirma a solução e avalia, com comentário; quem atendeu
+// e a gestão passam a ver a avaliação no próprio chamado.
+test('o solicitante confirma a solução e avalia, e a gestão vê a avaliação no chamado (RF09)', async ({ page }) => {
+  const chamado = await cenario.abrirChamado();
+  await cenario.atribuir(chamado.id);
+  await cenario.concluir(chamado.id);
+
+  await entrar(page, cenario.pessoas.solicitante);
+  await page.goto(`/chamados/${chamado.id}`);
+  const formulario = page.locator('form', {
+    has: page.getByRole('heading', { name: 'Confirmar a solução e avaliar' }),
+  });
+  await expect(formulario.getByText(/você confirma que o serviço foi feito/)).toBeVisible();
+  await formulario.getByLabel('Nota do atendimento').selectOption('4');
+  await formulario.getByLabel('Comentário (opcional)').fill(`Resolveu ${cenario.marca}`);
+  await formulario.getByRole('button', { name: 'Confirmar e enviar avaliação' }).click();
+
+  await expect(page.getByText('Solução confirmada e avaliação enviada. Obrigado!')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sua avaliação' })).toBeVisible();
+  await expect(page.getByLabel('Comentário (opcional)')).toHaveValue(`Resolveu ${cenario.marca}`);
+  // O histórico fica recolhido: abre, e a confirmação está lá.
+  await page.locator('summary', { hasText: 'Histórico' }).click();
+  await expect(
+    page.getByText('Solicitante confirmou a solução e avaliou o atendimento: nota 4 de 5.')
+  ).toBeVisible();
+  await conferirQueCabeNaTela(page, expect);
+
+  // Outra pessoa no mesmo navegador: a sessão é o cookie.
+  await page.context().clearCookies();
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto(`/chamados/${chamado.id}`);
+  const cartao = page.locator('div', { has: page.getByRole('heading', { name: 'Avaliação do solicitante' }) }).last();
+  await expect(cartao.getByText('4 de 5')).toBeVisible();
+  await expect(cartao.getByText(`“Resolveu ${cenario.marca}”`)).toBeVisible();
+  await expect(page.getByLabel('Nota do atendimento')).toHaveCount(0);
 });
 
 test('o escopo por perfil vale na tela, não só na API', async ({ page }) => {

@@ -90,6 +90,10 @@ const TRANSICOES = {
   cancelado: [],
 };
 
+// Os sete estados do Termo (RF06), na ordem do fluxo. É a lista que o filtro da
+// fila aceita: sai das chaves do mapa acima para não existir em dois lugares.
+const ESTADOS = Object.keys(TRANSICOES);
+
 /**
  * Local, categoria e equipamento efetivos de um chamado novo.
  *
@@ -524,7 +528,15 @@ async function buscarPorId(id, usuario) {
   // dele; quem decide é o servidor, o mesmo que vai conferir ao mudar o estado.
   const podeAssumir = await daEquipeDoTecnico(pool, chamado, usuario);
 
-  return { ...chamado, ...contexto.rows[0], historico: historico.rows, pode_assumir: podeAssumir };
+  // RF09: a confirmação e a nota do solicitante, para quem abre o chamado. Só
+  // enquanto ele está concluído: depois de reaberto, a avaliação do ciclo
+  // anterior deixou de valer como confirmação (continua na linha do tempo).
+  const avaliacao =
+    chamado.estado === 'concluido'
+      ? (await pool.query('SELECT nota, comentario, data FROM avaliacao WHERE chamado_id = $1', [id])).rows[0] || null
+      : null;
+
+  return { ...chamado, ...contexto.rows[0], historico: historico.rows, pode_assumir: podeAssumir, avaliacao };
 }
 
 // Estados em que o chamado já tem responsável: atribuir de novo aqui é
@@ -1176,6 +1188,18 @@ async function reabrir(id, { justificativa }, usuario) {
   return chamado;
 }
 
+/**
+ * RF09: o solicitante confirma a solução e avalia o atendimento.
+ *
+ * Avaliar É confirmar: quem não concorda com a conclusão não avalia, reabre
+ * (RN09, 48 horas). A tela diz isso antes do botão, e a confirmação entra na
+ * linha do tempo com autor e hora, como toda ação relevante do chamado; antes
+ * a nota ia só para a tabela `avaliacao` e ninguém que abrisse o chamado sabia
+ * que o solicitante tinha dado o serviço por feito.
+ *
+ * Uma avaliação por chamado. Reenviar troca a nota e o comentário (depois de
+ * uma reabertura, por exemplo), atualiza a data e deixa a troca no histórico.
+ */
 async function avaliar(id, { nota, comentario }, usuario) {
   const chamado = await buscarChamadoBruto(id);
 
@@ -1186,14 +1210,35 @@ async function avaliar(id, { nota, comentario }, usuario) {
     throw new AppError('Só é possível avaliar chamados concluídos.', 409, 'ESTADO_INVALIDO');
   }
 
-  const { rows } = await pool.query(
-    `INSERT INTO avaliacao (chamado_id, nota, comentario) VALUES ($1, $2, $3)
-     ON CONFLICT (chamado_id) DO UPDATE SET nota = EXCLUDED.nota, comentario = EXCLUDED.comentario
-     RETURNING *`,
-    [id, nota, comentario || null]
-  );
+  const texto = typeof comentario === 'string' && comentario.trim() ? comentario.trim() : null;
 
-  return rows[0];
+  return transacao(async (client) => {
+    const anterior = await client.query('SELECT nota FROM avaliacao WHERE chamado_id = $1 FOR UPDATE', [id]);
+
+    const { rows } = await client.query(
+      `INSERT INTO avaliacao (chamado_id, nota, comentario) VALUES ($1, $2, $3)
+       ON CONFLICT (chamado_id) DO UPDATE
+         SET nota = EXCLUDED.nota, comentario = EXCLUDED.comentario, data = now()
+       RETURNING *`,
+      [id, nota, texto]
+    );
+
+    // O comentário não é copiado para o histórico: texto livre fica num lugar só
+    // (a avaliação), para que uma correção pedida pelo titular não precise caçar
+    // cópias em registro que não se edita (docs/lgpd.md).
+    await registrarHistorico(
+      client,
+      id,
+      usuario.id,
+      chamado.estado,
+      chamado.estado,
+      anterior.rows[0]
+        ? `Solicitante alterou a avaliação do atendimento: nota ${nota} de 5 (antes, ${anterior.rows[0].nota}).`
+        : `Solicitante confirmou a solução e avaliou o atendimento: nota ${nota} de 5.`
+    );
+
+    return rows[0];
+  });
 }
 
 function validarTransicao(estadoAtual, novoEstado) {
@@ -1250,4 +1295,5 @@ module.exports = {
   editar,
   garantirLeitura,
   garantirExecucao,
+  ESTADOS,
 };

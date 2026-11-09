@@ -12,15 +12,15 @@ router.use(authenticate, authorize('administrador', 'gestor'));
 const CAMPOS = {
   titulo: { tipo: 'string', minLength: 3, maxLength: 200, aparar: true },
   descricao: { tipo: 'string', minLength: 5, maxLength: 4000 },
-  equipamento_id: { tipo: 'number' },
-  local_id: { tipo: 'number' },
-  categoria_id: { tipo: 'number' },
+  equipamento_id: { tipo: 'inteiro' },
+  local_id: { tipo: 'inteiro' },
+  categoria_id: { tipo: 'inteiro' },
   prioridade: { enum: ['baixa', 'media', 'alta', 'critica'] },
-  repetir_a_cada: { tipo: 'number', min: 1, max: 366 },
+  repetir_a_cada: { tipo: 'inteiro', min: 1, max: 366 },
   unidade_repeticao: { enum: ['dia', 'semana', 'mes', 'ano'] },
   proxima_execucao: { tipo: 'string' },
-  antecedencia_dias: { tipo: 'number', min: 0, max: 60 },
-  tecnico_id: { tipo: 'number' },
+  antecedencia_dias: { tipo: 'inteiro', min: 0, max: 60 },
+  tecnico_id: { tipo: 'inteiro' },
 };
 
 router.get('/', planosController.listar);

@@ -11,6 +11,7 @@ import { rotuloEstado, rotuloPrioridade } from '../dominio/rotulos';
 import Tabela from '../components/ui/Tabela';
 import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
+import HistoricoDoSla from '../components/HistoricoDoSla';
 import { formatarDia } from '../dominio/preventiva';
 
 // O backend devolve segundos; quem lê o relatório pensa em horas e dias.
@@ -89,6 +90,8 @@ function Relatorios() {
   const refPagina = useRef(null);
   useEntrada(refPagina, [dados]);
   const [erro, setErro] = useState('');
+  // Troca a cada alteração de prazo, para o histórico aberto se atualizar (RN12).
+  const [alteracoesDeSla, setAlteracoesDeSla] = useState(0);
   const [baixando, setBaixando] = useState('');
 
   const carregar = useCallback(() => {
@@ -146,7 +149,14 @@ function Relatorios() {
     setErro('');
     try {
       await api.patch(`/sla/${prioridade}`, campos);
-      carregar();
+      setAlteracoesDeSla((n) => n + 1);
+      // Só os prazos, sem recarregar a tela: `carregar()` troca tudo por
+      // "Carregando..." e desmonta os campos, e quem saía de um prazo com Tab
+      // para o seguinte perdia o foco e a posição da página a cada alteração.
+      // Os números do relatório não mudam com o SLA (o prazo de cada chamado
+      // foi gravado na abertura).
+      const { data } = await api.get('/sla');
+      setDados((atual) => (atual ? { ...atual, sla: data.sla } : atual));
     } catch (err) {
       setErro(err.response?.data?.erro?.mensagem || 'Não foi possível alterar o prazo.');
       carregar();
@@ -484,6 +494,7 @@ function Relatorios() {
                 </Link>
                 .
               </p>
+              <HistoricoDoSla versao={alteracoesDeSla} />
             </div>
           </div>
 

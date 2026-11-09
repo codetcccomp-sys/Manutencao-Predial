@@ -1,4 +1,5 @@
 const { asyncHandler } = require('../utils/asyncHandler');
+const { filtroInteiro } = require('../middlewares/entrada');
 const equipamentosService = require('../services/equipamentos.service');
 
 const ehGestao = (usuario) => ['administrador', 'gestor'].includes(usuario.perfil);
@@ -7,7 +8,7 @@ const listar = asyncHandler(async (req, res) => {
   // Inativos só para a gestão, que os reativa na tela de cadastros. Para quem
   // abre chamado, equipamento desativado não existe mais.
   const equipamentos = await equipamentosService.listar({
-    localId: req.query.local_id ? Number(req.query.local_id) : undefined,
+    localId: filtroInteiro(req.query.local_id, 'local_id'),
     incluirInativos: ehGestao(req.usuario) && req.query.incluir_inativos === 'true',
     busca: req.query.busca,
   });
