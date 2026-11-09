@@ -16,11 +16,11 @@ router.get('/', distribuicaoController.listar);
 router.post(
   '/',
   validate({
-    categoria_id: { obrigatorio: true, tipo: 'number' },
-    equipe_id: { obrigatorio: true, tipo: 'number' },
+    categoria_id: { obrigatorio: true, tipo: 'inteiro' },
+    equipe_id: { obrigatorio: true, tipo: 'inteiro' },
     unidade: { tipo: 'string', maxLength: 150 },
     bloco: { tipo: 'string', maxLength: 100 },
-    tecnico_id: { tipo: 'number' },
+    tecnico_id: { tipo: 'inteiro' },
     prioridade: { enum: PRIORIDADES },
   }),
   distribuicaoController.criar
@@ -31,8 +31,8 @@ router.post(
 router.patch(
   '/:id',
   validate({
-    equipe_id: { tipo: 'number' },
-    tecnico_id: { tipo: 'number' },
+    equipe_id: { tipo: 'inteiro' },
+    tecnico_id: { tipo: 'inteiro' },
     prioridade: { enum: PRIORIDADES },
     ativo: { tipo: 'boolean' },
   }),

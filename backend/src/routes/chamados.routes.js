@@ -19,15 +19,15 @@ router.post(
     descricao: { obrigatorio: true, tipo: 'string', minLength: 5 },
     // Local e categoria são obrigatórios, a menos que venha o equipamento:
     // aí os dois são os dele (o caminho do QR Code). Quem confere é o serviço.
-    categoria_id: { tipo: 'number' },
-    local_id: { tipo: 'number' },
-    equipamento_id: { tipo: 'number' },
+    categoria_id: { tipo: 'inteiro' },
+    local_id: { tipo: 'inteiro' },
+    equipamento_id: { tipo: 'inteiro' },
     prioridade: { enum: ['baixa', 'media', 'alta', 'critica'] },
     // Os três fatores da regra de priorização (RF04), de 1 a 4. Quem confere que
     // vêm os três ou nenhum é o serviço, que já conhece a escala.
-    urgencia: { tipo: 'number' },
-    impacto: { tipo: 'number' },
-    risco: { tipo: 'number' },
+    urgencia: { tipo: 'inteiro' },
+    impacto: { tipo: 'inteiro' },
+    risco: { tipo: 'inteiro' },
   }),
   chamadosController.criar
 );
@@ -43,9 +43,9 @@ router.patch(
   validate({
     titulo: { tipo: 'string', minLength: 3, maxLength: 200 },
     descricao: { tipo: 'string', minLength: 5 },
-    categoria_id: { tipo: 'number' },
-    local_id: { tipo: 'number' },
-    equipamento_id: { tipo: 'number' },
+    categoria_id: { tipo: 'inteiro' },
+    local_id: { tipo: 'inteiro' },
+    equipamento_id: { tipo: 'inteiro' },
   }),
   chamadosController.editar
 );
@@ -54,8 +54,8 @@ router.patch(
   '/:id/atribuir',
   authorize('administrador', 'gestor'),
   validate({
-    tecnico_id: { tipo: 'number' },
-    equipe_id: { tipo: 'number' },
+    tecnico_id: { tipo: 'inteiro' },
+    equipe_id: { tipo: 'inteiro' },
     // Obrigatória só na reatribuição; quem sabe se é o caso é o serviço, que
     // conhece o estado atual do chamado.
     justificativa: { tipo: 'string', maxLength: 1000 },
@@ -93,7 +93,7 @@ router.patch(
   '/:id/execucao',
   validate({
     diagnostico: { tipo: 'string', maxLength: 4000 },
-    tempo_empregado_minutos: { tipo: 'number', min: 1, max: 100000 },
+    tempo_empregado_minutos: { tipo: 'inteiro', min: 1, max: 100000 },
   }),
   chamadosController.registrarExecucao
 );
@@ -104,9 +104,9 @@ router.patch(
   '/:id/priorizacao',
   authorize('administrador', 'gestor'),
   validate({
-    urgencia: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
-    impacto: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
-    risco: { obrigatorio: true, tipo: 'number', min: 1, max: 4 },
+    urgencia: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 4 },
+    impacto: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 4 },
+    risco: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 4 },
     prioridade: { enum: ['baixa', 'media', 'alta', 'critica'] },
     justificativa: { tipo: 'string', maxLength: 1000 },
   }),
@@ -116,7 +116,11 @@ router.patch(
 router.post(
   '/:id/avaliacao',
   authorize('solicitante'),
-  validate({ nota: { obrigatorio: true, tipo: 'number', min: 1, max: 5 } }),
+  validate({
+    nota: { obrigatorio: true, tipo: 'inteiro', min: 1, max: 5 },
+    // Opcional (RF09). Sem tipo nem teto, um objeto ou 90 kB de texto chegavam ao banco.
+    comentario: { tipo: 'string', maxLength: 1000 },
+  }),
   chamadosController.avaliar
 );
 
@@ -128,7 +132,7 @@ router.get('/:id/materiais', materiaisController.listarDoChamado);
 router.post(
   '/:id/materiais',
   validate({
-    material_id: { obrigatorio: true, tipo: 'number' },
+    material_id: { obrigatorio: true, tipo: 'inteiro' },
     quantidade: { obrigatorio: true, tipo: 'number', min: 0.01 },
   }),
   materiaisController.registrarNoChamado

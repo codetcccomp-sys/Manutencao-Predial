@@ -22,14 +22,18 @@ router.post(
 router.patch(
   '/:id',
   authorize('administrador', 'gestor'),
-  validate({ nome: { aparar: true, tipo: 'string', minLength: 2, maxLength: 100 } }),
+  validate({
+    nome: { aparar: true, tipo: 'string', minLength: 2, maxLength: 100 },
+    // Sem isto, `ativo: "sim"` só era recusado pelo banco, como erro interno.
+    ativo: { tipo: 'boolean' },
+  }),
   equipesController.atualizar
 );
 
 router.post(
   '/:id/tecnicos',
   authorize('administrador', 'gestor'),
-  validate({ usuario_id: { obrigatorio: true, tipo: 'number' } }),
+  validate({ usuario_id: { obrigatorio: true, tipo: 'inteiro' } }),
   equipesController.adicionarTecnico
 );
 

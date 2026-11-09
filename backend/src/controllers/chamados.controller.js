@@ -1,5 +1,6 @@
 const chamadosService = require('../services/chamados.service');
 const { asyncHandler } = require('../utils/asyncHandler');
+const { filtroInteiro, filtroDeLista } = require('../middlewares/entrada');
 
 const criar = asyncHandler(async (req, res) => {
   const chamado = await chamadosService.criar(req.body, req.usuario.id, req.usuario.perfil);
@@ -22,9 +23,11 @@ const listar = asyncHandler(async (req, res) => {
     limite,
   } = req.query;
   const resultado = await chamadosService.listar(req.usuario, {
-    estado,
-    categoria_id,
-    equipamento_id,
+    // Filtro malformado é recusado (422), e não repassado ao banco: `estado=zzz`
+    // e `categoria_id=abc` voltavam como erro interno.
+    estado: filtroDeLista(estado, 'estado', chamadosService.ESTADOS),
+    categoria_id: filtroInteiro(categoria_id, 'categoria_id'),
+    equipamento_id: filtroInteiro(equipamento_id, 'equipamento_id'),
     origem,
     atrasados,
     sem_tecnico,

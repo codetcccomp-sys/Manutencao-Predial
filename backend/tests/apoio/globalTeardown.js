@@ -14,6 +14,7 @@ module.exports = async function limparDepoisDosTestes() {
     limparChamadosDeTeste,
     limparPlanosDeTeste,
     limparRegrasDeTeste,
+    limparVersoesDeSlaDeTeste,
     limparUsuariosDeTeste,
     recusarSeNaoForBancoDeTeste,
   } = require('./limpeza');
@@ -34,6 +35,7 @@ module.exports = async function limparDepoisDosTestes() {
     // nada mais aponta para elas.
     const planos = await limparPlanosDeTeste(client);
     const regras = await limparRegrasDeTeste(client);
+    await limparVersoesDeSlaDeTeste(client);
     const contas = await limparUsuariosDeTeste(client);
     // Só contagem de IP do teto de cadastro: sem pessoa, mas também sem razão para ficar.
     await client.query('DELETE FROM tentativa_cadastro').catch(() => {});

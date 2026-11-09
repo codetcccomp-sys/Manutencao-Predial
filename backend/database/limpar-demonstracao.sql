@@ -46,7 +46,7 @@ BEGIN
   PERFORM set_config('lock_timeout', coalesce(nullif(current_setting('limpeza.espera', true), ''), '15s'), true);
 END $$;
 LOCK TABLE chamado, historico_chamado, comentario, anexo, avaliacao, chamado_material, notificacao,
-           usuario, equipe_tecnico, plano_preventivo, regra_distribuicao, configuracao,
+           usuario, equipe_tecnico, plano_preventivo, regra_distribuicao, configuracao, sla_versao,
            recuperacao_senha, codigo_recuperacao_2fa, tentativa_login, tentativa_recuperacao
   IN EXCLUSIVE MODE;
 
@@ -150,6 +150,9 @@ UPDATE regra_distribuicao SET criado_por = (SELECT id FROM limpeza_herdeiro)
  WHERE criado_por IN (SELECT id FROM limpeza_contas WHERE NOT fica);
 UPDATE configuracao SET atualizado_por = NULL
  WHERE atualizado_por IN (SELECT id FROM limpeza_contas WHERE NOT fica);
+-- A versão do SLA é configuração e fica; só perde o nome de quem a gravou (032).
+UPDATE sla_versao SET alterado_por = NULL
+ WHERE alterado_por IN (SELECT id FROM limpeza_contas WHERE NOT fica);
 
 DELETE FROM recuperacao_senha WHERE usuario_id IN (SELECT id FROM limpeza_contas WHERE NOT fica);
 DELETE FROM codigo_recuperacao_2fa WHERE usuario_id IN (SELECT id FROM limpeza_contas WHERE NOT fica);

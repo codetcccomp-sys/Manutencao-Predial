@@ -314,13 +314,13 @@ try {
   await legenda('O primeiro aviso é a conclusão do chamado; um clique leva até ele', 1800);
   // O aviso cita o protocolo, não o título: o primeiro da lista é o mais recente.
   await clicar(page.locator('div.fixed.z-20 ul li').first().getByRole('button'), 1800);
-  await legenda('Ele confere o histórico completo e avalia o atendimento', 2600);
-  const avaliar = page.locator('form', { has: page.getByRole('heading', { name: /avaliar atendimento/i }) });
+  await legenda('Ele confere o histórico, confirma a solução e avalia o atendimento', 2600);
+  const avaliar = page.locator('form', { has: page.getByRole('heading', { name: /confirmar a solução e avaliar/i }) });
   await mover(avaliar);
   await mover(avaliar.locator('select'));
   await avaliar.locator('select').selectOption('5');
   await pausa(900);
-  await clicar(avaliar.getByRole('button', { name: 'Enviar avaliação' }), 2200);
+  await clicar(avaliar.getByRole('button', { name: 'Confirmar e enviar avaliação' }), 2200);
   await legenda('A nota entra nos relatórios de desempenho', 2800);
   await sair();
 

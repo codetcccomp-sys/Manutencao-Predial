@@ -44,6 +44,9 @@ const FATORES = [
 // com ordens diferentes. Agora saem de dominio/rotulos.js.
 const PRIORIDADES = ORDEM_PRIORIDADES;
 
+// Nota com palavra (RF09): "3 estrela(s)" não dizia se três é bom ou ruim.
+const NOTAS = { 5: '5 – Ótimo', 4: '4 – Bom', 3: '3 – Regular', 2: '2 – Ruim', 1: '1 – Péssimo' };
+
 const PROXIMOS_ESTADOS = {
   aberto: ['em_triagem', 'cancelado'],
   em_triagem: ['atribuido', 'cancelado'],
@@ -68,6 +71,7 @@ function ChamadoDetalhe() {
   const [tecnicoId, setTecnicoId] = useState('');
   const [tecnicos, setTecnicos] = useState([]);
   const [nota, setNota] = useState(5);
+  const [comentarioAvaliacao, setComentarioAvaliacao] = useState('');
   const [anexos, setAnexos] = useState([]);
   // Quantos anexos o chamado aceita; vem da API, que é quem faz valer o limite.
   const [limiteAnexos, setLimiteAnexos] = useState(null);
@@ -121,6 +125,12 @@ function ChamadoDetalhe() {
       .get(`/chamados/${id}`)
       .then(({ data }) => {
         setChamado(data.chamado);
+        // Quem já avaliou reencontra a própria nota e o comentário, e não um
+        // formulário zerado que parece dizer que nada foi enviado.
+        if (data.chamado.avaliacao) {
+          setNota(data.chamado.avaliacao.nota);
+          setComentarioAvaliacao(data.chamado.avaliacao.comentario ?? '');
+        }
         // Reabre o painel já preenchido quando o chamado foi priorizado antes:
         // repriorizar é revisar a avaliação anterior, não começar do zero.
         if (data.chamado.urgencia) {
@@ -364,8 +374,9 @@ function ChamadoDetalhe() {
     e.preventDefault();
     iniciarAcao();
     try {
-      await api.post(`/chamados/${id}/avaliacao`, { nota: Number(nota) });
-      setAviso('Avaliação enviada. Obrigado!');
+      const texto = comentarioAvaliacao.trim();
+      await api.post(`/chamados/${id}/avaliacao`, { nota: Number(nota), ...(texto ? { comentario: texto } : {}) });
+      setAviso(chamado.avaliacao ? 'Avaliação atualizada.' : 'Solução confirmada e avaliação enviada. Obrigado!');
       registrarAcao('avaliacao_enviada');
       carregar();
     } catch (err) {
@@ -1092,18 +1103,57 @@ function ChamadoDetalhe() {
         </div>
       )}
 
+      {/* RF09: avaliar é confirmar a solução. Quem discorda da conclusão reabre, e a
+          tela diz isso antes do botão, para a nota não virar o lugar da reclamação. */}
       {podeAvaliar && (
         <form onSubmit={avaliar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
-          <h2 className="font-medium text-navy">Avaliar atendimento</h2>
-          <select aria-label="Nota do atendimento" value={nota} onChange={(e) => setNota(e.target.value)} className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm">
-            {[5, 4, 3, 2, 1].map((n) => (
-              <option key={n} value={n}>{n} estrela(s)</option>
-            ))}
-          </select>
-          <button className="alvo-toque inline-flex items-center justify-center rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
-            Enviar avaliação
+          <div>
+            <h2 className="font-medium text-navy">
+              {chamado.avaliacao ? 'Sua avaliação' : 'Confirmar a solução e avaliar'}
+            </h2>
+            <p className="text-xs text-tinta-2">
+              {chamado.avaliacao
+                ? `Solução confirmada em ${new Date(chamado.avaliacao.data).toLocaleString('pt-BR')}. Você pode ajustar a nota ou o comentário.`
+                : 'Ao enviar, você confirma que o serviço foi feito. Se o problema continua, não avalie: reabra o chamado.'}
+            </p>
+          </div>
+          <label className="grid gap-1 text-sm text-tinta">
+            Nota do atendimento
+            <select value={nota} onChange={(e) => setNota(e.target.value)} className="alvo-toque w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm">
+              {[5, 4, 3, 2, 1].map((n) => (
+                <option key={n} value={n}>{NOTAS[n]}</option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm text-tinta">
+            Comentário (opcional)
+            <textarea
+              rows={2}
+              maxLength={1000}
+              value={comentarioAvaliacao}
+              onChange={(e) => setComentarioAvaliacao(e.target.value)}
+              className="w-full min-w-0 rounded border border-borda-forte bg-superficie px-3 py-2 text-sm"
+            />
+          </label>
+          <button className="alvo-toque inline-flex items-center justify-center justify-self-start rounded bg-navy px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-navy-2">
+            {chamado.avaliacao ? 'Atualizar avaliação' : 'Confirmar e enviar avaliação'}
           </button>
         </form>
+      )}
+
+      {/* Para quem atendeu e para a gestão: o que o solicitante achou do serviço. */}
+      {!podeAvaliar && chamado.avaliacao && (
+        <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-2">
+          <h2 className="font-medium text-navy">Avaliação do solicitante</h2>
+          <p className="text-sm text-tinta">
+            Solução confirmada em{' '}
+            <strong>{new Date(chamado.avaliacao.data).toLocaleString('pt-BR')}</strong>, com nota{' '}
+            <strong>{chamado.avaliacao.nota} de 5</strong> ({NOTAS[chamado.avaliacao.nota]?.split(' – ')[1]}).
+          </p>
+          {chamado.avaliacao.comentario && (
+            <p className="text-sm text-tinta-2 whitespace-pre-wrap break-words">“{chamado.avaliacao.comentario}”</p>
+          )}
+        </div>
       )}
 
       <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">

@@ -27,21 +27,29 @@ describe('título de cada rota', () => {
     const rotas = [...app.matchAll(/<Route\s+path="([^"]+)"/g)].map((m) => m[1]);
     expect(rotas.length).toBeGreaterThan(10);
 
+    const naoEncontrada = `Página não encontrada — ${NOME_DO_SISTEMA}`;
     for (const rota of rotas) {
       const concreta = rota.replace(':id', '7');
       const titulo = tituloDaRota(concreta);
       expect(titulo, `rota ${rota}`).not.toBe(NOME_DO_SISTEMA);
       expect(titulo.endsWith(` — ${NOME_DO_SISTEMA}`), `rota ${rota}`).toBe(true);
+      // Desde que existe a página 404, rota fora do mapa ganha o título dela, que
+      // passa nas duas conferências acima: uma tela nova sem título apareceria na
+      // aba como "Página não encontrada" e este teste continuaria verde.
+      if (rota !== '*') expect(titulo, `rota ${rota} sem título no mapa`).not.toBe(naoEncontrada);
     }
-    expect(tituloDaRota('/nao-existe')).toBe(`Página não encontrada — ${NOME_DO_SISTEMA}`);
+    expect(tituloDaRota('/nao-existe')).toBe(naoEncontrada);
   });
 
   it('toda rota do App.jsx tem descrição própria, e as telas internas só dizem que são restritas', () => {
     const app = fs.readFileSync(path.join(__dirname, '..', 'src', 'App.jsx'), 'utf8');
     const rotas = [...app.matchAll(/<Route\s+path="([^"]+)"/g)].map((m) => m[1]).filter((r) => r !== '*');
 
+    const daNaoEncontrada = descricaoDaRota('/nao-existe');
     for (const rota of rotas) {
       const descricao = descricaoDaRota(rota.replace(':id', '7'));
+      // Rota fora do mapa herdaria a descrição da página 404.
+      expect([rota, descricao === daNaoEncontrada]).toEqual([rota, false]);
       expect(descricao.length, `rota ${rota}`).toBeGreaterThan(30);
       // Cabe na linha de resultado de um buscador e de uma prévia de link.
       expect(descricao.length, `rota ${rota}`).toBeLessThanOrEqual(160);

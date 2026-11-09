@@ -25,6 +25,9 @@ router.post(
   }),
   slaController.adicionarFeriado
 );
+// RN12: versões da política de prazos. Só a gestão: traz o nome de quem alterou.
+router.get('/historico', authorize('administrador', 'gestor'), slaController.historico);
+
 router.delete('/feriados/:data', authorize('administrador', 'gestor'), slaController.removerFeriado);
 
 router.patch(
@@ -34,7 +37,7 @@ router.patch(
   // digitação, e um prazo absurdo torna o indicador de atraso inútil sem
   // deixar rastro de que foi configurado errado.
   validate({
-    prazo_horas: { tipo: 'number', min: 1, max: 8760 },
+    prazo_horas: { tipo: 'inteiro', min: 1, max: 8760 },
     contagem: { enum: ['corridas', 'uteis'] },
   }),
   slaController.atualizar

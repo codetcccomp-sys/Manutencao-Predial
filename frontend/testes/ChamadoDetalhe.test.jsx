@@ -851,3 +851,82 @@ describe('Confirmação do que deu certo', () => {
     expect(screen.getByRole('link', { name: /Voltar à lista de chamados/ })).toHaveAttribute('href', '/');
   });
 });
+
+describe('RF09: confirmar a solução e avaliar', () => {
+  const CONCLUIDO = { estado: 'concluido', solicitante_id: SOLICITANTE.id, data_conclusao: new Date().toISOString() };
+  const AVALIACAO = { nota: 2, comentario: 'Voltou a pingar', data: '2026-11-05T14:30:00Z' };
+
+  it('diz ao solicitante que avaliar é confirmar, e que quem discorda reabre', async () => {
+    montar({ como: SOLICITANTE, dados: chamado(CONCLUIDO) });
+
+    const formulario = (await screen.findByRole('heading', { name: 'Confirmar a solução e avaliar' })).closest('form');
+
+    expect(within(formulario).getByText(/você confirma que o serviço foi feito/)).toBeInTheDocument();
+    expect(within(formulario).getByText(/reabra o chamado/)).toBeInTheDocument();
+    expect(within(formulario).getByRole('button', { name: 'Confirmar e enviar avaliação' })).toBeInTheDocument();
+  });
+
+  it('envia a nota e o comentário opcional, e confirma na tela', async () => {
+    const user = userEvent.setup();
+    montar({ como: SOLICITANTE, dados: chamado(CONCLUIDO) });
+
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Nota do atendimento' }), '4');
+    await user.type(screen.getByRole('textbox', { name: 'Comentário (opcional)' }), '  Resolveu rápido  ');
+    await user.click(screen.getByRole('button', { name: 'Confirmar e enviar avaliação' }));
+
+    expect(api.post).toHaveBeenCalledWith('/chamados/7/avaliacao', { nota: 4, comentario: 'Resolveu rápido' });
+    expect(await screen.findByText('Solução confirmada e avaliação enviada. Obrigado!')).toBeInTheDocument();
+  });
+
+  it('sem comentário, envia só a nota', async () => {
+    const user = userEvent.setup();
+    montar({ como: SOLICITANTE, dados: chamado(CONCLUIDO) });
+
+    await user.click(await screen.findByRole('button', { name: 'Confirmar e enviar avaliação' }));
+
+    expect(api.post).toHaveBeenCalledWith('/chamados/7/avaliacao', { nota: 5 });
+  });
+
+  it('a nota vem com palavra: 3 é "Regular", e não "3 estrela(s)"', async () => {
+    montar({ como: SOLICITANTE, dados: chamado(CONCLUIDO) });
+
+    const nota = await screen.findByRole('combobox', { name: 'Nota do atendimento' });
+
+    expect(within(nota).getByRole('option', { name: '3 – Regular' })).toBeInTheDocument();
+    expect(within(nota).getAllByRole('option')).toHaveLength(5);
+  });
+
+  it('quem já avaliou reencontra a nota e o comentário, com a data da confirmação', async () => {
+    montar({ como: SOLICITANTE, dados: chamado({ ...CONCLUIDO, avaliacao: AVALIACAO }) });
+
+    expect(await screen.findByRole('heading', { name: 'Sua avaliação' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Nota do atendimento' })).toHaveValue('2');
+    expect(screen.getByRole('textbox', { name: 'Comentário (opcional)' })).toHaveValue('Voltou a pingar');
+    expect(screen.getByText(/Solução confirmada em .*2026/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Atualizar avaliação' })).toBeInTheDocument();
+  });
+
+  it('a gestão vê a avaliação do solicitante, sem formulário', async () => {
+    montar({ como: GESTOR, dados: chamado({ ...CONCLUIDO, avaliacao: AVALIACAO }) });
+
+    const cartao = (await screen.findByRole('heading', { name: 'Avaliação do solicitante' })).parentElement;
+
+    expect(within(cartao).getByText('2 de 5')).toBeInTheDocument();
+    expect(within(cartao).getByText(/Ruim/)).toBeInTheDocument();
+    expect(within(cartao).getByText('“Voltou a pingar”')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Nota do atendimento' })).toBeNull();
+  });
+
+  it('o técnico que atendeu também vê', async () => {
+    montar({ como: TECNICO, dados: chamado({ ...CONCLUIDO, tecnico_id: TECNICO.id, avaliacao: AVALIACAO }) });
+
+    expect(await screen.findByRole('heading', { name: 'Avaliação do solicitante' })).toBeInTheDocument();
+  });
+
+  it('sem avaliação, a gestão não vê cartão nenhum', async () => {
+    montar({ como: GESTOR, dados: chamado({ ...CONCLUIDO, avaliacao: null }) });
+
+    await screen.findByText('Infiltração no auditório');
+    expect(screen.queryByRole('heading', { name: 'Avaliação do solicitante' })).toBeNull();
+  });
+});

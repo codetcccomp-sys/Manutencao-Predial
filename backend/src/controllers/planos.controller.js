@@ -1,10 +1,11 @@
 const { asyncHandler } = require('../utils/asyncHandler');
+const { filtroInteiro } = require('../middlewares/entrada');
 const preventivaService = require('../services/preventiva.service');
 
 const listar = asyncHandler(async (req, res) => {
   const planos = await preventivaService.listar({
     incluirInativos: req.query.incluir_inativos === 'true',
-    equipamentoId: req.query.equipamento_id ? Number(req.query.equipamento_id) : undefined,
+    equipamentoId: filtroInteiro(req.query.equipamento_id, 'equipamento_id'),
   });
   res.json({ planos });
 });

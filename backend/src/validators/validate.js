@@ -39,6 +39,13 @@ function validate(schema) {
       if (regras.tipo === 'number' && typeof valor !== 'number') {
         erros.push(`Campo "${campo}" deve ser numérico.`);
       }
+      // Coluna INTEGER ou SMALLINT: `2.5` e `99999999999` passavam por "numérico"
+      // e só eram recusados pelo banco, como erro interno (500). `inteiro` é o
+      // tipo de toda chave (`categoria_id`) e de toda contagem (horas, minutos,
+      // nota); `number` fica para o que tem casa decimal (quantidade de material).
+      if (regras.tipo === 'inteiro' && (!Number.isInteger(valor) || Math.abs(valor) > 2147483647)) {
+        erros.push(`Campo "${campo}" deve ser um número inteiro.`);
+      }
       if (regras.tipo === 'boolean' && typeof valor !== 'boolean') {
         erros.push(`Campo "${campo}" deve ser verdadeiro ou falso.`);
       }

@@ -109,7 +109,9 @@ async function anexar(chamadoId, usuarioId, arquivo) {
           chamadoId,
           usuarioId,
           TIPOS_ACEITOS[arquivo.mimetype].categoria,
-          arquivo.originalname.slice(0, 255),
+          // Caractere de controle no nome (o nulo, que o banco recusa, e quebras de
+          // linha, que bagunçam o cabeçalho de download) sai antes de gravar.
+          arquivo.originalname.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 255) || 'arquivo',
           arquivo.mimetype,
           arquivo.size,
           noStorage ? null : arquivo.buffer,

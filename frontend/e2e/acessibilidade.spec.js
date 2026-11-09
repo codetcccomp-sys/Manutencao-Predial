@@ -87,6 +87,31 @@ test('o detalhe do chamado não tem violação de acessibilidade', async ({ page
   expect(await violacoes(page)).toEqual([]);
 });
 
+// RF09 e RN12: o formulário de confirmar a solução (rótulos, alvo de toque) e o
+// histórico de prazos aberto (o `details` e a lista que ele revela).
+test('o chamado concluído, com o formulário de avaliação, não tem violação de acessibilidade', async ({ page }) => {
+  const concluido = await cenario.abrirChamado({ titulo: `Chamado concluído ${cenario.marca}` });
+  await cenario.atribuir(concluido.id);
+  await cenario.concluir(concluido.id);
+
+  await entrar(page, cenario.pessoas.solicitante);
+  await page.goto(`/chamados/${concluido.id}`);
+  await expect(page.getByRole('heading', { name: 'Confirmar a solução e avaliar' })).toBeVisible();
+  expect(await violacoes(page)).toEqual([]);
+
+  await page.getByRole('button', { name: 'Confirmar e enviar avaliação' }).click();
+  await expect(page.getByRole('heading', { name: 'Sua avaliação' })).toBeVisible();
+  expect(await violacoes(page)).toEqual([]);
+});
+
+test('o histórico de prazos aberto, nos relatórios, não tem violação de acessibilidade', async ({ page }) => {
+  await entrar(page, cenario.pessoas.gestor);
+  await page.goto('/relatorios');
+  await page.getByText('Histórico de alterações dos prazos').click();
+  await expect(page.getByText(/Em vigor desde/).first()).toBeVisible();
+  expect(await violacoes(page)).toEqual([]);
+});
+
 test('o painel com o aviso de espaço do banco não tem violação de acessibilidade', async ({ page }) => {
   // O banco de teste está longe dos 70%: a resposta é simulada para a faixa aparecer.
   await page.route('**/operacao/armazenamento', (rota) =>

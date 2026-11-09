@@ -1,10 +1,13 @@
 const usuariosService = require('../services/usuarios.service');
 const authService = require('../services/auth.service');
 const { asyncHandler } = require('../utils/asyncHandler');
+const { filtroInteiro, filtroDeLista } = require('../middlewares/entrada');
+
+const PERFIS = ['solicitante', 'tecnico', 'gestor', 'administrador'];
 
 const listar = asyncHandler(async (req, res) => {
   const usuarios = await usuariosService.listar({
-    perfil: req.query.perfil,
+    perfil: filtroDeLista(req.query.perfil, 'perfil', PERFIS),
     incluirInativos: req.query.incluir_inativos === 'true',
     situacao: req.query.situacao,
   });

@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const { errorHandler, AppError } = require('./middlewares/errorHandler');
 const { NOME_SISTEMA } = require('./config/marca');
+const { idsInteiros, consultaSimples, semCaractereNulo } = require('./middlewares/entrada');
 
 const app = express();
 
@@ -106,6 +107,9 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Filtro de consulta repetido ou aninhado é recusado antes de chegar a qualquer rota.
+app.use(consultaSimples);
+app.use(semCaractereNulo);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', servico: `${NOME_SISTEMA} — API` });
@@ -149,24 +153,27 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
-app.use('/auth', require('./routes/auth.routes'));
-app.use('/chamados', require('./routes/chamados.routes'));
-app.use('/usuarios', require('./routes/usuarios.routes'));
-app.use('/locais', require('./routes/locais.routes'));
-app.use('/equipamentos', require('./routes/equipamentos.routes'));
-app.use('/planos-preventivos', require('./routes/planos.routes'));
-app.use('/categorias', require('./routes/categorias.routes'));
-app.use('/equipes', require('./routes/equipes.routes'));
-app.use('/materiais', require('./routes/materiais.routes'));
-app.use('/relatorios', require('./routes/relatorios.routes'));
-app.use('/notificacoes', require('./routes/notificacoes.routes'));
-app.use('/sla', require('./routes/sla.routes'));
-app.use('/regras-priorizacao', require('./routes/priorizacao.routes'));
-app.use('/regras-distribuicao', require('./routes/distribuicao.routes'));
-app.use('/configuracoes', require('./routes/configuracao.routes'));
-app.use('/tarefas', require('./routes/tarefas.routes'));
-app.use('/operacao', require('./routes/operacao.routes'));
-app.use('/telemetria', require('./routes/telemetria.routes'));
+// Todo roteador passa por `idsInteiros`: `/chamados/abc` responde 404 em vez de
+// chegar ao banco e voltar como erro interno (middlewares/entrada.js).
+const montar = (caminho, arquivo) => app.use(caminho, idsInteiros(require(arquivo)));
+montar('/auth', './routes/auth.routes');
+montar('/chamados', './routes/chamados.routes');
+montar('/usuarios', './routes/usuarios.routes');
+montar('/locais', './routes/locais.routes');
+montar('/equipamentos', './routes/equipamentos.routes');
+montar('/planos-preventivos', './routes/planos.routes');
+montar('/categorias', './routes/categorias.routes');
+montar('/equipes', './routes/equipes.routes');
+montar('/materiais', './routes/materiais.routes');
+montar('/relatorios', './routes/relatorios.routes');
+montar('/notificacoes', './routes/notificacoes.routes');
+montar('/sla', './routes/sla.routes');
+montar('/regras-priorizacao', './routes/priorizacao.routes');
+montar('/regras-distribuicao', './routes/distribuicao.routes');
+montar('/configuracoes', './routes/configuracao.routes');
+montar('/tarefas', './routes/tarefas.routes');
+montar('/operacao', './routes/operacao.routes');
+montar('/telemetria', './routes/telemetria.routes');
 
 app.use((req, res) => {
   res.status(404).json({ erro: { mensagem: 'Rota não encontrada.' } });

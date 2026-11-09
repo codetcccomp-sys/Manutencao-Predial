@@ -86,6 +86,12 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
   caracteres fora da lista de comuns (`utils/senha.js`). Teste que cria conta pela API não precisa de
   nada: `tests/apoio/ambiente.js` abre o teto; só `cadastroSeguro.test.js` o aperta. Senha de teste
   tem de ter 10+ caracteres e não ser comum (`senha-teste-123`, não `senha123`).
+- **Avaliação (RF09)**: avaliar **é** confirmar a solução; quem discorda reabre. `nota` inteira de 1 a 5 e
+  `comentario` opcional (até 1000). A confirmação entra na linha do tempo (sem o texto do comentário) e volta em
+  `chamado.avaliacao`, só enquanto o chamado está `concluido`. Uma por chamado; reenviar troca e atualiza a data.
+- **Versões do SLA (RN12)**: toda alteração por `sla.service.atualizar` grava uma linha em `sla_versao` (migração
+  032: prazo, régua, vigência, autor). **`UPDATE sla` por SQL direto não deixa versão**: na produção, altere pela
+  tela. A migração só vale lá depois de `npm run migrate`; antes disso o prazo muda e o histórico fica vazio.
 - **Equipamento**: tem só `ativo BOOLEAN`.
 - **Sem conexão**: o service worker guarda as *leituras* (fila e chamado). Escrita
   falha na hora e a tela diz que nada foi registrado. É decisão deliberada
@@ -107,6 +113,12 @@ Dependem de decisão do dono do projeto antes de qualquer código:
 - Comentário explica o **porquê**, em português, e cita a regra (RN07, RF04…).
 - Toda trava nova ganha teste **e** mutação em `tests/mutacao.js` ou
   `testes/mutacao.mjs`. Mutação que passa despercebida é teste decorativo.
+  Mexeu num trecho que uma mutação cita? Atualize o `de` dela: `mutacoesEmDia.test.js`
+  (backend e frontend) falha o CI com mutação desatualizada.
+- **Entrada malformada é 4xx, nunca 500** (`middlewares/entrada.js`): roteador novo entra em `app.js` por
+  `montar` (confere `:id` e afins); campo inteiro no corpo é `tipo: 'inteiro'` (`'number'` só com casa decimal);
+  filtro de consulta numérico ou de lista usa `filtroInteiro`/`filtroDeLista`. Todo 5xx vai para o painel de
+  erros do administrador: não pode ser provocado por endereço digitado errado.
 - Migração nova é aditiva e roda inteira numa transação. Em produção aplica-se
   pelo mesmo `migrate`, nunca colando SQL sem registrar em `migracao`; faça antes
   um ensaio com `BEGIN … ROLLBACK`.

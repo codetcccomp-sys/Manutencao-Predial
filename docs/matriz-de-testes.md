@@ -120,6 +120,24 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RF04 | O formulário envia urgência, impacto e risco, e nenhuma prioridade | `frontend/testes/NovoChamado.test.jsx` | envia urgência, impacto e risco como números e nenhuma prioridade |
 | RF04 | Nenhuma resposta repete o nome de outro campo (o leitor de tela as confundiria) | `frontend/testes/NovoChamado.test.jsx` | nenhuma resposta traz o nome de outro campo: o rótulo "Equipamento" achava o rádio de risco |
 | RN12 | O chamado guarda a versão da regra que o classificou | `backend/tests/priorizacao.test.js` | chamado priorizado antes guarda a versão que o classificou |
+| RN12 | A política de prazos tem versão: alterar o prazo grava o valor novo, a vigência e quem alterou | `backend/tests/slaVersao.test.js` | alterar o prazo cria uma versão com o valor novo, a vigência e quem alterou |
+| RN12 | Mudar só a contagem (úteis ou corridas) também é uma versão | `backend/tests/slaVersao.test.js` | mudar só a contagem também é uma versão, e guarda o prazo que continuou valendo |
+| RN12 | Reenviar o mesmo valor não cria versão | `backend/tests/slaVersao.test.js` | reenviar o mesmo valor não cria versão nem mexe na data da última alteração |
+| RN12 | Alteração recusada não cria versão | `backend/tests/slaVersao.test.js` | alteração recusada não cria versão |
+| RN12 | A migração registra como primeira versão o prazo que já valia | `backend/tests/slaVersao.test.js` | a migração registra, para cada prioridade, o prazo que já valia |
+| RN12 | O histórico traz autor e fim da vigência, contado dentro da prioridade | `backend/tests/slaVersao.test.js` | o histórico vem do mais recente para o mais antigo, com o autor e o fim da vigência |
+| RN12 | O histórico de prazos é da gestão | `backend/tests/slaVersao.test.js` | o histórico é da gestão: técnico recebe 403 |
+| RN12 | A tabela de versões não é exposta pela API pública do Supabase | `backend/tests/slaVersao.test.js` | a tabela não é acessível pela API pública do Supabase (papéis anon e authenticated) |
+| RN12 | Sem a tabela (migração 032 não aplicada), alterar o prazo continua funcionando | `backend/tests/slaVersao.test.js` | alterar o prazo continua funcionando: o prazo é gravado, sem versão |
+| RN12 | Sem a tabela, o histórico responde vazio | `backend/tests/slaVersao.test.js` | o histórico responde vazio, e não erro |
+| RN12 | A limpeza das suítes apaga as versões gravadas por contas de teste | `backend/tests/limpezaDeTestes.test.js` | apaga a versão assinada por conta de teste e preserva a de fora e a sem autor |
+| RN12 | O histórico aberto não tem violação de acessibilidade | `frontend/e2e/acessibilidade.spec.js` | o histórico de prazos aberto, nos relatórios, não tem violação de acessibilidade |
+| RN12 | A tela mostra a versão em vigor, com prazo, régua, desde quando e quem alterou | `frontend/testes/HistoricoDoSla.test.jsx` | aberto, mostra a versão em vigor com o prazo, a régua, desde quando e quem alterou |
+| RN12 | Versão antiga mostra o intervalo em que valeu, sem inventar autor | `frontend/testes/HistoricoDoSla.test.jsx` | a versão antiga mostra o intervalo em que valeu, sem inventar autor |
+| RN12 | O histórico só consulta quando aberto, e de novo quando um prazo muda | `frontend/testes/HistoricoDoSla.test.jsx` | consulta de novo quando um prazo muda com o histórico aberto |
+| RN12 | Falha ao carregar o histórico aparece como erro | `frontend/testes/HistoricoDoSla.test.jsx` | falha ao carregar aparece como erro, e não como lista vazia |
+| RN12 | Fechado, o histórico não consulta nada | `frontend/testes/HistoricoDoSla.test.jsx` | fechado, não consulta nada |
+| RN12 | O histórico fica na tela de Relatórios, e alterar um prazo não recarrega a tela | `frontend/testes/Operacao.test.jsx` | o histórico de prazos abre na tela de Relatórios e se atualiza quando um prazo muda |
 | SLA | O prazo nasce da prioridade | `backend/tests/sla.test.js` | define prazo a partir da prioridade |
 | SLA | Atraso é calculado: prazo passou e o chamado segue aberto | `backend/tests/sla.test.js` | marca em_atraso quando o prazo passou e o chamado segue aberto |
 | SLA | Concluir tira o chamado do atraso | `backend/tests/sla.test.js` | deixa de contar como atraso quando o chamado é concluído |
@@ -204,6 +222,27 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | §2.4 | Cancelar serviço em execução exige justificativa | `backend/tests/reabertura.test.js` | exige justificativa para cancelar serviço já em execução |
 | RN05 | O técnico não atribui chamados | `backend/tests/chamados.test.js` | técnico não pode atribuir chamados (apenas gestor/administrador) |
 | Encerrado | Chamado encerrado guarda a conversa, mas não aceita comentário | `frontend/e2e/fluxo.spec.js` | chamado encerrado guarda a conversa mas não aceita comentário novo |
+| RF09 | A avaliação guarda nota, comentário e data, e volta no chamado | `backend/tests/confirmacaoDaSolucao.test.js` | guarda a nota, o comentário e a data, e os devolve no chamado |
+| RF09 | O comentário é opcional | `backend/tests/confirmacaoDaSolucao.test.js` | o comentário é opcional |
+| RF09 | Comentário só de espaços não é gravado | `backend/tests/confirmacaoDaSolucao.test.js` | comentário só de espaços é o mesmo que nenhum |
+| RF09 | A confirmação da solução entra na linha do tempo, sem o texto do comentário | `backend/tests/confirmacaoDaSolucao.test.js` | a confirmação entra na linha do tempo, com o solicitante como autor e sem mudar o estado |
+| RF09 | Reavaliar troca a avaliação, que continua única, e atualiza a data | `backend/tests/confirmacaoDaSolucao.test.js` | reenviar troca a avaliação, continua sendo uma só e deixa a troca no histórico |
+| RF09 | Técnico e gestão veem a avaliação no chamado | `backend/tests/confirmacaoDaSolucao.test.js` | quem atendeu e a gestão veem a avaliação no chamado |
+| RF09 | Chamado sem avaliação devolve nulo | `backend/tests/confirmacaoDaSolucao.test.js` | chamado sem avaliação devolve avaliacao nula |
+| RF09 | Depois da reabertura, a avaliação anterior deixa de valer como confirmação | `backend/tests/confirmacaoDaSolucao.test.js` | depois de reaberto, a avaliação do ciclo anterior deixa de aparecer como confirmação |
+| RF09 | Nota fracionada ou fora da escala e comentário que não é texto ou passa de 1000 caracteres voltam 422 | `backend/tests/confirmacaoDaSolucao.test.js` | %s: 422, sem gravar nada |
+| RF09 | Só o solicitante do chamado confirma a solução | `backend/tests/confirmacaoDaSolucao.test.js` | só o solicitante do chamado confirma: outro solicitante e a gestão não |
+| RF09 | Chamado não concluído não é avaliado | `backend/tests/confirmacaoDaSolucao.test.js` | chamado que não está concluído não é avaliado, nem ganha linha de confirmação |
+| RF09 | A tela diz que avaliar é confirmar, e que quem discorda reabre | `frontend/testes/ChamadoDetalhe.test.jsx` | diz ao solicitante que avaliar é confirmar, e que quem discorda reabre |
+| RF09 | A tela envia a nota e o comentário opcional | `frontend/testes/ChamadoDetalhe.test.jsx` | envia a nota e o comentário opcional, e confirma na tela |
+| RF09 | Sem comentário, só a nota é enviada | `frontend/testes/ChamadoDetalhe.test.jsx` | sem comentário, envia só a nota |
+| RF09 | A nota vem com palavra ("Regular"), e não só o número | `frontend/testes/ChamadoDetalhe.test.jsx` | a nota vem com palavra: 3 é "Regular", e não "3 estrela(s)" |
+| RF09 | Quem já avaliou reencontra a nota, o comentário e a data | `frontend/testes/ChamadoDetalhe.test.jsx` | quem já avaliou reencontra a nota e o comentário, com a data da confirmação |
+| RF09 | A gestão vê a avaliação, sem formulário | `frontend/testes/ChamadoDetalhe.test.jsx` | a gestão vê a avaliação do solicitante, sem formulário |
+| RF09 | O técnico que atendeu vê a avaliação | `frontend/testes/ChamadoDetalhe.test.jsx` | o técnico que atendeu também vê |
+| RF09 | Sem avaliação, não há cartão | `frontend/testes/ChamadoDetalhe.test.jsx` | sem avaliação, a gestão não vê cartão nenhum |
+| RF09 | No navegador: o solicitante confirma e avalia, e a gestão vê a avaliação | `frontend/e2e/fluxo.spec.js` | o solicitante confirma a solução e avalia, e a gestão vê a avaliação no chamado (RF09) |
+| RF09 | O formulário de avaliação não tem violação de acessibilidade | `frontend/e2e/acessibilidade.spec.js` | o chamado concluído, com o formulário de avaliação, não tem violação de acessibilidade |
 
 ## 6. Distribuição automática
 
@@ -323,6 +362,22 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Desempenho | Se continuar falhando, mostra o erro em vez de recarregar em laço | `frontend/testes/telaSobDemanda.test.jsx` | se já recarregou e continua falhando, mostra o erro em vez de recarregar em laço |
 | Acessibilidade | Se o h1 chega depois (tela sob demanda), o foco passa a ele | `frontend/testes/AnuncioDeRota.test.jsx` | se o h1 chega depois (tela sob demanda), o foco passa a ele |
 | Acessibilidade | O foco não é roubado se a pessoa já o moveu | `frontend/testes/AnuncioDeRota.test.jsx` | se a pessoa já mexeu o foco quando o h1 chega, o foco não é roubado |
+| Entrada | Identificador malformado na rota é 404, e não erro interno gravado no painel | `backend/tests/entradaMalformada.test.js` | GET /chamados/%s responde 404, sem gravar erro do sistema |
+| Entrada | Vale para os identificadores secundários (anexo, material, técnico) | `backend/tests/entradaMalformada.test.js` | vale para os identificadores secundários da rota (anexo, material, técnico da equipe) |
+| Entrada | Vale em todos os roteadores | `backend/tests/entradaMalformada.test.js` | vale em todos os roteadores, e não só no de chamados |
+| Entrada | Sem sessão, a resposta continua 401 | `backend/tests/entradaMalformada.test.js` | quem não entrou continua recebendo 401, e não uma pista sobre o formato do endereço |
+| Entrada | Identificador válido que não existe segue o 404 da rota | `backend/tests/entradaMalformada.test.js` | um identificador válido que não existe segue sendo o 404 da própria rota |
+| Entrada | Data malformada ao remover feriado é 404 | `backend/tests/entradaMalformada.test.js` | DELETE /sla/feriados/abc responde 404 em vez de erro interno |
+| Entrada | Número com casa decimal em campo inteiro é 422 | `backend/tests/entradaMalformada.test.js` | recusa prazo com casa decimal (422), sem alterar o SLA |
+| Entrada | Chave fracionada ou maior que um INTEGER é 422 | `backend/tests/entradaMalformada.test.js` | recusa chave fracionada e chave que não cabe num INTEGER ao abrir chamado |
+| Entrada | Quantidade de material continua aceitando decimal | `backend/tests/entradaMalformada.test.js` | quantidade de material continua aceitando casa decimal |
+| Entrada | "ativo" precisa ser verdadeiro ou falso | `backend/tests/entradaMalformada.test.js` | recusa "ativo" que não é verdadeiro ou falso ao editar equipe |
+| Entrada | Filtro malformado é 422 e diz qual | `backend/tests/entradaMalformada.test.js` | GET %s responde 422 dizendo qual filtro |
+| Entrada | Filtro válido continua filtrando | `backend/tests/entradaMalformada.test.js` | filtro válido continua filtrando |
+| Entrada | Filtro repetido ou aninhado é 400 | `backend/tests/entradaMalformada.test.js` | GET %s (filtro repetido ou aninhado) responde 400 |
+| Entrada | Caractere nulo no endereço ou no filtro é 400 | `backend/tests/entradaMalformada.test.js` | no filtro e no endereço responde 400, sem gravar erro do sistema |
+| Entrada | Caractere nulo no corpo, em qualquer profundidade, é 400 | `backend/tests/entradaMalformada.test.js` | no corpo, em qualquer profundidade, responde 400 |
+| Entrada | Nome de anexo com caractere de controle é gravado sem ele | `backend/tests/anexos.test.js` | nome de arquivo com caractere de controle é gravado sem ele, e nunca vazio |
 
 ## 11. Demonstração publicada
 
@@ -345,6 +400,8 @@ com o que cobre.
 | Arquivo | O que cobre |
 | --- | --- |
 | `backend/tests/anexosStorage.test.js` | Anexos no Supabase Storage (ver a seção 3) |
+| `backend/tests/mutacoesEmDia.test.js` | Toda mutação de `tests/mutacao.js` ainda encontra no código o trecho que desfaz (mutação desatualizada não vigia nada) |
+| `frontend/testes/mutacoesEmDia.test.js` | O mesmo para `testes/mutacao.mjs` |
 | `backend/tests/emailCaixa.test.js` | E-mail sem distinção de maiúsculas |
 | `backend/tests/emailSenha.test.js` | A senha do SMTP não vaza para o log |
 | `backend/tests/emailSmtp.test.js` | Envio por SMTP de verdade, contra um servidor de mentira |
