@@ -164,6 +164,100 @@ describe('Limite de anexos por chamado', () => {
   });
 });
 
+// RF03 pede anexos "dentro de limites definidos pela administração". O número era
+// uma constante do código; agora é uma configuração que só a administração muda,
+// dentro do teto que a hospedagem aguenta.
+describe('RF03: a administração define quantos anexos cabem num chamado', () => {
+  let admin;
+  const definir = (valor, quem = admin) =>
+    request(app).patch('/configuracoes').set(como(quem)).send({ anexos_por_chamado: valor });
+  const limiteNaListagem = async (id) =>
+    (await request(app).get(`/chamados/${id}/anexos`).set(como(solicitante))).body.limite;
+  // As outras suítes contam com o padrão: nenhum teste deixa a chave gravada.
+  const voltarAoPadrao = () => pool.query("DELETE FROM configuracao WHERE chave = 'anexos_por_chamado'");
+
+  beforeAll(async () => {
+    admin = await conta('administrador');
+  });
+  afterEach(voltarAoPadrao);
+
+  it('sem ninguém ter mexido, vale o padrão', async () => {
+    const lida = await request(app).get('/configuracoes').set(como(admin));
+
+    expect(lida.body.configuracoes.anexos_por_chamado).toBe(LIMITE_POR_CHAMADO);
+  });
+
+  it('o limite definido passa a valer no envio, na mensagem e na listagem', async () => {
+    const id = await novoChamado();
+
+    const mudanca = await definir(2);
+    await anexar(id);
+    const segundo = await anexar(id);
+    const terceiro = await anexar(id);
+
+    expect(mudanca.status).toBe(200);
+    expect(mudanca.body.configuracoes.anexos_por_chamado).toBe(2);
+    expect([segundo.status, terceiro.status]).toEqual([201, 422]);
+    expect(terceiro.body.erro.mensagem).toMatch(/já tem 2 anexos/);
+    expect(await limiteNaListagem(id)).toBe(2);
+    expect(await quantos(id)).toBe(2);
+  });
+
+  it('com limite de um, a mensagem fala em "1 anexo"', async () => {
+    const id = await novoChamado();
+    await definir(1);
+    await anexar(id);
+
+    const alem = await anexar(id);
+
+    expect(alem.body.erro.mensagem).toMatch(/já tem 1 anexo,/);
+  });
+
+  it('baixar o limite não apaga o que já estava anexado: só recusa o próximo', async () => {
+    const id = await novoChamado();
+    await encher(id, 5);
+
+    await definir(3);
+    const alem = await anexar(id);
+
+    expect(alem.status).toBe(422);
+    expect(await quantos(id)).toBe(5);
+  });
+
+  it.each([0, 21, 2.5, '5', null, true])('recusa %p (fora de 1 a 20, ou que não é número inteiro)', async (valor) => {
+    const resp = await definir(valor);
+    const gravado = await pool.query("SELECT 1 FROM configuracao WHERE chave = 'anexos_por_chamado'");
+
+    expect(resp.status).toBe(422);
+    expect(resp.body.erro.mensagem).toMatch(/inteiro de 1 a 20/);
+    expect(gravado.rows).toHaveLength(0);
+  });
+
+  it('aceita os dois extremos: 1 e 20', async () => {
+    expect((await definir(1)).status).toBe(200);
+    expect((await definir(20)).status).toBe(200);
+  });
+
+  it('só a administração define: o gestor recebe 403', async () => {
+    const resp = await definir(3, gestor);
+
+    expect(resp.status).toBe(403);
+  });
+
+  it('valor fora da faixa gravado direto no banco não vale: fica o padrão', async () => {
+    const id = await novoChamado();
+    await pool.query("INSERT INTO configuracao (chave, valor) VALUES ('anexos_por_chamado', '999'::jsonb)");
+    await encher(id, LIMITE_POR_CHAMADO);
+
+    const alem = await anexar(id);
+    const lida = await request(app).get('/configuracoes').set(como(admin));
+
+    expect(alem.status).toBe(422);
+    expect(await limiteNaListagem(id)).toBe(LIMITE_POR_CHAMADO);
+    expect(lida.body.configuracoes.anexos_por_chamado).toBe(LIMITE_POR_CHAMADO);
+  });
+});
+
 describe('Uso do banco', () => {
   it('avisa a partir de 70% do limite, e não antes', () => {
     expect(armazenamentoUso.avaliar(699, 1000)).toEqual({ percentual: 69.9, alerta: false });

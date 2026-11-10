@@ -575,6 +575,13 @@ celular. Por padrão roda com movimento reduzido (`reducedMotion: 'reduce'`), pa
 a entrada animada de cada tela não somar meio segundo a cada navegação; as specs
 `animacao` e `seguranca` pedem movimento por conta própria.
 
+**Firefox (RNF06).** O Termo pede Chrome, Edge e Firefox. Chrome e Edge usam o mesmo
+motor (Chromium), que é o dos dois projetos acima; o Firefox é outro motor, e roda num
+projeto à parte, só no computador: `npm run e2e:firefox` (precisa de
+`npx playwright install firefox`). O projeto só existe com `E2E_FIREFOX=1`, que o script
+liga: sem o Firefox instalado ele falharia inteiro, e essa falha faria os testes de
+mutação de layout parecerem acusados. No CI é um job próprio.
+
 Esta camada existe por um motivo específico: **geometria**. Todos os defeitos
 de responsividade deste projeto — o cartão de chamado esticando a página, as
 tabelas vazando do cartão, o painel de avisos saindo pela esquerda no celular,
@@ -622,10 +629,11 @@ ferramenta de quem escreve ou revisa teste.
 
 ### No CI
 
-`.github/workflows/ci.yml` tem três jobs: backend (PostgreSQL de serviço,
+`.github/workflows/ci.yml` tem quatro jobs: backend (PostgreSQL de serviço,
 migrações pelo mesmo `npm run migrate`, suíte), frontend (testes de componente
-e build) e ponta a ponta (PostgreSQL, migrações, administrador semeado,
-Chromium e a suíte do Playwright). O relatório do Playwright fica guardado
+e build), ponta a ponta (PostgreSQL, migrações, administrador semeado,
+Chromium e a suíte do Playwright) e ponta a ponta no Firefox (o mesmo, com o
+projeto `firefox`). O relatório do Playwright fica guardado
 como artefato quando algo falha.
 
 `.github/workflows/auditoria.yml` é separado do CI de propósito: advisory novo
@@ -677,7 +685,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `POST PATCH` | `/usuarios`, `/usuarios/:id` | administrador |
 | `POST` | `/usuarios/:id/anonimizar` | administrador (ver [docs/lgpd.md](docs/lgpd.md)) |
 | `POST` | `/usuarios/aprovar`, `/usuarios/recusar` | gestor, administrador (corpo `{ "ids": [...] }`; só toca em pedidos pendentes) |
-| `GET PATCH` | `/configuracoes` | leitura: gestor, administrador; alteração: administrador. Chaves: `cadastro_exige_aprovacao`, `exigir_2fa_gestao` (só liga quem já tem a própria verificação) |
+| `GET PATCH` | `/configuracoes` | leitura: gestor, administrador; alteração: administrador. Chaves: `cadastro_exige_aprovacao`, `exigir_2fa_gestao` (só liga quem já tem a própria verificação) e `anexos_por_chamado` (inteiro de 1 a 20, RF03) |
 | `POST` | `/usuarios/:id/2fa/redefinir` | administrador (quem perdeu o celular e os códigos) |
 | `GET PATCH` | `/notificacoes`, `/notificacoes/:id/lida` | o próprio usuário |
 | `GET POST PATCH` | `/locais`, `/categorias` | leitura autenticada, escrita para gestão |
@@ -846,8 +854,12 @@ só nas variáveis do backend, nunca no frontend.
 Anexo é o que mais enche o banco, e o plano gratuito do Supabase tem 500 MB para o
 sistema todo. Dois freios, em `backend/src/config/anexos.js`:
 
-- **Até 10 anexos por chamado.** O 11º volta 422 `LIMITE_DE_ANEXOS`, com a mensagem na
-  tela; remover um libera a vaga. A conferência é refeita dentro da transação, sob um
+- **Até 10 anexos por chamado, ou o que a administração definir (RF03).** O número é a
+  configuração `anexos_por_chamado`, que o administrador muda na tela de Usuários, de 1 a 20;
+  o teto é folga da hospedagem, e não escolha da tela. Baixar o limite não apaga o que já
+  estava anexado: o chamado só deixa de aceitar outros. Um valor fora da faixa gravado direto
+  no banco é ignorado, e vale o padrão. Acima do limite a resposta é 422 `LIMITE_DE_ANEXOS`,
+  com a mensagem na tela; remover um libera a vaga. A conferência é refeita dentro da transação, sob um
   cadeado por chamado (`pg_advisory_xact_lock`): dois envios simultâneos na última vaga
   não passam os dois. `GET /chamados/:id/anexos` devolve `limite`, e a tela mostra "3 de 10"
   e desliga o envio no limite.

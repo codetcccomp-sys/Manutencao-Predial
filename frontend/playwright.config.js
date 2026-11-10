@@ -11,6 +11,17 @@ const APP = process.env.E2E_APP ?? 'http://localhost:4173';
  * que o deploy publica, com o proxy de /api que o ambiente de produção faz por
  * rewrite.
  */
+// Em ambientes que já trazem o Chromium instalado (o contêiner de
+// desenvolvimento deste projeto, por exemplo), apontar para o executável
+// existente evita baixar outro de 150 MB — e evita o erro de versão
+// quando o binário pré-instalado não é o que esta versão do Playwright
+// espera. No CI a variável não existe e vale o browser que o
+// `playwright install` baixou. Fica nos projetos do Chromium, e não no `use`
+// geral: o projeto do Firefox não pode herdar o executável de outro navegador.
+const CHROMIUM = process.env.PLAYWRIGHT_CHROMIUM
+  ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM } }
+  : {};
+
 export default defineConfig({
   testDir: './e2e',
   // Uma tela de cada vez: as suítes compartilham o mesmo banco, e paralelizar
@@ -25,15 +36,6 @@ export default defineConfig({
 
   use: {
     baseURL: APP,
-    // Em ambientes que já trazem o Chromium instalado (o contêiner de
-    // desenvolvimento deste projeto, por exemplo), apontar para o executável
-    // existente evita baixar outro de 150 MB — e evita o erro de versão
-    // quando o binário pré-instalado não é o que esta versão do Playwright
-    // espera. No CI a variável não existe e vale o browser que o
-    // `playwright install` baixou.
-    launchOptions: process.env.PLAYWRIGHT_CHROMIUM
-      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM }
-      : undefined,
     // Movimento reduzido por padrão. O Playwright espera o elemento parar de se
     // mover antes de clicar, então a entrada animada de cada tela somaria meio
     // segundo a cada navegação dos 59 testes — e o que as suítes de fluxo e de
@@ -50,14 +52,26 @@ export default defineConfig({
   projects: [
     {
       name: 'computador',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 }, ...CHROMIUM },
     },
     {
       // A RNF02 pede interface responsiva para celular, e os defeitos de
       // layout que apareceram neste projeto só existiam em tela estreita.
       name: 'celular',
-      use: { ...devices['Pixel 5'] },
+      use: { ...devices['Pixel 5'], ...CHROMIUM },
     },
+    // RNF06: o Termo pede Chrome, Edge e Firefox. Chrome e Edge são o mesmo motor
+    // (Chromium), coberto pelos dois projetos acima; o Firefox é outro motor, e só
+    // um navegador de verdade mostra o que muda nele.
+    //
+    // Só existe com E2E_FIREFOX=1 (o job próprio do CI): sem o Firefox instalado, o
+    // projeto falharia inteiro por falta do navegador, e uma falha dessas faria todo
+    // teste de mutação de layout parecer "acusado" (testes/mutacao.mjs roda
+    // `playwright test` sem escolher projeto). Só computador: o que muda no celular
+    // é a largura, e a largura já é medida no Chromium.
+    ...(process.env.E2E_FIREFOX
+      ? [{ name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 900 } } }]
+      : []),
   ],
 
   webServer: [

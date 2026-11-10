@@ -372,3 +372,44 @@ describe('As listas acompanham o aplicativo', () => {
     expect(usadas.size).toBeGreaterThan(5);
   });
 });
+
+// Deploy antes da migração: em produção, em 05/11/2026, o painel respondeu 500 porque a
+// 031 foi aplicada 2 minutos depois do código. A leitura passa a mostrar o painel vazio.
+describe('Painel antes da migração (tabelas ausentes)', () => {
+  beforeAll(() => pool.query('ALTER TABLE telemetria_diaria RENAME TO telemetria_diaria_ausente'));
+  afterAll(() => pool.query('ALTER TABLE telemetria_diaria_ausente RENAME TO telemetria_diaria'));
+
+  it('o resumo responde vazio, e não 500', async () => {
+    const resp = await request(app).get('/operacao/telemetria').set(auth(administrador));
+
+    expect(resp.status).toBe(200);
+    expect(resp.body.telas).toEqual([]);
+    expect(resp.body.acoes).toEqual([]);
+  });
+
+  it('sem a tabela de erros (migração 028), o resumo também responde, com zero erros da tela', async () => {
+    await pool.query('ALTER TABLE erro_aplicacao RENAME TO erro_aplicacao_ausente');
+    try {
+      const resp = await request(app).get('/operacao/telemetria').set(auth(administrador));
+
+      expect(resp.status).toBe(200);
+      expect(resp.body.erros_da_tela_24h).toBe(0);
+    } finally {
+      await pool.query('ALTER TABLE erro_aplicacao_ausente RENAME TO erro_aplicacao');
+    }
+  });
+
+  it('só a tabela ausente é tolerada: qualquer outro defeito do banco continua sendo erro', async () => {
+    // A tabela existe, mas sem a coluna que a consulta lê (SQLSTATE 42703, e não 42P01).
+    await pool.query('ALTER TABLE telemetria_diaria_ausente RENAME TO telemetria_diaria');
+    await pool.query('ALTER TABLE telemetria_diaria RENAME COLUMN soma TO soma_renomeada');
+    try {
+      const resp = await request(app).get('/operacao/telemetria').set(auth(administrador));
+
+      expect(resp.status).toBe(500);
+    } finally {
+      await pool.query('ALTER TABLE telemetria_diaria RENAME COLUMN soma_renomeada TO soma');
+      await pool.query('ALTER TABLE telemetria_diaria RENAME TO telemetria_diaria_ausente');
+    }
+  });
+});

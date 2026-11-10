@@ -418,3 +418,36 @@ describe('Abrir chamado para um equipamento', () => {
     expect(api.post.mock.calls[0][1].local_id).toBe(2);
   });
 });
+
+describe('Ficha de equipamento que não abre', () => {
+  function abrirComFalha(falha) {
+    api.get.mockRejectedValue(falha);
+    return render(
+      <MemoryRouter initialEntries={['/equipamentos/7']}>
+        <Routes>
+          <Route path="/equipamentos/:id" element={<Equipamento />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  it('etiqueta ou endereço de equipamento que não existe: título próprio e caminho de volta', async () => {
+    abrirComFalha({ response: { status: 404 } });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Equipamento não encontrado' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Voltar ao início/ })).toHaveAttribute('href', '/');
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
+  });
+
+  it('sem conexão: tentar de novo refaz a consulta e abre a ficha', async () => {
+    const usuario = userEvent.setup();
+    abrirComFalha({ response: { status: 0 } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Não foi possível abrir o equipamento' })).toBeInTheDocument();
+
+    api.get.mockResolvedValue({ data: { equipamento: { ...EQUIPAMENTO, totais: { chamados: 0, corretivos: 0, preventivos: 0, corretivos_12_meses: 0 }, planos: [], chamados: [] } } });
+    await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: EQUIPAMENTO.nome })).toBeInTheDocument();
+  });
+});
+

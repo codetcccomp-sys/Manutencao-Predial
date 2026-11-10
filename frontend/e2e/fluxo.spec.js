@@ -208,6 +208,21 @@ test('o solicitante confirma a solução e avalia, e a gestão vê a avaliação
   await expect(page.getByLabel('Nota do atendimento')).toHaveCount(0);
 });
 
+// Link antigo ou digitado errado: a tela diz que o chamado não existe e leva de
+// volta, em vez de uma caixa de erro sem título nem saída. A API responde 404
+// (e não 500) também para o endereço que nem número é.
+for (const endereco of ['/chamados/999999999', '/chamados/abc']) {
+  test(`${endereco} mostra "Chamado não encontrado" e o caminho de volta`, async ({ page }) => {
+    await entrar(page, cenario.pessoas.solicitante);
+    await page.goto(endereco);
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Chamado não encontrado' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Tentar de novo' })).toHaveCount(0);
+    await page.getByRole('link', { name: /Voltar à lista de chamados/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Meus pedidos' })).toBeVisible();
+  });
+}
+
 test('o escopo por perfil vale na tela, não só na API', async ({ page }) => {
   const chamado = await cenario.abrirChamado({ titulo: `Privado ${cenario.marca}` });
 
@@ -218,7 +233,8 @@ test('o escopo por perfil vale na tela, não só na API', async ({ page }) => {
     await page.goto(`/chamados/${chamado.id}`);
 
     // A tela mostra a recusa do servidor em vez de conteúdo alheio.
-    await expect(page.getByText('Não foi possível carregar o chamado.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Você não tem acesso a este chamado' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Voltar à lista de chamados/ })).toBeVisible();
     await expect(page.getByText(`Privado ${cenario.marca}`)).toHaveCount(0);
   } finally {
     await outro.encerrar();

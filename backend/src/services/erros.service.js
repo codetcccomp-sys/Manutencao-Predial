@@ -92,15 +92,22 @@ async function registrar({ metodo, url, status, codigo, mensagem, pilha }) {
 /** Os mais recentes primeiro, e quantos houve nas últimas 24 horas. */
 async function listar({ limite = 50 } = {}) {
   const teto = Math.min(Math.max(Number(limite) || 50, 1), 200);
-  const { rows } = await pool.query(
-    `SELECT id, ocorrido_em, metodo, rota, status, codigo, mensagem, pilha
-       FROM erro_aplicacao ORDER BY ocorrido_em DESC, id DESC LIMIT $1`,
-    [teto]
-  );
-  const { rows: contagem } = await pool.query(
-    `SELECT count(*)::int AS total FROM erro_aplicacao WHERE ocorrido_em > now() - interval '24 hours'`
-  );
-  return { erros: rows, ultimas_24h: contagem[0].total, retencao_dias: RETENCAO_DIAS };
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, ocorrido_em, metodo, rota, status, codigo, mensagem, pilha
+         FROM erro_aplicacao ORDER BY ocorrido_em DESC, id DESC LIMIT $1`,
+      [teto]
+    );
+    const { rows: contagem } = await pool.query(
+      `SELECT count(*)::int AS total FROM erro_aplicacao WHERE ocorrido_em > now() - interval '24 hours'`
+    );
+    return { erros: rows, ultimas_24h: contagem[0].total, retencao_dias: RETENCAO_DIAS };
+  } catch (err) {
+    // Migração 028 ainda não aplicada neste banco: a gravação já tolera (ver `registrar`), e a
+    // leitura mostra a lista vazia. Um 500 aqui não teria nem onde ser gravado.
+    if (err.code === '42P01') return { erros: [], ultimas_24h: 0, retencao_dias: RETENCAO_DIAS };
+    throw err;
+  }
 }
 
 module.exports = { registrar, listar, mascarar, soAsLinhasDePilha, RETENCAO_DIAS, TETO_POR_MINUTO };

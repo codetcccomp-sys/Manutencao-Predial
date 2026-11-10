@@ -11,6 +11,7 @@ import Confirmacao from '../components/ui/Confirmacao';
 import MostrarMais from '../components/ui/MostrarMais';
 import CadastrosPendentes from '../components/CadastrosPendentes';
 import ExigenciaDoisFatores from '../components/ExigenciaDoisFatores';
+import LimiteDeAnexos from '../components/LimiteDeAnexos';
 import ErrosDoSistema from '../components/ErrosDoSistema';
 import UsoEDesempenho from '../components/UsoEDesempenho';
 import { MINIMO_SENHA } from '../dominio/senha';
@@ -167,6 +168,8 @@ function Usuarios() {
       <CadastrosPendentes comConfiguracao />
 
       {!carregando && <ExigenciaDoisFatores usuarios={usuarios} />}
+
+      <LimiteDeAnexos />
 
       <form onSubmit={criar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3">
         <h2 className="font-medium text-navy">Cadastrar usuário</h2>

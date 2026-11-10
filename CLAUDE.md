@@ -13,7 +13,8 @@ sem ler tudo, e o que **não** existe.
 - **Frontend**: React, Vite, Tailwind, React Router. **É PWA, não React
   Native**: nada de WatermelonDB; armazenamento local, se vier, é IndexedDB.
 - **Testes**: Jest + Supertest (backend), Vitest + Testing Library (componentes),
-  Playwright (ponta a ponta, projetos `computador` e `celular`).
+  Playwright (ponta a ponta, projetos `computador` e `celular`; `firefox` só com `E2E_FIREFOX=1`,
+  no job próprio do CI: `npm run e2e:firefox`).
 - **Segurança**: sessão em cookie HttpOnly, 2FA por TOTP, CSP estrita
   (`style-src 'self'`: estilo escrito como texto no HTML é bloqueado).
 
@@ -77,8 +78,9 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
   a passagem de 15 min do agendador (`/tarefas/notificar-atrasos`) manda sino e e-mail à gestão
   ativa, uma vez por chamado (`criticos.service`, `chamado.critico_notificado_em`, migração 030).
   O e-mail sai da conta do Gmail dos demais avisos; trocar por domínio da instituição é do dono.
-- **Anexos**: até 10 por chamado (`config/anexos.js`; 422 `LIMITE_DE_ANEXOS`, conferido sob
-  cadeado por chamado) e aviso à gestão aos 70% do banco (`GET /operacao/armazenamento`).
+- **Anexos**: até 10 por chamado por padrão; a administração define de 1 a 20 na tela de Usuários (RF03,
+  configuração `anexos_por_chamado`; o teto é de `config/anexos.js`). 422 `LIMITE_DE_ANEXOS`, conferido sob
+  cadeado por chamado, e aviso à gestão aos 70% do banco (`GET /operacao/armazenamento`).
   Ligar o Storage é decisão e ação do dono (chave de serviço), nunca de código.
 - **Cadastro público**: `POST /auth/registrar` responde 202 com o mesmo corpo para e-mail novo e
   repetido (não devolve conta nem token; o 409 é só da administração), tem teto por IP e por dia
@@ -119,6 +121,9 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   `montar` (confere `:id` e afins); campo inteiro no corpo é `tipo: 'inteiro'` (`'number'` só com casa decimal);
   filtro de consulta numérico ou de lista usa `filtroInteiro`/`filtroDeLista`. Todo 5xx vai para o painel de
   erros do administrador: não pode ser provocado por endereço digitado errado.
+- **`require` do backend é sempre literal** (`require('./x')`, nunca `require(variavel)`): a Vercel só empacota o que
+  enxerga de forma estática. Com variável, os testes passam (o arquivo está no disco) e a função publicada responde
+  500 em tudo com "Cannot find module" (10/11/2026, PR #102). `tests/empacotamento.test.js` confere.
 - Migração nova é aditiva e roda inteira numa transação. Em produção aplica-se
   pelo mesmo `migrate`, nunca colando SQL sem registrar em `migracao`; faça antes
   um ensaio com `BEGIN … ROLLBACK`.
@@ -158,7 +163,8 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   duram 1 hora. Sem usuário, IP, query string nem corpo; e-mail na mensagem sai mascarado; 30 dias; teto
   de 100 por minuto. Só o administrador lê (`GET /operacao/erros`, tela de Usuários). Mexeu no que ela
   guarda? Mude `docs/lgpd.md` e o aviso de privacidade junto. A migração só vale em produção depois de
-  `npm run migrate` lá: antes disso gravar falha em silêncio e vai só para o console.
+  `npm run migrate` lá: antes disso gravar falha em silêncio e vai só para o console, e **ler** (painel de
+  erros, painel de uso) responde vazio, e não 500: código novo que lê tabela de migração nova tolera `42P01`.
 - **Medida de desempenho (RNF03) só vale com build de produção.** Com `NODE_ENV=development` no shell,
   o `vite build` empacota o React de desenvolvimento: o StrictMode dobra toda chamada à API e as telas
   ficam mais lentas (o documento de projeto chegou a sair com tempo inflado por isso). Confira com
@@ -185,6 +191,8 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   barra), `<select>` e `<input>` levam rótulo, link dentro de frase leva `underline`, e rota nova
   ganha título em `frontend/src/dominio/titulosDeRota.js` (o teste confere cada rota do `App.jsx`).
   Não use `role="tab"` sem setas, `tabpanel` e `aria-controls`: grupo de botões com `aria-pressed`.
+- Tela de um registro só (chamado, equipamento) que não carrega usa `ui/RegistroIndisponivel`: diz a causa
+  (404, 403, sem conexão, falha), tem `h1` e caminho de volta. Não volte à caixa de erro solta.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque
   pequeno e formulário vazando no celular que o jsdom não vê.
 

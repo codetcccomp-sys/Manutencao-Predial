@@ -232,3 +232,23 @@ describe('Lista longa de contas', () => {
   });
 });
 
+
+// RF03: o limite de anexos é definido pela administração, na mesma tela das
+// outras chaves que só ela muda.
+describe('Limite de anexos na tela de Usuários', () => {
+  it('a administração encontra o campo com o limite em vigor', async () => {
+    api.get.mockImplementation(async (caminho) =>
+      caminho === '/configuracoes'
+        ? { data: { configuracoes: { anexos_por_chamado: 12, cadastro_exige_aprovacao: false, exigir_2fa_gestao: false } } }
+        : { data: { usuarios: PESSOAS } }
+    );
+    render(
+      <MemoryRouter>
+        <Usuarios />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('spinbutton', { name: 'Limite de anexos por chamado' })).toHaveValue(12);
+    expect(screen.getByRole('heading', { name: 'Anexos por chamado' })).toBeInTheDocument();
+  });
+});

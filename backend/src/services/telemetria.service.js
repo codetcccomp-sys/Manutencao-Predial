@@ -190,17 +190,29 @@ async function registrarErroDaTela({ mensagem, tela, pilha } = {}) {
 /** O que a administração lê: aberturas e desempenho por tela, ações e erros da tela nas últimas 24 horas. */
 async function resumo({ dias = DIAS_PADRAO } = {}) {
   const janela = Math.min(Math.max(Math.trunc(Number(dias)) || DIAS_PADRAO, 1), RETENCAO_DIAS);
-  const { rows } = await pool.query(
-    `SELECT tipo, chave, sum(n)::int AS n, sum(soma) AS soma, sum(ruins)::int AS ruins, max(maximo) AS maximo
-       FROM telemetria_diaria
-      WHERE dia > (now() AT TIME ZONE $1)::date - $2::int
-      GROUP BY tipo, chave`,
-    [FUSO, janela]
-  );
-  const { rows: erro } = await pool.query(
-    `SELECT count(*)::int AS total FROM erro_aplicacao
-      WHERE metodo = 'TELA' AND ocorrido_em > now() - interval '24 hours'`
-  );
+  // O código chega à produção no deploy e as migrações (031, 028) só quando alguém roda
+  // `npm run migrate` lá. Nesse intervalo a tabela não existe, e o painel do administrador
+  // respondia 500: aconteceu em 05/11/2026, 2 minutos antes da migração 031. A escrita
+  // já tolerava (ver `registrar`); a leitura mostra o painel vazio, e não um erro.
+  const semTabela = (vazio) => (err) => {
+    if (err.code === '42P01') return vazio;
+    throw err;
+  };
+  const { rows } = await pool
+    .query(
+      `SELECT tipo, chave, sum(n)::int AS n, sum(soma) AS soma, sum(ruins)::int AS ruins, max(maximo) AS maximo
+         FROM telemetria_diaria
+        WHERE dia > (now() AT TIME ZONE $1)::date - $2::int
+        GROUP BY tipo, chave`,
+      [FUSO, janela]
+    )
+    .catch(semTabela({ rows: [] }));
+  const { rows: erro } = await pool
+    .query(
+      `SELECT count(*)::int AS total FROM erro_aplicacao
+        WHERE metodo = 'TELA' AND ocorrido_em > now() - interval '24 hours'`
+    )
+    .catch(semTabela({ rows: [{ total: 0 }] }));
 
   const telas = new Map(TELAS.map((t) => [t, { tela: t, aberturas: 0, desempenho: {} }]));
   const acoes = new Map(ACOES.map((a) => [a, { acao: a, total: 0 }]));

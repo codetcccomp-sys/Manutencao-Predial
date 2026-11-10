@@ -25,6 +25,13 @@ const { spawnSync } = require('child_process');
 
 const MUTACOES = [
   {
+    descricao: 'roteador passa a ser carregado por require de variável (some do pacote da Vercel)',
+    arquivo: 'src/app.js',
+    de: "['/auth', require('./routes/auth.routes')],",
+    para: "['/auth', ((caminho) => require(caminho))('./routes/auth.routes')],",
+    spec: 'tests/empacotamento.test.js',
+  },
+  {
     descricao: 'código do aplicativo volta a valer duas vezes',
     arquivo: 'src/services/auth.service.js',
     de: 'AND (totp_ultimo_passo IS NULL OR totp_ultimo_passo < $2)',
@@ -880,7 +887,7 @@ const MUTACOES = [
   {
     descricao: 'anexos, só a conferência de antes do envio vale (a de dentro da transação some)',
     arquivo: 'src/services/anexos.service.js',
-    de: "      if ((await contar(client, chamadoId)) >= LIMITE_POR_CHAMADO) throw limiteAtingido();\n",
+    de: "      if ((await contar(client, chamadoId)) >= limite) throw limiteAtingido(limite);\n",
     para: '',
     spec: 'tests/anexosCota.test.js',
   },
@@ -894,7 +901,7 @@ const MUTACOES = [
   {
     descricao: 'anexos, a listagem deixa de informar o limite',
     arquivo: 'src/controllers/anexos.controller.js',
-    de: 'res.json({ anexos, limite: anexosService.LIMITE_POR_CHAMADO });',
+    de: 'res.json({ anexos, limite: await anexosService.limitePorChamado() });',
     para: 'res.json({ anexos });',
     spec: 'tests/anexosCota.test.js',
   },
@@ -1322,8 +1329,8 @@ const MUTACOES = [
   {
     descricao: "entrada: os roteadores deixam de passar pela conferência de identificadores",
     arquivo: "src/app.js",
-    de: "app.use(caminho, idsInteiros(require(arquivo)));",
-    para: "app.use(caminho, require(arquivo));",
+    de: "app.use(caminho, idsInteiros(roteador));",
+    para: "app.use(caminho, roteador);",
     spec: "tests/entradaMalformada.test.js",
   },
   {
@@ -1627,6 +1634,120 @@ const MUTACOES = [
     para: "",
     spec: "tests/slaVersao.test.js",
     migrar: true,
+  },
+  // --- RF03: limite de anexos definido pela administração ------------------------
+  {
+    descricao: "RF03: o limite de anexos definido pela administração deixa de valer no envio",
+    arquivo: "src/services/anexos.service.js",
+    de: "  const limite = await limitePorChamado();\n",
+    para: "  const limite = 10;\n",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: a listagem de anexos informa o padrão, e não o limite definido",
+    arquivo: "src/services/anexos.service.js",
+    de: "const limitePorChamado = () => configuracao.anexosPorChamado();",
+    para: "const limitePorChamado = async () => 10;",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: com limite de um anexo a mensagem diz \"1 anexos\"",
+    arquivo: "src/services/anexos.service.js",
+    de: "${limite === 1 ? 'anexo' : 'anexos'}",
+    para: "anexos",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: o limite de anexos aceita número com casa decimal",
+    arquivo: "src/services/configuracao.service.js",
+    de: "  return Number.isInteger(valor) && valor >= definicao.minimo && valor <= definicao.maximo;",
+    para: "  return valor >= definicao.minimo && valor <= definicao.maximo;",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: o limite de anexos aceita zero",
+    arquivo: "src/services/configuracao.service.js",
+    de: "valor >= definicao.minimo && ",
+    para: "",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: o limite de anexos aceita valor acima do teto da hospedagem",
+    arquivo: "src/services/configuracao.service.js",
+    de: " && valor <= definicao.maximo;",
+    para: ";",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: o teto do limite de anexos sobe sem ninguém notar",
+    arquivo: "src/config/anexos.js",
+    de: "const LIMITE_POR_CHAMADO_TETO = 20;",
+    para: "const LIMITE_POR_CHAMADO_TETO = 21;",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "configuração de liga e desliga volta a aceitar o que não é verdadeiro ou falso",
+    arquivo: "src/services/configuracao.service.js",
+    de: "  if (typeof valor !== definicao.tipo) return false;\n",
+    para: "",
+    spec: "tests/cadastroAprovacao.test.js",
+  },
+  {
+    descricao: "RF03: valor fora da faixa gravado direto no banco passa a valer no envio",
+    arquivo: "src/services/configuracao.service.js",
+    de: "  return rows[0] && valorValido(definicao, rows[0].valor) ? rows[0].valor : definicao.padrao;",
+    para: "  return rows[0] ? rows[0].valor : definicao.padrao;",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: valor fora da faixa gravado direto no banco aparece na tela de configuração",
+    arquivo: "src/services/configuracao.service.js",
+    de: "      chave in salvas && valorValido(definicao, salvas[chave]) ? salvas[chave] : definicao.padrao,",
+    para: "      chave in salvas ? salvas[chave] : definicao.padrao,",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: o gestor passa a definir o limite de anexos",
+    arquivo: "src/routes/configuracao.routes.js",
+    de: "router.patch('/', authorize('administrador'), configuracaoController.definir);",
+    para: "router.patch('/', authorize('administrador', 'gestor'), configuracaoController.definir);",
+    spec: "tests/anexosCota.test.js",
+  },
+  {
+    descricao: "RF03: a recusa do limite de anexos deixa de dizer a faixa aceita",
+    arquivo: "src/services/configuracao.service.js",
+    de: "        definicao.tipo === 'number'\n          ? ",
+    para: "        false\n          ? ",
+    spec: "tests/anexosCota.test.js",
+  },
+  // --- Deploy antes da migração: leituras de painel não podem virar 500 ----------
+  {
+    descricao: "deploy antes da migração: o painel de telemetria volta a responder 500 (tabela de contadores ausente)",
+    arquivo: "src/services/telemetria.service.js",
+    de: "    .catch(semTabela({ rows: [] }));\n",
+    para: "    ;\n",
+    spec: "tests/telemetria.test.js",
+  },
+  {
+    descricao: "deploy antes da migração: o painel de telemetria volta a responder 500 (tabela de erros ausente)",
+    arquivo: "src/services/telemetria.service.js",
+    de: "    .catch(semTabela({ rows: [{ total: 0 }] }));\n",
+    para: "    ;\n",
+    spec: "tests/telemetria.test.js",
+  },
+  {
+    descricao: "deploy antes da migração: a tolerância do painel a tabela ausente passa a engolir qualquer erro",
+    arquivo: "src/services/telemetria.service.js",
+    de: "    if (err.code === '42P01') return vazio;\n    throw err;",
+    para: "    return vazio;",
+    spec: "tests/telemetria.test.js",
+  },
+  {
+    descricao: "deploy antes da migração: a lista de erros do sistema volta a responder 500",
+    arquivo: "src/services/erros.service.js",
+    de: "    if (err.code === '42P01') return { erros: [], ultimas_24h: 0, retencao_dias: RETENCAO_DIAS };\n    throw err;",
+    para: "    throw err;",
+    spec: "tests/errosGuardados.test.js",
   },
 ];
 

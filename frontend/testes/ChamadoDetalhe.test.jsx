@@ -146,7 +146,7 @@ describe('Quando o chamado não pode ser lido', () => {
     // recebia 403 no chamado lia "não foi possível carregar os anexos" — uma
     // explicação errada para um acesso negado.
     await waitFor(() =>
-      expect(screen.getByText('Não foi possível carregar o chamado.')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Você não tem acesso a este chamado' })).toBeInTheDocument()
     );
     expect(screen.queryByText(/anexos|comentários/i)).toBeNull();
   });
@@ -165,7 +165,7 @@ describe('Quando o chamado não pode ser lido', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText('Não foi possível carregar o chamado.')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Você não tem acesso a este chamado' })).toBeInTheDocument()
     );
 
     // Quem não pode ler o chamado também não pode ler o resto: duas
@@ -928,5 +928,72 @@ describe('RF09: confirmar a solução e avaliar', () => {
 
     await screen.findByText('Infiltração no auditório');
     expect(screen.queryByRole('heading', { name: 'Avaliação do solicitante' })).toBeNull();
+  });
+});
+
+describe('Chamado que não abre: a tela diz a causa e dá a saída', () => {
+  function abrirCom(falha) {
+    usuarioAtual.valor = SOLICITANTE;
+    api.get.mockImplementation(async (caminho) => {
+      if (caminho === '/chamados/7') throw falha;
+      return { data: { anexos: [], comentarios: [] } };
+    });
+    return render(
+      <MemoryRouter>
+        <ChamadoDetalhe />
+      </MemoryRouter>
+    );
+  }
+
+  it('endereço de chamado que não existe: título próprio e caminho de volta, sem "tentar de novo"', async () => {
+    abrirCom({ response: { status: 404 } });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Chamado não encontrado' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Voltar à lista de chamados/ })).toHaveAttribute('href', '/');
+    // Repetir um 404 devolveria a mesma tela.
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
+  });
+
+  it('chamado de outra pessoa: diz que é falta de acesso, e não que o chamado sumiu', async () => {
+    abrirCom({ response: { status: 403 } });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Você não tem acesso a este chamado' })).toBeInTheDocument();
+    expect(screen.queryByText(/Não existe chamado/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
+  });
+
+  it('sem conexão: explica, oferece tentar de novo, e o chamado abre quando a rede volta', async () => {
+    const user = userEvent.setup();
+    abrirCom({ response: { status: 0 } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Não foi possível abrir o chamado' })).toBeInTheDocument();
+    expect(screen.getByText(/sem conexão/)).toBeInTheDocument();
+
+    // A rede voltou.
+    api.get.mockImplementation(async (caminho) => {
+      if (caminho === '/chamados/7') return { data: { chamado: chamado() } };
+      if (caminho === '/chamados/7/anexos') return { data: { anexos: [] } };
+      return { data: { comentarios: [] } };
+    });
+    await user.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await screen.findByText('Infiltração no auditório')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Não foi possível abrir o chamado' })).toBeNull();
+    // Anexos e comentários também são pedidos na segunda tentativa.
+    expect(api.get).toHaveBeenCalledWith('/chamados/7/anexos');
+  });
+
+  it('falha do servidor: não culpa a conexão nem o endereço', async () => {
+    abrirCom({ response: { status: 500 } });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Não foi possível abrir o chamado' })).toBeInTheDocument();
+    expect(screen.getByText(/falha ao carregar/)).toBeInTheDocument();
+    expect(screen.queryByText(/sem conexão/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+  });
+
+  it('a causa é anunciada a quem usa leitor de tela', async () => {
+    abrirCom({ response: { status: 404 } });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Chamado não encontrado');
   });
 });
