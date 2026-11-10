@@ -155,25 +155,33 @@ app.get('/health/db', async (req, res) => {
 
 // Todo roteador passa por `idsInteiros`: `/chamados/abc` responde 404 em vez de
 // chegar ao banco e voltar como erro interno (middlewares/entrada.js).
-const montar = (caminho, arquivo) => app.use(caminho, idsInteiros(require(arquivo)));
-montar('/auth', './routes/auth.routes');
-montar('/chamados', './routes/chamados.routes');
-montar('/usuarios', './routes/usuarios.routes');
-montar('/locais', './routes/locais.routes');
-montar('/equipamentos', './routes/equipamentos.routes');
-montar('/planos-preventivos', './routes/planos.routes');
-montar('/categorias', './routes/categorias.routes');
-montar('/equipes', './routes/equipes.routes');
-montar('/materiais', './routes/materiais.routes');
-montar('/relatorios', './routes/relatorios.routes');
-montar('/notificacoes', './routes/notificacoes.routes');
-montar('/sla', './routes/sla.routes');
-montar('/regras-priorizacao', './routes/priorizacao.routes');
-montar('/regras-distribuicao', './routes/distribuicao.routes');
-montar('/configuracoes', './routes/configuracao.routes');
-montar('/tarefas', './routes/tarefas.routes');
-montar('/operacao', './routes/operacao.routes');
-montar('/telemetria', './routes/telemetria.routes');
+//
+// Os `require` são LITERAIS, de propósito. Uma versão anterior recebia o caminho numa
+// variável (`require(arquivo)`): passava em todos os testes, onde os arquivos estão no
+// disco, e derrubou a API inteira na Vercel, que só empacota na função o que consegue
+// enxergar de forma estática ("Cannot find module './routes/auth.routes'", 10/11/2026).
+// `tests/empacotamento.test.js` impede que volte.
+const ROTEADORES = [
+  ['/auth', require('./routes/auth.routes')],
+  ['/chamados', require('./routes/chamados.routes')],
+  ['/usuarios', require('./routes/usuarios.routes')],
+  ['/locais', require('./routes/locais.routes')],
+  ['/equipamentos', require('./routes/equipamentos.routes')],
+  ['/planos-preventivos', require('./routes/planos.routes')],
+  ['/categorias', require('./routes/categorias.routes')],
+  ['/equipes', require('./routes/equipes.routes')],
+  ['/materiais', require('./routes/materiais.routes')],
+  ['/relatorios', require('./routes/relatorios.routes')],
+  ['/notificacoes', require('./routes/notificacoes.routes')],
+  ['/sla', require('./routes/sla.routes')],
+  ['/regras-priorizacao', require('./routes/priorizacao.routes')],
+  ['/regras-distribuicao', require('./routes/distribuicao.routes')],
+  ['/configuracoes', require('./routes/configuracao.routes')],
+  ['/tarefas', require('./routes/tarefas.routes')],
+  ['/operacao', require('./routes/operacao.routes')],
+  ['/telemetria', require('./routes/telemetria.routes')],
+];
+for (const [caminho, roteador] of ROTEADORES) app.use(caminho, idsInteiros(roteador));
 
 app.use((req, res) => {
   res.status(404).json({ erro: { mensagem: 'Rota não encontrada.' } });

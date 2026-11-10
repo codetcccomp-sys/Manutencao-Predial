@@ -415,6 +415,7 @@ com o que cobre.
 | Arquivo | O que cobre |
 | --- | --- |
 | `backend/tests/anexosStorage.test.js` | Anexos no Supabase Storage (ver a seção 3) |
+| `backend/tests/empacotamento.test.js` | Nenhum `require` do código da API recebe variável, e todo arquivo de rotas é alcançável por `require` literal a partir de `api/index.js` (é o que a Vercel empacota; `require(variavel)` passa nos testes e derruba a API publicada) |
 | `backend/tests/mutacoesEmDia.test.js` | Toda mutação de `tests/mutacao.js` ainda encontra no código o trecho que desfaz (mutação desatualizada não vigia nada) |
 | `frontend/testes/mutacoesEmDia.test.js` | O mesmo para `testes/mutacao.mjs` |
 | `backend/tests/emailCaixa.test.js` | E-mail sem distinção de maiúsculas |

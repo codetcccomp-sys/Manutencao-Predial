@@ -121,6 +121,9 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   `montar` (confere `:id` e afins); campo inteiro no corpo é `tipo: 'inteiro'` (`'number'` só com casa decimal);
   filtro de consulta numérico ou de lista usa `filtroInteiro`/`filtroDeLista`. Todo 5xx vai para o painel de
   erros do administrador: não pode ser provocado por endereço digitado errado.
+- **`require` do backend é sempre literal** (`require('./x')`, nunca `require(variavel)`): a Vercel só empacota o que
+  enxerga de forma estática. Com variável, os testes passam (o arquivo está no disco) e a função publicada responde
+  500 em tudo com "Cannot find module" (10/11/2026, PR #102). `tests/empacotamento.test.js` confere.
 - Migração nova é aditiva e roda inteira numa transação. Em produção aplica-se
   pelo mesmo `migrate`, nunca colando SQL sem registrar em `migracao`; faça antes
   um ensaio com `BEGIN … ROLLBACK`.

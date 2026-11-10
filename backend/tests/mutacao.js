@@ -25,6 +25,13 @@ const { spawnSync } = require('child_process');
 
 const MUTACOES = [
   {
+    descricao: 'roteador passa a ser carregado por require de variável (some do pacote da Vercel)',
+    arquivo: 'src/app.js',
+    de: "['/auth', require('./routes/auth.routes')],",
+    para: "['/auth', ((caminho) => require(caminho))('./routes/auth.routes')],",
+    spec: 'tests/empacotamento.test.js',
+  },
+  {
     descricao: 'código do aplicativo volta a valer duas vezes',
     arquivo: 'src/services/auth.service.js',
     de: 'AND (totp_ultimo_passo IS NULL OR totp_ultimo_passo < $2)',
@@ -1322,8 +1329,8 @@ const MUTACOES = [
   {
     descricao: "entrada: os roteadores deixam de passar pela conferência de identificadores",
     arquivo: "src/app.js",
-    de: "app.use(caminho, idsInteiros(require(arquivo)));",
-    para: "app.use(caminho, require(arquivo));",
+    de: "app.use(caminho, idsInteiros(roteador));",
+    para: "app.use(caminho, roteador);",
     spec: "tests/entradaMalformada.test.js",
   },
   {
