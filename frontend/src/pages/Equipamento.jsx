@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import Aviso from '../components/ui/Aviso';
 import Cartao from '../components/ui/Cartao';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
 import { BadgeEstado } from '../components/ui/Badge';
 import { Esqueleto } from '../components/ui/Estados';
 import LinkVoltar from '../components/ui/LinkVoltar';
+import RegistroIndisponivel, { causaDaFalha } from '../components/ui/RegistroIndisponivel';
 import CodigoQR from '../components/ui/CodigoQR';
 import { descreverPeriodicidade, enderecoDeAbertura, formatarDia } from '../dominio/preventiva';
 
@@ -24,19 +24,29 @@ function Equipamento() {
   const ehGestao = ['administrador', 'gestor'].includes(usuario.perfil);
 
   const [equipamento, setEquipamento] = useState(null);
-  const [erro, setErro] = useState('');
+  // Por que a ficha não abriu (404, 403, sem rede, falha), ou nulo.
+  const [falhaDeCarga, setFalhaDeCarga] = useState(null);
+  // Troca a cada "Tentar de novo", para refazer a consulta.
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
-    setErro('');
+    setFalhaDeCarga(null);
     api
       .get(`/equipamentos/${id}`)
       .then(({ data }) => setEquipamento(data.equipamento))
-      .catch((err) =>
-        setErro(err.response?.data?.erro?.mensagem || 'Não foi possível carregar o equipamento.')
-      );
-  }, [id]);
+      .catch((err) => setFalhaDeCarga(causaDaFalha(err)));
+  }, [id, tentativa]);
 
-  if (erro) return <Aviso tipo="erro">{erro}</Aviso>;
+  if (falhaDeCarga) {
+    return (
+      <RegistroIndisponivel
+        oQue="equipamento"
+        causa={falhaDeCarga}
+        aoTentarDeNovo={() => setTentativa((n) => n + 1)}
+        rotuloVoltar="Voltar ao início"
+      />
+    );
+  }
   if (!equipamento) return <Esqueleto linhas={3} />;
 
   const dados = [

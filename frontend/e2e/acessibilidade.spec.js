@@ -87,6 +87,13 @@ test('o detalhe do chamado não tem violação de acessibilidade', async ({ page
   expect(await violacoes(page)).toEqual([]);
 });
 
+test('a tela de chamado não encontrado não tem violação de acessibilidade', async ({ page }) => {
+  await entrar(page, cenario.pessoas.solicitante);
+  await page.goto('/chamados/999999999');
+  await expect(page.getByRole('heading', { level: 1, name: 'Chamado não encontrado' })).toBeVisible();
+  expect(await violacoes(page)).toEqual([]);
+});
+
 // RF09 e RN12: o formulário de confirmar a solução (rótulos, alvo de toque) e o
 // histórico de prazos aberto (o `details` e a lista que ele revela).
 test('o chamado concluído, com o formulário de avaliação, não tem violação de acessibilidade', async ({ page }) => {

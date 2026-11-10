@@ -11,6 +11,7 @@ import {
   rotuloPrioridade,
 } from '../dominio/rotulos';
 import LinkVoltar from '../components/ui/LinkVoltar';
+import RegistroIndisponivel, { causaDaFalha } from '../components/ui/RegistroIndisponivel';
 import { registrarAcao } from '../monitoramento';
 import { LIMITE_BYTES, formatarTamanho, prepararAnexo } from '../dominio/prepararAnexo';
 import { formatarDia } from '../dominio/preventiva';
@@ -62,6 +63,8 @@ function ChamadoDetalhe() {
   const { usuario } = useAuth();
   const [chamado, setChamado] = useState(null);
   const [erro, setErro] = useState('');
+  // Por que o chamado não abriu (404, 403, sem rede, falha): decide o que a tela diz e oferece.
+  const [falhaDeCarga, setFalhaDeCarga] = useState(null);
   // A confirmação do que deu certo (item 11 do levantamento de usabilidade): sem ela, quem
   // conclui ou atribui só via a tela recarregar, sem saber se o clique valeu. Vem
   // também de quem abriu o chamado, que chega aqui logo depois de "Abrir chamado".
@@ -146,7 +149,8 @@ function ChamadoDetalhe() {
         );
       })
       .then(() => true)
-      .catch(() => {
+      .catch((err) => {
+        setFalhaDeCarga(causaDaFalha(err));
         setErro('Não foi possível carregar o chamado.');
         // Devolve false em vez de rejeitar: `carregar` é chamado solto depois
         // de cada ação da tela, e uma rejeição ali viraria erro não tratado.
@@ -171,7 +175,7 @@ function ChamadoDetalhe() {
       .catch(() => setErro('Não foi possível carregar os comentários.'));
   }, [id]);
 
-  useEffect(() => {
+  const abrir = useCallback(() => {
     // Anexos e comentários só depois do chamado, e não em paralelo. Quem não
     // pode ler o chamado também não pode ler o resto: as três chamadas
     // falhariam juntas, e a última a responder deixava na tela "não foi
@@ -183,6 +187,19 @@ function ChamadoDetalhe() {
       carregarComentarios();
     });
   }, [carregar, carregarAnexos, carregarComentarios]);
+
+  useEffect(() => {
+    abrir();
+  }, [abrir]);
+
+  // "Tentar de novo" da tela de chamado que não abriu: volta ao "Carregando..."
+  // (senão o botão parece não ter feito nada enquanto a rede não responde) e
+  // refaz a abertura inteira, anexos e comentários incluídos.
+  function abrirDeNovo() {
+    setFalhaDeCarga(null);
+    setErro('');
+    abrir();
+  }
 
   // Só administrador e gestor atribuem chamados — e só eles têm permissão de
   // listar usuários, então a busca fica condicionada ao perfil.
@@ -502,8 +519,13 @@ function ChamadoDetalhe() {
   }
 
   if (!chamado) {
-    return erro ? (
-      <Aviso tipo="erro">{erro}</Aviso>
+    return falhaDeCarga ? (
+      <RegistroIndisponivel
+        oQue="chamado"
+        causa={falhaDeCarga}
+        aoTentarDeNovo={abrirDeNovo}
+        rotuloVoltar="Voltar à lista de chamados"
+      />
     ) : (
       <p className="text-tinta-2 text-sm">Carregando...</p>
     );

@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { AppError } = require('../middlewares/errorHandler');
+const { LIMITE_POR_CHAMADO, LIMITE_POR_CHAMADO_MINIMO, LIMITE_POR_CHAMADO_TETO } = require('../config/anexos');
 
 /**
  * Configurações que a administração muda pela tela.
@@ -13,19 +14,38 @@ const CHAVES = {
   // Gestão e administração sem a verificação em duas etapas ficam restritas à
   // própria conta até ligá-la (middlewares/auth.js).
   exigir_2fa_gestao: { tipo: 'boolean', padrao: false },
+  // RF03: quantos anexos cabem num chamado. O teto é da hospedagem (config/anexos.js).
+  anexos_por_chamado: {
+    tipo: 'number',
+    padrao: LIMITE_POR_CHAMADO,
+    minimo: LIMITE_POR_CHAMADO_MINIMO,
+    maximo: LIMITE_POR_CHAMADO_TETO,
+  },
 };
+
+/** O valor serve para a chave? Vale na gravação e também na leitura (ver `ler`). */
+function valorValido(definicao, valor) {
+  if (typeof valor !== definicao.tipo) return false;
+  if (definicao.tipo !== 'number') return true;
+  return Number.isInteger(valor) && valor >= definicao.minimo && valor <= definicao.maximo;
+}
 
 async function ler(chave, client = pool) {
   const definicao = CHAVES[chave];
   const { rows } = await client.query('SELECT valor FROM configuracao WHERE chave = $1', [chave]);
-  return rows[0] ? rows[0].valor : definicao.padrao;
+  // Valor fora da faixa só chega aqui por escrita direta no banco. Vale o padrão:
+  // um limite de anexos negativo ou de mil não pode sair de uma linha editada à mão.
+  return rows[0] && valorValido(definicao, rows[0].valor) ? rows[0].valor : definicao.padrao;
 }
 
 async function listar(client = pool) {
   const { rows } = await client.query('SELECT chave, valor FROM configuracao');
   const salvas = Object.fromEntries(rows.map((r) => [r.chave, r.valor]));
   return Object.fromEntries(
-    Object.entries(CHAVES).map(([chave, { padrao }]) => [chave, chave in salvas ? salvas[chave] : padrao])
+    Object.entries(CHAVES).map(([chave, definicao]) => [
+      chave,
+      chave in salvas && valorValido(definicao, salvas[chave]) ? salvas[chave] : definicao.padrao,
+    ])
   );
 }
 
@@ -39,8 +59,14 @@ async function definir(valores, autor, client = pool) {
     if (!definicao) {
       throw new AppError(`Configuração desconhecida: "${chave}".`, 422, 'CONFIGURACAO_DESCONHECIDA');
     }
-    if (typeof valor !== definicao.tipo) {
-      throw new AppError(`"${chave}" deve ser verdadeiro ou falso.`, 422, 'VALIDACAO');
+    if (!valorValido(definicao, valor)) {
+      throw new AppError(
+        definicao.tipo === 'number'
+          ? `"${chave}" deve ser um número inteiro de ${definicao.minimo} a ${definicao.maximo}.`
+          : `"${chave}" deve ser verdadeiro ou falso.`,
+        422,
+        'VALIDACAO'
+      );
     }
   }
 
@@ -71,5 +97,6 @@ async function definir(valores, autor, client = pool) {
 
 const cadastroExigeAprovacao = (client) => ler('cadastro_exige_aprovacao', client);
 const exige2faGestao = (client) => ler('exigir_2fa_gestao', client);
+const anexosPorChamado = (client) => ler('anexos_por_chamado', client);
 
-module.exports = { listar, definir, cadastroExigeAprovacao, exige2faGestao, CHAVES };
+module.exports = { listar, definir, cadastroExigeAprovacao, exige2faGestao, anexosPorChamado, CHAVES };

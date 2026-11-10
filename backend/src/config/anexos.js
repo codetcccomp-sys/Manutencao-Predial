@@ -12,11 +12,23 @@
  *   (ver `services/armazenamentoUso.service.js`), com tempo de ligar o Storage antes de
  *   o banco acabar.
  *
- * Mora aqui, e não na tabela `sla`, porque não é regra de negócio da instituição: é folga
- * da hospedagem. O limite do banco vem de `BANCO_LIMITE_MB`, para acompanhar um plano pago.
+ * RF03: os anexos entram "dentro de limites definidos pela administração". Quantos cabem
+ * num chamado é dela (chave `anexos_por_chamado`, na tela de Usuários); `LIMITE_POR_CHAMADO`
+ * é só o valor de quem nunca mexeu. O que a administração não escolhe é o teto: ele é
+ * folga da hospedagem, e não regra da instituição. Com 20 anexos de até 4 MB, um chamado
+ * já pode ocupar 80 MB de um banco de 500. O limite do banco vem de `BANCO_LIMITE_MB`,
+ * para acompanhar um plano pago.
  */
 const LIMITE_POR_CHAMADO = 10;
+const LIMITE_POR_CHAMADO_MINIMO = 1;
+const LIMITE_POR_CHAMADO_TETO = 20;
 const ALERTA_PERCENTUAL = 70;
 const BANCO_LIMITE_MB_PADRAO = 500;
 
-module.exports = { LIMITE_POR_CHAMADO, ALERTA_PERCENTUAL, BANCO_LIMITE_MB_PADRAO };
+module.exports = {
+  LIMITE_POR_CHAMADO,
+  LIMITE_POR_CHAMADO_MINIMO,
+  LIMITE_POR_CHAMADO_TETO,
+  ALERTA_PERCENTUAL,
+  BANCO_LIMITE_MB_PADRAO,
+};

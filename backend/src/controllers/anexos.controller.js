@@ -16,7 +16,7 @@ const listar = asyncHandler(async (req, res) => {
   const anexos = await anexosService.listar(req.params.id);
   // O limite vai junto para a tela dizer "3 de 10" e desligar o envio no limite, sem copiar
   // o número no frontend.
-  res.json({ anexos, limite: anexosService.LIMITE_POR_CHAMADO });
+  res.json({ anexos, limite: await anexosService.limitePorChamado() });
 });
 
 const baixar = asyncHandler(async (req, res) => {

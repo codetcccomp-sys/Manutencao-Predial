@@ -2,7 +2,7 @@ const pool = require('../config/db');
 const { AppError } = require('../middlewares/errorHandler');
 const armazenamento = require('./armazenamento.service');
 const { transacao } = require('../config/transacao');
-const { LIMITE_POR_CHAMADO } = require('../config/anexos');
+const configuracao = require('./configuracao.service');
 
 // Limite do corpo de uma requisição em função serverless na Vercel é 4,5 MB;
 // 4 MB deixa folga para o restante do multipart.
@@ -65,13 +65,16 @@ function validarArquivo(arquivo) {
   }
 }
 
-function limiteAtingido() {
+function limiteAtingido(limite) {
   return new AppError(
-    `Este chamado já tem ${LIMITE_POR_CHAMADO} anexos, que é o limite. Remova algum para enviar outro.`,
+    `Este chamado já tem ${limite} ${limite === 1 ? 'anexo' : 'anexos'}, que é o limite. Remova algum para enviar outro.`,
     422,
     'LIMITE_DE_ANEXOS'
   );
 }
+
+/** Quantos anexos um chamado aceita hoje (RF03). */
+const limitePorChamado = () => configuracao.anexosPorChamado();
 
 async function contar(client, chamadoId) {
   const { rows } = await client.query('SELECT COUNT(*)::int AS n FROM anexo WHERE chamado_id = $1', [chamadoId]);
@@ -83,7 +86,9 @@ async function anexar(chamadoId, usuarioId, arquivo) {
 
   // Recusa antes de subir o arquivo ao Storage: o caso comum (limite já atingido) não
   // gasta envio nem apaga objeto. A conferência que vale é a de dentro da transação.
-  if ((await contar(pool, chamadoId)) >= LIMITE_POR_CHAMADO) throw limiteAtingido();
+  // RF03: o limite é o que a administração definiu (configuracao.service).
+  const limite = await limitePorChamado();
+  if ((await contar(pool, chamadoId)) >= limite) throw limiteAtingido(limite);
 
   const noStorage = armazenamento.modo() === 'supabase';
   const chave = noStorage ? armazenamento.novaChave(chamadoId) : null;
@@ -98,7 +103,7 @@ async function anexar(chamadoId, usuarioId, arquivo) {
       // Duas fotos enviadas juntas com o chamado em 9 anexos contariam 9 cada uma e
       // passariam as duas. O cadeado é por chamado e some no fim da transação.
       await client.query("SELECT pg_advisory_xact_lock(hashtext('anexo_chamado'), $1::int)", [chamadoId]);
-      if ((await contar(client, chamadoId)) >= LIMITE_POR_CHAMADO) throw limiteAtingido();
+      if ((await contar(client, chamadoId)) >= limite) throw limiteAtingido(limite);
 
       const { rows } = await client.query(
         `INSERT INTO anexo (chamado_id, usuario_id, tipo, nome_arquivo, mime_type, tamanho_bytes,
@@ -200,6 +205,6 @@ module.exports = {
   buscarConteudo,
   remover,
   TAMANHO_MAXIMO_BYTES,
-  LIMITE_POR_CHAMADO,
+  limitePorChamado,
   TIPOS_ACEITOS,
 };

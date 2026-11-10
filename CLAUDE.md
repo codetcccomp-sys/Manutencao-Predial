@@ -13,7 +13,8 @@ sem ler tudo, e o que **não** existe.
 - **Frontend**: React, Vite, Tailwind, React Router. **É PWA, não React
   Native**: nada de WatermelonDB; armazenamento local, se vier, é IndexedDB.
 - **Testes**: Jest + Supertest (backend), Vitest + Testing Library (componentes),
-  Playwright (ponta a ponta, projetos `computador` e `celular`).
+  Playwright (ponta a ponta, projetos `computador` e `celular`; `firefox` só com `E2E_FIREFOX=1`,
+  no job próprio do CI: `npm run e2e:firefox`).
 - **Segurança**: sessão em cookie HttpOnly, 2FA por TOTP, CSP estrita
   (`style-src 'self'`: estilo escrito como texto no HTML é bloqueado).
 
@@ -77,8 +78,9 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
   a passagem de 15 min do agendador (`/tarefas/notificar-atrasos`) manda sino e e-mail à gestão
   ativa, uma vez por chamado (`criticos.service`, `chamado.critico_notificado_em`, migração 030).
   O e-mail sai da conta do Gmail dos demais avisos; trocar por domínio da instituição é do dono.
-- **Anexos**: até 10 por chamado (`config/anexos.js`; 422 `LIMITE_DE_ANEXOS`, conferido sob
-  cadeado por chamado) e aviso à gestão aos 70% do banco (`GET /operacao/armazenamento`).
+- **Anexos**: até 10 por chamado por padrão; a administração define de 1 a 20 na tela de Usuários (RF03,
+  configuração `anexos_por_chamado`; o teto é de `config/anexos.js`). 422 `LIMITE_DE_ANEXOS`, conferido sob
+  cadeado por chamado, e aviso à gestão aos 70% do banco (`GET /operacao/armazenamento`).
   Ligar o Storage é decisão e ação do dono (chave de serviço), nunca de código.
 - **Cadastro público**: `POST /auth/registrar` responde 202 com o mesmo corpo para e-mail novo e
   repetido (não devolve conta nem token; o 409 é só da administração), tem teto por IP e por dia
@@ -185,6 +187,8 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   barra), `<select>` e `<input>` levam rótulo, link dentro de frase leva `underline`, e rota nova
   ganha título em `frontend/src/dominio/titulosDeRota.js` (o teste confere cada rota do `App.jsx`).
   Não use `role="tab"` sem setas, `tabpanel` e `aria-controls`: grupo de botões com `aria-pressed`.
+- Tela de um registro só (chamado, equipamento) que não carrega usa `ui/RegistroIndisponivel`: diz a causa
+  (404, 403, sem conexão, falha), tem `h1` e caminho de volta. Não volte à caixa de erro solta.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque
   pequeno e formulário vazando no celular que o jsdom não vê.
 

@@ -99,6 +99,21 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | Anexos | Ligar o Storage não quebra os anexos antigos | `backend/tests/anexosStorage.test.js` | anexo antigo, em bytea, continua abrindo depois de ligar o Storage |
 | Anexos | Foto grande do celular é reduzida no navegador | `frontend/e2e/anexos.spec.js` | foto de câmera acima de 4 MB é reduzida no navegador e entra no chamado |
 | Anexos | Um chamado aceita até 10 anexos; o seguinte é recusado com o motivo | `backend/tests/anexosCota.test.js` | o último anexo dentro do limite entra, e o seguinte é recusado com o motivo |
+| RF03 | Sem ninguém ter mexido, o limite de anexos é o padrão | `backend/tests/anexosCota.test.js` | sem ninguém ter mexido, vale o padrão |
+| RF03 | O limite definido pela administração vale no envio, na mensagem e na listagem | `backend/tests/anexosCota.test.js` | o limite definido passa a valer no envio, na mensagem e na listagem |
+| RF03 | Com limite de um, a mensagem está no singular | `backend/tests/anexosCota.test.js` | com limite de um, a mensagem fala em "1 anexo" |
+| RF03 | Baixar o limite não apaga anexos | `backend/tests/anexosCota.test.js` | baixar o limite não apaga o que já estava anexado: só recusa o próximo |
+| RF03 | O limite só aceita inteiro de 1 a 20 | `backend/tests/anexosCota.test.js` | recusa %p (fora de 1 a 20, ou que não é número inteiro) |
+| RF03 | Os extremos 1 e 20 são aceitos | `backend/tests/anexosCota.test.js` | aceita os dois extremos: 1 e 20 |
+| RF03 | Só a administração define o limite | `backend/tests/anexosCota.test.js` | só a administração define: o gestor recebe 403 |
+| RF03 | Valor fora da faixa gravado direto no banco não vale | `backend/tests/anexosCota.test.js` | valor fora da faixa gravado direto no banco não vale: fica o padrão |
+| RF03 | A tela mostra o limite em vigor e a faixa | `frontend/testes/LimiteDeAnexos.test.jsx` | mostra o limite em vigor e a faixa aceita |
+| RF03 | A tela salva o número novo e confirma | `frontend/testes/LimiteDeAnexos.test.jsx` | salva o número novo e confirma o que passou a valer |
+| RF03 | Valor fora da faixa é recusado na tela | `frontend/testes/LimiteDeAnexos.test.jsx` | "%s" é recusado na tela, sem chamar o servidor |
+| RF03 | Salvar o mesmo valor não chama o servidor | `frontend/testes/LimiteDeAnexos.test.jsx` | salvar o mesmo valor não chama o servidor, e diz que nada mudou |
+| RF03 | A recusa do servidor aparece, e o limite em vigor não muda | `frontend/testes/LimiteDeAnexos.test.jsx` | a recusa do servidor aparece com a mensagem dele, e o limite em vigor não muda |
+| RF03 | Sem carregar a configuração, não há campo vazio | `frontend/testes/LimiteDeAnexos.test.jsx` | se a configuração não carrega, mostra o erro e não oferece um campo vazio |
+| RF03 | O campo fica na tela de Usuários | `frontend/testes/Usuarios.test.jsx` | a administração encontra o campo com o limite em vigor |
 | Anexos | Remover um anexo libera uma vaga | `backend/tests/anexosCota.test.js` | remover um anexo libera uma vaga |
 | Anexos | Envio simultâneo na última vaga espera o cadeado e reconta | `backend/tests/anexosCota.test.js` | envio simultâneo no último lugar espera o cadeado do chamado e confere de novo |
 | Anexos | A gestão é avisada ao passar de 70% do banco | `backend/tests/anexosCota.test.js` | avisa a partir de 70% do limite, e não antes |
@@ -525,6 +540,15 @@ Detalhes em `docs/lgpd.md` (seção 8) e no README.
 | Indexação | O robots.txt cobre toda rota atrás do login e a API | `frontend/testes/Indexacao.test.js` | afasta os robôs de toda rota atrás do login, e da API |
 | Indexação | As telas públicas ficam rastreáveis, para o robô ler o `noindex` | `frontend/testes/Indexacao.test.js` | deixa rastreáveis as telas públicas, para o robô ler o noindex delas |
 | Indexação | O robots.txt diz que não substitui a autenticação | `frontend/testes/Indexacao.test.js` | diz que orienta robôs e não substitui a autenticação |
+| Não abriu | Chamado inexistente tem título e caminho de volta, sem "tentar de novo" | `frontend/testes/ChamadoDetalhe.test.jsx` | endereço de chamado que não existe: título próprio e caminho de volta, sem "tentar de novo" |
+| Não abriu | Chamado de outra pessoa diz que é falta de acesso | `frontend/testes/ChamadoDetalhe.test.jsx` | chamado de outra pessoa: diz que é falta de acesso, e não que o chamado sumiu |
+| Não abriu | Sem conexão, tentar de novo abre o chamado quando a rede volta | `frontend/testes/ChamadoDetalhe.test.jsx` | sem conexão: explica, oferece tentar de novo, e o chamado abre quando a rede volta |
+| Não abriu | Falha do servidor não culpa a conexão nem o endereço | `frontend/testes/ChamadoDetalhe.test.jsx` | falha do servidor: não culpa a conexão nem o endereço |
+| Não abriu | A causa é anunciada ao leitor de tela | `frontend/testes/ChamadoDetalhe.test.jsx` | a causa é anunciada a quem usa leitor de tela |
+| Não abriu | Equipamento inexistente tem título e caminho de volta | `frontend/testes/Preventiva.test.jsx` | etiqueta ou endereço de equipamento que não existe: título próprio e caminho de volta |
+| Não abriu | Na ficha do equipamento, tentar de novo refaz a consulta | `frontend/testes/Preventiva.test.jsx` | sem conexão: tentar de novo refaz a consulta e abre a ficha |
+| Não abriu | No navegador, endereço de chamado errado mostra a tela e leva de volta | `frontend/e2e/fluxo.spec.js` | ${endereco} mostra "Chamado não encontrado" e o caminho de volta |
+| Não abriu | A tela de chamado não encontrado não tem violação de acessibilidade | `frontend/e2e/acessibilidade.spec.js` | a tela de chamado não encontrado não tem violação de acessibilidade |
 | Indexação | No navegador, `noindex` no cabeçalho e no HTML | `frontend/e2e/paginas.spec.js` | toda tela sai com noindex, no cabeçalho e no HTML |
 | Indexação | O robots.txt é servido como texto | `frontend/e2e/paginas.spec.js` | o robots.txt é servido como texto e afasta os robôs das telas internas |
 | Termos | Estrutura e seções em ordem | `frontend/testes/PaginasDeInformacao.test.jsx` | é uma página com um título e seções em ordem, dentro de <main> |
