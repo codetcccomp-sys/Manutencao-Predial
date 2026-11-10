@@ -1713,6 +1713,35 @@ const MUTACOES = [
     para: "        false\n          ? ",
     spec: "tests/anexosCota.test.js",
   },
+  // --- Deploy antes da migração: leituras de painel não podem virar 500 ----------
+  {
+    descricao: "deploy antes da migração: o painel de telemetria volta a responder 500 (tabela de contadores ausente)",
+    arquivo: "src/services/telemetria.service.js",
+    de: "    .catch(semTabela({ rows: [] }));\n",
+    para: "    ;\n",
+    spec: "tests/telemetria.test.js",
+  },
+  {
+    descricao: "deploy antes da migração: o painel de telemetria volta a responder 500 (tabela de erros ausente)",
+    arquivo: "src/services/telemetria.service.js",
+    de: "    .catch(semTabela({ rows: [{ total: 0 }] }));\n",
+    para: "    ;\n",
+    spec: "tests/telemetria.test.js",
+  },
+  {
+    descricao: "deploy antes da migração: a tolerância do painel a tabela ausente passa a engolir qualquer erro",
+    arquivo: "src/services/telemetria.service.js",
+    de: "    if (err.code === '42P01') return vazio;\n    throw err;",
+    para: "    return vazio;",
+    spec: "tests/telemetria.test.js",
+  },
+  {
+    descricao: "deploy antes da migração: a lista de erros do sistema volta a responder 500",
+    arquivo: "src/services/erros.service.js",
+    de: "    if (err.code === '42P01') return { erros: [], ultimas_24h: 0, retencao_dias: RETENCAO_DIAS };\n    throw err;",
+    para: "    throw err;",
+    spec: "tests/errosGuardados.test.js",
+  },
 ];
 
 // A lista sai sozinha para `tests/mutacoesEmDia.test.js`, que confere a cada

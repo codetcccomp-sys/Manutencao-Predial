@@ -160,7 +160,8 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   duram 1 hora. Sem usuário, IP, query string nem corpo; e-mail na mensagem sai mascarado; 30 dias; teto
   de 100 por minuto. Só o administrador lê (`GET /operacao/erros`, tela de Usuários). Mexeu no que ela
   guarda? Mude `docs/lgpd.md` e o aviso de privacidade junto. A migração só vale em produção depois de
-  `npm run migrate` lá: antes disso gravar falha em silêncio e vai só para o console.
+  `npm run migrate` lá: antes disso gravar falha em silêncio e vai só para o console, e **ler** (painel de
+  erros, painel de uso) responde vazio, e não 500: código novo que lê tabela de migração nova tolera `42P01`.
 - **Medida de desempenho (RNF03) só vale com build de produção.** Com `NODE_ENV=development` no shell,
   o `vite build` empacota o React de desenvolvimento: o StrictMode dobra toda chamada à API e as telas
   ficam mais lentas (o documento de projeto chegou a sair com tempo inflado por isso). Confira com

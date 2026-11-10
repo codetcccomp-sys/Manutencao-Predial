@@ -209,3 +209,15 @@ describe('GET /operacao/erros', () => {
     }
   });
 });
+
+describe('GET /operacao/erros antes da migração 028 (tabela ausente)', () => {
+  beforeAll(() => pool.query('ALTER TABLE erro_aplicacao RENAME TO erro_aplicacao_ausente'));
+  afterAll(() => pool.query('ALTER TABLE erro_aplicacao_ausente RENAME TO erro_aplicacao'));
+
+  it('responde a lista vazia, e não 500', async () => {
+    const resp = await request(app).get('/operacao/erros').set(como(admin));
+
+    expect(resp.status).toBe(200);
+    expect(resp.body).toMatchObject({ erros: [], ultimas_24h: 0, retencao_dias: 30 });
+  });
+});

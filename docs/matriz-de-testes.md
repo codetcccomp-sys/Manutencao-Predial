@@ -620,4 +620,8 @@ Detalhes em `docs/lgpd.md` (seção 8) e no README.
 | Monitoramento | Endereço inexistente vira "outra" na telemetria | `frontend/testes/AnuncioDeRota.test.jsx` | um endereço que não existe vira "outra", sem repetir o que foi digitado |
 | Monitoramento | O erro que derruba a tela chega à administração, e a tela aponta o suporte | `frontend/testes/LimiteDeErroTelemetria.test.jsx` | avisa a administração e mostra a mensagem com o caminho para o suporte |
 | Monitoramento | Sem a tabela (migração 031 não aplicada), responde 204 e não 500 | `backend/tests/telemetria.test.js` | sem a tabela (migração 031 ainda não aplicada), responde 204 em vez de 500 |
+| Monitoramento | Sem a tabela (migração 031), o painel do administrador responde vazio, e não 500 (aconteceu em produção em 05/11/2026) | `backend/tests/telemetria.test.js` | o resumo responde vazio, e não 500 |
+| Monitoramento | Sem a tabela de erros (migração 028), o resumo responde com zero erros da tela | `backend/tests/telemetria.test.js` | sem a tabela de erros (migração 028), o resumo também responde, com zero erros da tela |
+| Monitoramento | Só a tabela ausente é tolerada: outro defeito do banco continua sendo erro | `backend/tests/telemetria.test.js` | só a tabela ausente é tolerada: qualquer outro defeito do banco continua sendo erro |
+| Erros do sistema | Sem a tabela (migração 028), a lista de erros responde vazia, e não 500 | `backend/tests/errosGuardados.test.js` | responde a lista vazia, e não 500 |
 | Monitoramento | Outro erro de banco continua sendo erro | `backend/tests/telemetria.test.js` | um erro de banco que não é a tabela ausente continua sendo erro |
