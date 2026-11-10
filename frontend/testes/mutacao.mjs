@@ -2321,6 +2321,14 @@ const MUTACOES = [
     para: "",
     spec: "testes/Preventiva.test.jsx",
   },
+  {
+    descricao: "monitoramento: erro de script de fora do aplicativo (extensão) passa a ser enviado",
+    arquivo: "src/monitoramento/index.js",
+    de: "    if (e.filename && !e.filename.startsWith(window.location.origin)) return;\n",
+    para: "",
+    motor: 'playwright',
+    spec: "e2e/telemetria.spec.js",
+  },
 ];
 
 // A lista sai sozinha para `testes/mutacoesEmDia.test.js`, que confere a cada

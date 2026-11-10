@@ -614,6 +614,7 @@ Detalhes em `docs/lgpd.md` (seção 8) e no README.
 | Monitoramento | No navegador: aberturas pelo modelo da rota | `frontend/e2e/telemetria.spec.js` | manda as aberturas de tela pelo modelo da rota, e nunca pelo endereço real |
 | Monitoramento | No navegador: "Não rastrear" corta o envio | `frontend/e2e/telemetria.spec.js` | quem liga "Não rastrear" não é medido |
 | Monitoramento | No navegador: erro de tela chega à administração | `frontend/e2e/telemetria.spec.js` | um erro de tela chega à administração com a tela pelo modelo da rota |
+| Monitoramento | Erro de script de fora do aplicativo (extensão do navegador) não é enviado | `frontend/e2e/telemetria.spec.js` | erro de script de fora do aplicativo (extensão do navegador) não é enviado |
 | Monitoramento | No navegador: o administrador lê o que foi medido | `frontend/e2e/telemetria.spec.js` | o administrador lê o que foi medido no painel de uso e desempenho |
 | Monitoramento | A tela é contada pelo modelo da rota, nunca pelo caminho | `frontend/testes/AnuncioDeRota.test.jsx` | registra a abertura pelo MODELO da rota, nunca pelo caminho com o identificador |
 | Monitoramento | Endereço inexistente vira "outra" na telemetria | `frontend/testes/AnuncioDeRota.test.jsx` | um endereço que não existe vira "outra", sem repetir o que foi digitado |
