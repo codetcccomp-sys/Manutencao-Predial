@@ -177,11 +177,11 @@ await gravar('abertura', ARTE, async ({ page, pausa, marca }) => {
     .map((src, i) => `<img class="fundo" style="animation-delay:${i * 3.2}s,${i * 3.2}s" src="${src}">`)
     .join('');
   await arte(page, `
-    .fundo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
+    .fundo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 58%;opacity:0;
       animation:foto 3.9s linear both,aproxima 3.9s linear both}
     @keyframes foto{0%{opacity:0}12%{opacity:1}85%{opacity:1}100%{opacity:0}}
     @keyframes aproxima{from{transform:scale(1.02)}to{transform:scale(1.1)}}
-    .veu{position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,27,51,.5),rgba(14,27,51,.82))}
+    .veu{position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,27,51,.42),rgba(14,27,51,.78))}
     .recados{position:absolute;inset:0}
     .recado{position:absolute;width:640px;padding:26px 32px;border-radius:20px;background:rgba(255,255,255,.96);color:#16294b;
       box-shadow:0 18px 50px rgba(0,0,0,.35);opacity:0;animation:entra .8s cubic-bezier(.22,1,.36,1) both}
