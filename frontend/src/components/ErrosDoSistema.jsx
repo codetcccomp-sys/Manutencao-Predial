@@ -68,7 +68,7 @@ function ErrosDoSistema() {
   return (
     <Cartao
       titulo="Erros do sistema"
-      descricao="Falhas de servidor e de tela dos últimos 30 dias. Sem dado de pessoa: só a rota, o código e a mensagem."
+      descricao="Últimos 30 dias."
     >
       <details onToggle={(e) => setAberto(e.currentTarget.open)}>
         <summary className="cursor-pointer text-sm font-medium text-navy">Ver os erros recentes</summary>

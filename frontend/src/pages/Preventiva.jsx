@@ -204,7 +204,6 @@ function Preventiva() {
     <div className="grid gap-6">
       <CabecalhoDePagina
         titulo="Manutenção preventiva"
-        descricao="O que verificar, a cada quanto tempo, onde e por quem (ABNT NBR 5674). Cada plano gera o próprio chamado na data, e o chamado segue o fluxo de qualquer outro."
         className="mb-0"
       />
 
@@ -237,7 +236,7 @@ function Preventiva() {
         <>
           <Cartao
             titulo="Novo plano"
-            descricao="Escolha o equipamento — local e categoria vêm dele — ou, para um serviço sem equipamento (pintura, telhado), o local e a categoria."
+            descricao="Escolha um equipamento ou, sem equipamento, o local e a categoria."
           >
             <form onSubmit={criarPlano} className="grid gap-4">
               <Campo
@@ -454,14 +453,12 @@ function Preventiva() {
 
       {!carregando && aba === 'equipamentos' && (
         <>
-          <Cartao
-            titulo="Cadastrar equipamento"
-            descricao="O código é o da etiqueta (patrimônio, por exemplo). É ele que vai no QR Code colado no equipamento."
-          >
+          <Cartao titulo="Cadastrar equipamento">
             <form onSubmit={criarEquipamento} className="grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Campo
                   rotulo="Código"
+                  ajuda="O da etiqueta de patrimônio. Vai no QR Code."
                   value={equipamento.codigo}
                   onChange={(e) => setEquipamento({ ...equipamento, codigo: e.target.value })}
                   placeholder="AC-204-01"

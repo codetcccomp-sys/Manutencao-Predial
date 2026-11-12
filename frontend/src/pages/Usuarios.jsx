@@ -154,13 +154,7 @@ function Usuarios() {
 
   return (
     <div className="grid gap-6">
-      <div>
-        <CabecalhoDePagina titulo="Usuários" className="mb-0" />
-        <p className="text-sm text-tinta-2">
-          Técnicos, gestores e administradores só podem ser criados aqui — o cadastro público sempre
-          gera um solicitante, e com a aprovação ligada ele espera a gestão antes de entrar.
-        </p>
-      </div>
+      <CabecalhoDePagina titulo="Usuários" className="mb-0" />
 
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {aviso && <div className="bg-sucesso-tenue text-sucesso text-sm rounded p-3">{aviso}</div>}

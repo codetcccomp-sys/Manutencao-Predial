@@ -78,10 +78,7 @@ function ExpedienteEFeriados() {
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {aviso && <Aviso tipo="sucesso">{aviso}</Aviso>}
 
-      <Cartao
-        titulo="Expediente"
-        descricao="Os prazos em horas úteis só correm dentro destes horários. Dia desmarcado é dia sem expediente."
-      >
+      <Cartao titulo="Expediente">
         <ul className="grid gap-2">
           {semana.map((d) => (
             <li key={d.dia_semana} className="flex flex-wrap items-center gap-3 text-sm">
@@ -124,7 +121,7 @@ function ExpedienteEFeriados() {
         </Botao>
       </Cartao>
 
-      <Cartao titulo="Feriados" descricao="Dias sem expediente, mesmo caindo em dia de semana.">
+      <Cartao titulo="Feriados">
         <form
           onSubmit={async (e) => {
             e.preventDefault();

@@ -149,7 +149,6 @@ function NovoChamado() {
       </div>
       <CabecalhoDePagina
         titulo="Abrir novo chamado"
-        descricao="Quanto mais específico o título e o local, mais rápido a triagem encaminha."
       />
 
       <form
@@ -222,9 +221,6 @@ function NovoChamado() {
         )}
 
         <div className="grid gap-4 rounded border border-borda p-4">
-          <p className="text-xs text-tinta-2">
-            Responda sobre a situação: o sistema define a prioridade, e a gestão confere na triagem.
-          </p>
           {PERGUNTAS_DE_SITUACAO.map(({ campo, pergunta, opcoes }) => (
             <EscolhaUnica
               key={campo}

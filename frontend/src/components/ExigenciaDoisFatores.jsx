@@ -71,10 +71,7 @@ function ExigenciaDoisFatores({ usuarios }) {
   }
 
   return (
-    <Cartao
-      titulo="Verificação em duas etapas da gestão"
-      descricao="Gestores e administradores podem mais no sistema; com a senha vazada, a conta deles é a que mais expõe."
-    >
+    <Cartao titulo="Verificação em duas etapas da gestão">
       <div className="grid gap-3 text-sm">
         {erro && (
           <Aviso tipo="erro">

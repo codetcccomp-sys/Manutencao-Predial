@@ -85,7 +85,6 @@ function Etiquetas() {
       <div className="print:hidden grid gap-4">
         <CabecalhoDePagina
           titulo="Etiquetas com QR Code"
-          descricao="Imprima, recorte e cole no equipamento ou na porta da sala. A câmera do celular abre o chamado já preenchido; quem não estiver logado passa pelo login e volta para o formulário."
           acao={
             <Botao variante="primaria" onClick={() => window.print()} disabled={etiquetas.length === 0}>
               Imprimir

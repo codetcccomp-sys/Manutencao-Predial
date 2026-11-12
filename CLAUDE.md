@@ -191,6 +191,9 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   barra), `<select>` e `<input>` levam rótulo, link dentro de frase leva `underline`, e rota nova
   ganha título em `frontend/src/dominio/titulosDeRota.js` (o teste confere cada rota do `App.jsx`).
   Não use `role="tab"` sem setas, `tabpanel` e `aria-controls`: grupo de botões com `aria-pressed`.
+- **Tela não narra a si mesma**: título sem subtítulo explicando para que serve (pedido do dono, 12/11/2026;
+  `telaSemNarracao.test.js` barra frase fixa no `descricao` do `CabecalhoDePagina`). Texto só entra quando a pessoa
+  precisa dele para agir: `ajuda` do campo, consequência ao lado do botão, estado vazio, erro, aviso legal.
 - Tela de um registro só (chamado, equipamento) que não carrega usa `ui/RegistroIndisponivel`: diz a causa
   (404, 403, sem conexão, falha), tem `h1` e caminho de volta. Não volte à caixa de erro solta.
 - Mexeu em tela: rode o e2e nos dois projetos. Ele já pegou alvo de toque

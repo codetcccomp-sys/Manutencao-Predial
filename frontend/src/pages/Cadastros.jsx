@@ -185,7 +185,6 @@ function Cadastros() {
     <div className="grid gap-6">
       <CabecalhoDePagina
         titulo="Cadastros"
-        descricao="Nada aqui é apagado: locais e equipes são desativados, e categorias são renomeadas. Os chamados antigos continuam apontando para o registro original."
         className="mb-0"
       />
 
@@ -259,10 +258,9 @@ function Cadastros() {
           <div className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-3 min-w-0">
             <h2 className="font-medium text-navy">Importar planilha</h2>
             <p className="text-sm text-tinta-2">
-              Envie um arquivo CSV com as colunas <code>unidade</code>, <code>bloco</code>,{' '}
-              <code>pavimento</code>, <code>setor</code> e <code>ambiente</code>. Só{' '}
-              <code>unidade</code> é obrigatória. Locais que já existem são reconhecidos e não
-              entram de novo, então dá para corrigir o arquivo e reenviá-lo inteiro.
+              CSV com as colunas <code>unidade</code> (obrigatória), <code>bloco</code>,{' '}
+              <code>pavimento</code>, <code>setor</code> e <code>ambiente</code>. Locais já
+              cadastrados são ignorados.
             </p>
 
             <div className="flex flex-wrap items-center gap-3">

@@ -80,8 +80,8 @@ describe('Uso e desempenho', () => {
   it('diz que não há dado de pessoa e que "Não rastrear" é respeitado', async () => {
     await abrir();
 
-    expect(screen.getByText(/sem dado de pessoa/i)).toBeInTheDocument();
-    expect(await screen.findByText(/Quem liga “Não rastrear” no navegador não entra na contagem/)).toBeInTheDocument();
+    expect(await screen.findByText(/sem dado de pessoa/i)).toBeInTheDocument();
+    expect(screen.getByText(/quem liga “Não rastrear” no navegador não entra nelas/)).toBeInTheDocument();
     expect(screen.getByText(/3 erros de tela nas últimas 24 horas/)).toBeInTheDocument();
   });
 
