@@ -25,3 +25,4 @@ frontend/video/comercial/contexto/
 frontend/video/saida.*.log
 frontend/video/modelo/
 frontend/video/.venv/
+__pycache__/
