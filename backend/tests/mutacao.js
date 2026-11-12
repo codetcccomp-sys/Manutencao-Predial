@@ -25,6 +25,20 @@ const { spawnSync } = require('child_process');
 
 const MUTACOES = [
   {
+    descricao: 'conferência pós-deploy deixa passar o roteador que responde 500',
+    arquivo: 'scripts/conferir-publicacao.js',
+    de: 'if (status === 0 || status >= 500)',
+    para: 'if (status === 0 || status > 500)',
+    spec: 'tests/conferirPublicacao.test.js',
+  },
+  {
+    descricao: 'conferência pós-deploy deixa de comparar produção e demonstração',
+    arquivo: 'scripts/conferir-publicacao.js',
+    de: "} else if (banco.corpo.demonstracao !== (esperado === 'demonstracao')) {",
+    para: '} else if (false) {',
+    spec: 'tests/conferirPublicacao.test.js',
+  },
+  {
     descricao: 'roteador passa a ser carregado por require de variável (some do pacote da Vercel)',
     arquivo: 'src/app.js',
     de: "['/auth', require('./routes/auth.routes')],",

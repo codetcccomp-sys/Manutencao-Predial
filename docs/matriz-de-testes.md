@@ -416,6 +416,7 @@ com o que cobre.
 | --- | --- |
 | `backend/tests/anexosStorage.test.js` | Anexos no Supabase Storage (ver a seção 3) |
 | `backend/tests/empacotamento.test.js` | Nenhum `require` do código da API recebe variável, e todo arquivo de rotas é alcançável por `require` literal a partir de `api/index.js` (é o que a Vercel empacota; `require(variavel)` passa nos testes e derruba a API publicada) |
+| `backend/tests/conferirPublicacao.test.js` | A conferência pós-deploy (`scripts/conferir-publicacao.js`, workflow `publicacao.yml`) deixa passar a API que funciona e acusa roteador com 500, agendador sem segredo, API sem resposta e banco de produção/demonstração trocado; lê a API de cada site do `vercel.json` dele |
 | `backend/tests/mutacoesEmDia.test.js` | Toda mutação de `tests/mutacao.js` ainda encontra no código o trecho que desfaz (mutação desatualizada não vigia nada) |
 | `frontend/testes/mutacoesEmDia.test.js` | O mesmo para `testes/mutacao.mjs` |
 | `backend/tests/emailCaixa.test.js` | E-mail sem distinção de maiúsculas |

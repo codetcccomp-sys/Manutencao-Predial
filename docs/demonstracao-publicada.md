@@ -83,6 +83,15 @@ código tolera a ausência; é o mesmo caminho do desenvolvimento).
    `"banco":"conectado"` e `"demonstracao":true`.
 4. Abra `https://conserva-predial-demo.vercel.app` e entre.
 
+### 5. Ligar a conferência pós-deploy da demo
+
+Depois que a demo responder, crie a variável do repositório `CONFERIR_DEMONSTRACAO` com o valor `sim`
+(Settings → Secrets and variables → Actions → **Variables**). A partir daí o workflow
+`Conferência pós-deploy` chama a API da demo a cada deploy dela e todo dia às 07:41: `/health/db` tem
+de responder com o banco conectado e `demonstracao: true`, e nenhum roteador pode dar 5xx (sem
+`CRON_SECRET`, `/tarefas` responde 503 e a conferência acusa). Sem a variável, só a produção é
+conferida: em 12/11/2026 a API da demo ainda estava sem `DATABASE_URL` e sem `CRON_SECRET`.
+
 ## O que as travas garantem
 
 - **O banco de produção nunca é semeado.** `backend/database/guarda-demonstracao.js`
