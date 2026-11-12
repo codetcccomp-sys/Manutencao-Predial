@@ -20,6 +20,8 @@ frontend/coverage/
 # Gravação do vídeo de demonstração (frontend/video): saída, modelo de voz e ambiente Python.
 frontend/video/saida/
 frontend/video/tecnico/saida/
+frontend/video/comercial/saida/
+frontend/video/comercial/contexto/
 frontend/video/saida.*.log
 frontend/video/modelo/
 frontend/video/.venv/
