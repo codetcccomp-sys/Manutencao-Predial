@@ -69,7 +69,7 @@ function LimiteDeAnexos() {
   return (
     <Cartao
       titulo="Anexos por chamado"
-      descricao="Quantas fotos e documentos cada chamado aceita. O tamanho de cada arquivo (4 MB) não muda."
+      descricao="Até 4 MB por arquivo."
     >
       <form onSubmit={salvar} className="grid gap-3 text-sm" noValidate>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}

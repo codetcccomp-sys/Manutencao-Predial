@@ -132,5 +132,5 @@ test('o administrador lê o que foi medido no painel de uso e desempenho', async
   const tabela = page.getByRole('table', { name: 'Uso e desempenho de cada tela' });
   await expect(tabela).toBeVisible();
   await expect(tabela.getByRole('row', { name: /Relatórios/ })).toBeVisible();
-  await expect(page.getByText(/Quem liga “Não rastrear” no navegador não entra na contagem/)).toBeVisible();
+  await expect(page.getByText(/sem dado de pessoa; quem liga “Não rastrear” no navegador não entra nelas/)).toBeVisible();
 });

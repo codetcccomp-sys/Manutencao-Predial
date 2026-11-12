@@ -80,10 +80,7 @@ function UsoEDesempenho() {
   }, [aberto, dados]);
 
   return (
-    <Cartao
-      titulo="Uso e desempenho"
-      descricao="Contadores por dia, sem dado de pessoa: quantas vezes cada tela abriu, quão rápido e o que se fez."
-    >
+    <Cartao titulo="Uso e desempenho">
       <details onToggle={(e) => setAberto(e.currentTarget.open)}>
         <summary className="cursor-pointer text-sm font-medium text-navy">Ver o uso dos últimos dias</summary>
 
@@ -94,8 +91,8 @@ function UsoEDesempenho() {
             <>
               <p className="text-sm text-tinta-2">
                 Últimos {dados.dias} dias. {dados.erros_da_tela_24h === 1 ? '1 erro de tela' : `${dados.erros_da_tela_24h} erros de tela`}{' '}
-                nas últimas 24 horas (veja em “Erros do sistema”). Quem liga “Não rastrear” no navegador não entra na
-                contagem.
+                nas últimas 24 horas (veja em “Erros do sistema”). Contagens sem dado de pessoa; quem liga “Não
+                rastrear” no navegador não entra nelas.
               </p>
 
               {dados.telas.length === 0 ? (

@@ -100,7 +100,6 @@ function Equipamento() {
         {equipamento.ativo && (
           <Cartao
             titulo="Etiqueta"
-            descricao="Cole no equipamento: a câmera do celular abre o chamado para ele."
             acao={
               ehGestao && (
                 <Link

@@ -9,11 +9,12 @@
  * O nome do sistema, no cabeçalho azul, é um link de volta ao início, não o
  * título da página. O título é o que esta tela é.
  */
-function CabecalhoDePagina({ titulo, descricao, acao, className = '' }) {
+function CabecalhoDePagina({ titulo, descricao, acao, className = 'mb-6' }) {
+  // A margem só vem por padrão: com `mb-6` fixo, o `mb-0` das telas em grade não
+  // vencia (as duas classes no mesmo elemento, ganha a que o CSS declara por último),
+  // e sobrava um vão de 48 px entre o título e o conteúdo.
   return (
-    <div
-      className={`flex flex-col gap-3 mb-6 sm:flex-row sm:items-start sm:justify-between ${className}`}
-    >
+    <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${className}`}>
       <div className="min-w-0">
         <h1 className="text-lg font-bold text-navy">{titulo}</h1>
         {descricao && <p className="text-sm text-tinta-2 mt-1 max-w-2xl">{descricao}</p>}

@@ -182,7 +182,7 @@ function MinhaConta() {
 
       <Cartao
         titulo="Verificação em duas etapas"
-        descricao="Além da senha, um código de 6 dígitos do aplicativo autenticador do celular (Google Authenticator, Microsoft Authenticator, Aegis, o do seu gerenciador de senhas)."
+        descricao="Além da senha, um código de 6 dígitos do aplicativo autenticador."
       >
         {situacao === null ? (
           <p className="text-sm text-tinta-2">Carregando...</p>
@@ -380,17 +380,14 @@ function MinhaConta() {
 
       <Cartao
         titulo="Sessões"
-        descricao="Esqueceu a conta aberta num computador compartilhado, ou acha que alguém entrou? Isto encerra a sessão em todos os aparelhos, inclusive neste."
+        descricao="Encerra a sessão em todos os aparelhos, inclusive neste."
       >
         <Botao variante="perigo" onClick={sairDeTodos}>
           Sair de todos os aparelhos
         </Botao>
       </Cartao>
 
-      <Cartao
-        titulo="Seus dados"
-        descricao="O que o sistema guarda sobre você, por quanto tempo, e como pedir acesso, correção ou a remoção da conta."
-      >
+      <Cartao titulo="Seus dados">
         <a
           href="/privacidade"
           target="_blank"

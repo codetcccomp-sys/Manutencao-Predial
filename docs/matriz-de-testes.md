@@ -469,6 +469,8 @@ com o que cobre.
 | `frontend/testes/animacao.test.jsx` | Movimento reduzido, número animado e entrada |
 | `frontend/testes/atendimento.test.js` | Os minutos sem atendimento em palavras |
 | `frontend/testes/client.test.js` | O cliente da API: sessão vencida, download e sem conexão |
+| `frontend/testes/CabecalhoDePagina.test.jsx` | A margem que a tela passa ao título substitui a padrão, sem deixar vão entre o título e o conteúdo |
+| `frontend/testes/telaSemNarracao.test.js` | Título de tela não traz frase fixa explicando a tela; debaixo dele só entra dado (expressão) |
 | `frontend/testes/contraste.test.js` | Contraste dos tokens de cor (WCAG 2.1 AA) |
 | `frontend/testes/destinoSeguro.test.js` | Para onde o login devolve a pessoa |
 | `frontend/testes/listaAnimada.test.jsx` | A lista que se reorganiza |

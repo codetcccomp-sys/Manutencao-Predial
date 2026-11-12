@@ -184,7 +184,6 @@ function Relatorios() {
     <div ref={refPagina} className="grid gap-6">
       <CabecalhoDePagina
         titulo="Relatórios"
-        descricao="Os recortes respeitam o período selecionado — inclusive as exportações."
         className="mb-0"
       />
 
@@ -242,11 +241,6 @@ function Relatorios() {
           </button>
         </div>
       </div>
-
-      <p className="text-xs text-tinta-2 -mt-4">
-        O PDF traz este relatório consolidado, pronto para arquivar. A planilha traz uma linha por
-        chamado, para cruzamentos que a tela não prevê. Os dois respeitam o período selecionado.
-      </p>
 
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {carregando && <p className="text-tinta-2 text-sm">Carregando...</p>}

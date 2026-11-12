@@ -105,7 +105,6 @@ function CadastrosPendentes({ comConfiguracao = false }) {
           ? `${plural(pedidos.length, 'cadastro aguardando', 'cadastros aguardando')} aprovação`
           : 'Pedidos de cadastro'
       }
-      descricao="Quem se cadastra pelo link público entra como solicitante, depois de aprovado."
       className={comConfiguracao ? '' : 'mb-4'}
     >
       <div className="grid gap-3">

@@ -121,7 +121,7 @@ function RegrasDeDistribuicao({ categorias, equipes, locais }) {
 
       <Cartao
         titulo="Nova regra"
-        descricao="Os chamados da categoria vão direto para a equipe, sem esperar a triagem. A regra mais específica vence: bloco, depois unidade, depois a instituição toda."
+        descricao="A mais específica vence: bloco, unidade, instituição."
       >
         <form onSubmit={criar} className="grid gap-4 sm:grid-cols-2">
           <Selecao rotulo="Categoria" value={nova.categoria_id} onChange={(e) => mudar('categoria_id', e.target.value)}>
@@ -200,10 +200,7 @@ function RegrasDeDistribuicao({ categorias, equipes, locais }) {
         </form>
       </Cartao>
 
-      <Cartao
-        titulo="Regras"
-        descricao="O gestor continua vendo todos os chamados e pode repriorizar ou reatribuir. O histórico de cada chamado diz qual regra o distribuiu."
-      >
+      <Cartao titulo="Regras">
         {regras.length === 0 ? (
           <p className="text-sm text-tinta-2">
             Nenhuma regra. Sem regra, todo chamado passa pela triagem do gestor.

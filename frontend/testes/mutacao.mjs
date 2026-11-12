@@ -23,6 +23,20 @@ import { pathToFileURL } from 'url';
 
 const MUTACOES = [
   {
+    descricao: 'cabeçalho volta a somar mb-6 com a margem da tela (vão entre título e conteúdo)',
+    arquivo: 'src/components/ui/CabecalhoDePagina.jsx',
+    de: '`flex flex-col gap-3 sm:flex-row',
+    para: '`flex flex-col gap-3 mb-6 sm:flex-row',
+    spec: 'testes/CabecalhoDePagina.test.jsx',
+  },
+  {
+    descricao: 'título de tela volta a ganhar frase explicando a tela',
+    arquivo: 'src/pages/Relatorios.jsx',
+    de: 'titulo="Relatórios"',
+    para: 'titulo="Relatórios"\n        descricao="Os recortes respeitam o período selecionado."',
+    spec: 'testes/telaSemNarracao.test.js',
+  },
+  {
     descricao: 'técnico volta a ver o botão de cancelar (RN05)',
     arquivo: 'src/pages/ChamadoDetalhe.jsx',
     de: "(estado) => podeGerenciar || estado !== 'cancelado'",
