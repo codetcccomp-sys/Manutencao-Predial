@@ -1,19 +1,20 @@
-#!/usr/bin/env python3
 """
-Monta o vídeo comercial (60 s, 1920×1080) a partir do que o gravar.mjs e o narrar.py deixaram
-em saida/: corta os clipes pelas marcas, funde as cenas, grava as legendas na imagem, compõe a
+Monta o vídeo comercial (45 a 60 s, 1920×1080) a partir do que o gravar.mjs e o narrar.py
+deixaram em saida/: junta as cenas com fusão curta, grava as legendas na imagem, compõe a
 trilha e mistura com a narração.
 
   montar.py            -> saida/conserva-predial-comercial.mp4  (+ .srt e trilha.wav)
 
+Não há tempos escritos aqui: cada cena dura o que durou a gravação, e cada fala entra no
+instante que o gravar.mjs anotou em marcas.json (lá a fala comanda a ação). Para mudar o
+ritmo, mude a cena em gravar.mjs e grave de novo.
+
 A trilha é sintetizada aqui (acordes longos, sem melodia): não há arquivo de música de
 terceiros no repositório, logo não há licença a conferir. Quer outra? Aponte TRILHA=arquivo.
-
-O ROTEIRO abaixo é a fonte da montagem: cada cena diz de qual clipe sai, em que marca começa,
-quanto dura e a que instante da cena a fala entra. A soma (menos as fusões) dá 60 s.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -25,42 +26,12 @@ SAIDA = os.environ.get("SAIDA", os.path.join(AQUI, "saida"))
 FALAS = json.load(open(os.path.join(AQUI, "falas.json"), encoding="utf-8"))
 MANIFESTO = json.load(open(os.path.join(SAIDA, "manifesto.json"), encoding="utf-8"))
 MARCAS = json.load(open(os.path.join(SAIDA, "marcas.json"), encoding="utf-8"))
-FUSAO = 0.5
+ENDERECO = os.environ.get("ENDERECO", "conserva-predial.vercel.app")
+FUSAO = 0.4
 FPS = 30
-
-# (clipe, marca de referência, deslocamento em s, duração, fala, atraso da fala na cena)
-ROTEIRO = [
-    ("abertura", "inicio", 0.0, 11.0, "abertura", 0.4),
-    ("marca", "inicio", 0.0, 4.4, "apresentacao", 0.8),
-    ("visao", "inicio", 0.3, 4.4, None, 0),
-    ("chamado", "inicio", 0.0, 9.8, "chamado", 1.5),
-    ("painel", "inicio", 0.0, 9.0, "painel", 0.7),
-    ("preventiva", "gerado", -5.2, 9.0, "preventiva", 0.7),
-    ("encerramento", "inicio", 0.0, 15.4, "encerramento", 0.8),
-]
-
-# Legendas: cada fala em trechos curtos. O instante de cada trecho é proporcional ao número de
-# letras, o que basta para frases deste tamanho (erro de poucos décimos de segundo).
-LEGENDAS = {
-    "abertura": [
-        "Você sabe, agora, em que pé está cada pedido",
-        "de manutenção do seu prédio?",
-        "Quando o aviso chega por mensagem,",
-        "por telefone ou no corredor,",
-        "é fácil perder a conta.",
-    ],
-    "apresentacao": ["O Conserva Predial reúne os chamados", "de manutenção em um só lugar,", "do pedido à conclusão."],
-    "chamado": ["Quem percebe o problema abre o chamado", "em poucos passos,", "e recebe o protocolo na hora."],
-    "painel": ["A gestão vê, num painel,", "o que está sem técnico", "e o que passou do prazo."],
-    "preventiva": ["E os planos de manutenção preventiva", "abrem os chamados na data prevista."],
-    "encerramento": [
-        "Com o Conserva Predial, você sabe",
-        "o que foi pedido, quem está cuidando,",
-        "e o que está no prazo.",
-        "Agende uma demonstração",
-        "e conheça o sistema na prática.",
-    ],
-}
+CENAS = ["problema", "marca", "registro", "atribuicao", "conclusao", "painel", "preventiva", "encerramento"]
+# Linha de legenda: curta o bastante para se ler num celular, com a letra grande.
+LARGURA = 40
 
 
 def rodar(*args):
@@ -69,32 +40,67 @@ def rodar(*args):
 
 def linha_do_tempo():
     cenas, t = [], 0.0
-    for clipe, marca, desloc, dur, fala, atraso in ROTEIRO:
-        inicio_no_clipe = MARCAS[clipe][marca] + desloc
-        sobra = MARCAS[clipe]["fim"] - inicio_no_clipe - dur
-        if inicio_no_clipe < 0 or sobra < 0:
-            sys.exit(f"clipe {clipe}: falta material ({sobra:.2f}s). Grave de novo ou encurte a cena.")
-        cenas.append({"clipe": clipe, "de": inicio_no_clipe, "dur": dur, "t": t, "fala": fala, "t_fala": t + atraso})
+    for nome in CENAS:
+        m = MARCAS.get(nome)
+        if not m or "falas" not in m:
+            sys.exit(f"cena {nome}: sem gravação. Rode o gravar.mjs.")
+        dur = m["fim"] - m["inicio"]
+        falas = [{"chave": f["chave"], "t": t + f["t"] - m["inicio"]} for f in m["falas"]]
+        cenas.append({"clipe": nome, "de": m["inicio"], "dur": dur, "t": t, "falas": falas})
         t += dur - FUSAO
-    return cenas, t + FUSAO
+    total = t + FUSAO
+    falas = [f for c in cenas for f in c["falas"]]
+    for a, b in zip(falas, falas[1:]):
+        if a["t"] + MANIFESTO[a["chave"]]["duracao"] - 0.35 > b["t"]:
+            sys.exit(f"as falas {a['chave']} e {b['chave']} se atropelam: aumente a espera na cena.")
+    faltando = set(FALAS) - {f["chave"] for f in falas}
+    if faltando:
+        sys.exit(f"falas sem cena: {sorted(faltando)}")
+    if not 45 <= total <= 60:
+        sys.exit(f"o vídeo ficou com {total:.1f}s; o pedido é de 45 a 60 s.")
+    return cenas, total
+
+
+def quebrar(texto):
+    """Parte a fala em linhas curtas e equilibradas, respeitando a pontuação."""
+    pedacos = [p.strip() for p in re.findall(r"[^,.:;?!]+[,.:;?!]*", texto) if p.strip()]
+    # Pedaço curto ("No painel,") anda junto com o seguinte, a menos que feche a frase.
+    juntos = []
+    for p in pedacos:
+        if juntos and len(juntos[-1]) < 16 and juntos[-1][-1] not in ".?!":
+            juntos[-1] += " " + p
+        else:
+            juntos.append(p)
+    linhas = []
+    for p in juntos:
+        n = -(-len(p) // LARGURA)  # quantas linhas, arredondando para cima
+        alvo = len(p) / n
+        feitas, atual = 0, ""
+        for palavra in p.split():
+            if atual and feitas < n - 1 and len(atual) + 1 + len(palavra) / 2 > alvo:
+                linhas.append(atual)
+                feitas += 1
+                atual = palavra
+            else:
+                atual = f"{atual} {palavra}".strip()
+        linhas.append(atual)
+    return linhas
 
 
 def legendas(cenas):
+    # O instante de cada linha é proporcional ao número de letras: como cada fala começa num
+    # instante medido e é curta, o erro fica em poucos décimos de segundo.
     trechos = []
     for c in cenas:
-        if not c["fala"]:
-            continue
-        # A voz termina 0,35 s antes do fim do arquivo (respiro acrescentado na síntese).
-        voz = MANIFESTO[c["fala"]]["duracao"] - 0.35
-        partes = LEGENDAS[c["fala"]]
-        if "".join(partes).replace(" ", "") != FALAS[c["fala"]].replace(" ", "").replace("demonstração,", "demonstração"):
-            sys.exit(f"legenda de '{c['fala']}' não confere com a fala: o que se lê tem de ser o que se ouve.")
-        total = sum(len(p) for p in partes)
-        t = c["t_fala"]
-        for p in partes:
-            d = voz * len(p) / total
-            trechos.append((t, t + d, p))
-            t += d
+        for f in c["falas"]:
+            voz = MANIFESTO[f["chave"]]["duracao"] - 0.35
+            partes = quebrar(FALAS[f["chave"]])
+            total = sum(len(p) for p in partes)
+            t = f["t"]
+            for p in partes:
+                d = voz * len(p) / total
+                trechos.append((t, t + d, p))
+                t += d
     return trechos
 
 
@@ -122,7 +128,7 @@ def escrever_legendas(trechos):
             "Alignment, MarginL, MarginR, MarginV, Encoding\n"
             # Caixa azul-marinho da marca (#0F1B33, levemente translúcida) com texto branco: lê-se
             # sobre a tela clara do sistema e sobre as artes escuras.
-            "Style: L,Inter,46,&H00FFFFFF,&H00FFFFFF,&H18331B0F,&H18331B0F,-1,0,0,0,100,100,0,0,3,14,0,2,80,80,54,1\n\n"
+            "Style: L,Inter,56,&H00FFFFFF,&H00FFFFFF,&H18331B0F,&H18331B0F,-1,0,0,0,100,100,0,0,3,16,0,2,80,80,48,1\n\n"
             "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
         )
         for a, b, texto in trechos:
@@ -177,12 +183,10 @@ def main():
 
     n = len(cenas)
     vozes = []
-    for c in cenas:
-        if not c["fala"]:
-            continue
+    for f in [f for c in cenas for f in c["falas"]]:
         k = n + len(vozes)
-        entradas += ["-i", MANIFESTO[c["fala"]]["arquivo"]]
-        ms = int(c["t_fala"] * 1000)
+        entradas += ["-i", MANIFESTO[f["chave"]]["arquivo"]]
+        ms = int(f["t"] * 1000)
         filtros.append(f"[{k}:a]aresample=48000,adelay={ms}|{ms}[a{k}]")
         vozes.append(f"[a{k}]")
     km = n + len(vozes)
@@ -190,7 +194,7 @@ def main():
     filtros.append(f"{''.join(vozes)}amix=inputs={len(vozes)}:normalize=0,highpass=f=70,"
                    "acompressor=threshold=-20dB:ratio=3:attack=5:release=120,volume=5dB,asplit[voz][chave]")
     # A trilha baixa quando a voz entra (sidechain) e nunca passa de fundo.
-    filtros.append(f"[{km}:a]aresample=48000,volume=-17dB[m0];[m0][chave]sidechaincompress=threshold=0.02:ratio=6:attack=40:release=500[m]")
+    filtros.append(f"[{km}:a]aresample=48000,volume=-20dB[m0];[m0][chave]sidechaincompress=threshold=0.02:ratio=6:attack=40:release=500[m]")
     filtros.append(f"[voz][m]amix=inputs=2:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=9,atrim=duration={total:.3f}[a]")
 
     destino = os.path.join(SAIDA, "conserva-predial-comercial.mp4")
@@ -199,7 +203,23 @@ def main():
           "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", destino)
     print(f"✔ {destino}  ({total:.1f}s)")
     for c in cenas:
-        print(f"  {c['t']:5.1f}s  {c['clipe']:<13}" + (f" fala em {c['t_fala']:.1f}s" if c["fala"] else ""))
+        print(f"  {c['t']:5.1f}s  {c['clipe']:<13}" + "".join(f" {f['chave']}@{f['t']:.1f}" for f in c["falas"]))
+    conferir_qr(destino, total)
+
+
+def conferir_qr(video, total):
+    """Lê o QR Code de um quadro do vídeo pronto: tem de abrir o endereço do cartão final."""
+    try:
+        import cv2
+    except ImportError:
+        print("  QR Code não conferido (instale opencv-python-headless).")
+        return
+    quadro = os.path.join(SAIDA, "quadro-final.png")
+    rodar("-ss", f"{total - 2:.2f}", "-i", video, "-frames:v", "1", quadro)
+    lido, _, _ = cv2.QRCodeDetector().detectAndDecode(cv2.imread(quadro))
+    if lido != f"https://{ENDERECO}":
+        sys.exit(f"o QR Code do vídeo lê {lido!r}, e não https://{ENDERECO}.")
+    print(f"  QR Code conferido no vídeo pronto: {lido}")
 
 
 if __name__ == "__main__":

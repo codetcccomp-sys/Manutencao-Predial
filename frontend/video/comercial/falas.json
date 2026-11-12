@@ -1,8 +1,12 @@
 {
-  "abertura": "Você sabe, agora, em que pé está cada pedido de manutenção do seu prédio? Quando o aviso chega por mensagem, por telefone ou no corredor, é fácil perder a conta.",
-  "apresentacao": "O Conserva Predial reúne os chamados de manutenção em um só lugar, do pedido à conclusão.",
-  "chamado": "Quem percebe o problema abre o chamado em poucos passos, e recebe o protocolo na hora.",
-  "painel": "A gestão vê, num painel, o que está sem técnico e o que passou do prazo.",
-  "preventiva": "E os planos de manutenção preventiva abrem os chamados na data prevista.",
-  "encerramento": "Com o Conserva Predial, você sabe o que foi pedido, quem está cuidando, e o que está no prazo. Agende uma demonstração, e conheça o sistema na prática."
+  "problema": "Pedidos de manutenção espalhados em mensagens, ligações e conversas?",
+  "marca": "Conserva Predial. Os chamados de manutenção em um só lugar.",
+  "registro": "Um vazamento, por exemplo: quem percebe registra o chamado, e recebe o protocolo na hora.",
+  "atribuicao": "A gestão define o técnico responsável, e o prazo fica registrado no chamado.",
+  "conclusao": "Ao concluir, o técnico descreve o serviço executado, e o histórico guarda cada etapa.",
+  "painel": "No painel, a gestão vê o que está sem técnico, o que passou do prazo, e quantos chamados estão em aberto.",
+  "planos": "Na manutenção preventiva, cada plano tem o serviço, a periodicidade e a próxima data.",
+  "gerar": "O chamado é aberto automaticamente na data programada. Com o botão Gerar agora, a gestão pode antecipar.",
+  "beneficios": "Saiba o que precisa de atenção, quem é o responsável, e o que passou do prazo.",
+  "convite": "Conserva Predial. Acesse, e conheça o sistema."
 }
