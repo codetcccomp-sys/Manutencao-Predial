@@ -1,0 +1,79 @@
+name: Conferência pós-deploy
+
+# Chama a API PUBLICADA, sem login e sem escrever nada, e confere que ela atende: /health,
+# /health/db (banco conectado, e de produção ou de demonstração conforme o caso) e cada roteador
+# de backend/src/app.js abaixo de 500 (backend/scripts/conferir-publicacao.js).
+#
+# Existe porque, em 10/11/2026, a API ficou fora do ar desde o deploy do PR #102 até alguém tentar
+# entrar: os testes passaram (rodam com os arquivos no disco) e a função da Vercel respondia 500 em
+# tudo. Falhou aqui, o GitHub manda e-mail a quem segue o repositório.
+#
+# Não precisa de segredo: os endereços saem dos vercel.json dos sites, os mesmos que o navegador usa.
+#
+# A demonstração só é conferida com a variável do repositório CONFERIR_DEMONSTRACAO = sim (Settings →
+# Secrets and variables → Actions → Variables). Em 12/11/2026 a API dela estava sem banco nem segredos
+# cadastrados (docs/demonstracao-publicada.md); conferir assim falharia a cada merge, e alerta que
+# falha sempre ensina a ignorar alerta. Ligue depois de configurar a demo.
+on:
+  # A Vercel avisa o GitHub quando um deploy fica pronto.
+  deployment_status:
+  # Rede de segurança, caso um aviso de deploy se perca: 10:41 UTC = 07:41 em Brasília, antes do
+  # expediente. O minuto quebrado foge da fila de agendamentos na hora cheia.
+  schedule:
+    - cron: '41 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publicacao-${{ github.event.deployment.environment || 'agendada' }}
+  cancel-in-progress: true
+
+jobs:
+  conferir:
+    name: API publicada atende
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Deploy de prévia (branch) e deploy do frontend não interessam: só o deploy de produção de
+    # uma das duas APIs. Agendada ou acionada à mão, confere as duas (a demo, se ligada).
+    if: >-
+      github.event_name != 'deployment_status' || (
+        github.event.deployment_status.state == 'success' &&
+        startsWith(github.event.deployment.environment, 'Production') && (
+          contains(github.event.deployment.environment, 'manutencao-predial-backend') || (
+            vars.CONFERIR_DEMONSTRACAO == 'sim' &&
+            contains(github.event.deployment.environment, 'conserva-predial-demo-api')
+          )
+        )
+      )
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Produção
+        if: >-
+          github.event_name != 'deployment_status' ||
+          contains(github.event.deployment.environment, 'manutencao-predial-backend')
+        working-directory: backend
+        env:
+          CONFERIR_TENTATIVAS: 6
+          CONFERIR_ESPERA_MS: 30000
+        run: node scripts/conferir-publicacao.js "$(node -p "require('./scripts/conferir-publicacao').apiDoSite('../frontend/vercel.json')")" producao
+
+      # Roda mesmo com a produção falhando: numa conferência agendada, as duas respostas importam.
+      - name: Demonstração
+        if: >-
+          !cancelled() && vars.CONFERIR_DEMONSTRACAO == 'sim' && (
+            github.event_name != 'deployment_status' ||
+            contains(github.event.deployment.environment, 'conserva-predial-demo-api')
+          )
+        working-directory: backend
+        env:
+          CONFERIR_TENTATIVAS: 6
+          CONFERIR_ESPERA_MS: 30000
+        run: node scripts/conferir-publicacao.js "$(node -p "require('./scripts/conferir-publicacao').apiDoSite('../demo/frontend/vercel.json')")" demonstracao

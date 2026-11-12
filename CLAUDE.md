@@ -124,6 +124,10 @@ Dependem de decisão do dono do projeto antes de qualquer código:
 - **`require` do backend é sempre literal** (`require('./x')`, nunca `require(variavel)`): a Vercel só empacota o que
   enxerga de forma estática. Com variável, os testes passam (o arquivo está no disco) e a função publicada responde
   500 em tudo com "Cannot find module" (10/11/2026, PR #102). `tests/empacotamento.test.js` confere.
+- **Depois de cada deploy, a API publicada é chamada** (`.github/workflows/publicacao.yml`, no aviso de deploy da
+  Vercel e todo dia às 07:41 de Brasília): `/health`, `/health/db` e cada roteador de `app.js` abaixo de 500, na
+  produção e, com a variável `CONFERIR_DEMONSTRACAO = sim`, na demo (`scripts/conferir-publicacao.js`; endereços
+  lidos dos `vercel.json`). Falhou, o GitHub manda e-mail. Não desfaz o deploy sozinho: o rollback na Vercel é decisão de quem administra.
 - Migração nova é aditiva e roda inteira numa transação. Em produção aplica-se
   pelo mesmo `migrate`, nunca colando SQL sem registrar em `migracao`; faça antes
   um ensaio com `BEGIN … ROLLBACK`.
