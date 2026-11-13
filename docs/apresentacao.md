@@ -41,8 +41,8 @@ que falar em cada uma. Não tente consertar na frente da banca.
 
 - [ ] Abrir o sistema e o painel do Supabase: o plano gratuito pausa o banco
       depois de 7 dias sem uso, e acordá-lo leva minutos.
-- [ ] Reancorar a demonstração: `node database/reancorar-demo.js --aplicar`
-      (ver `docs/dados-demonstracao.md`).
+- [ ] Refazer os dados de apresentação com datas de hoje: `remover-apresentacao.sql` e depois
+      `semear-apresentacao.sql`, ensaiando com `ROLLBACK` (ver `docs/apresentacao-na-producao.md`).
 - [ ] Conferir no painel do gestor que há chamados no prazo **e** atrasados.
 - [ ] Baixar o PDF dos slides para o computador da apresentação.
 

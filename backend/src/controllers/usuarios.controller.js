@@ -1,7 +1,7 @@
 const usuariosService = require('../services/usuarios.service');
 const authService = require('../services/auth.service');
 const { asyncHandler } = require('../utils/asyncHandler');
-const { filtroInteiro, filtroDeLista } = require('../middlewares/entrada');
+const { filtroDeLista } = require('../middlewares/entrada');
 
 const PERFIS = ['solicitante', 'tecnico', 'gestor', 'administrador'];
 

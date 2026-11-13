@@ -8,7 +8,7 @@
     "node": "22.x || 24.x"
   },
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "migrate": "node database/migrate.js",
     "test": "jest --runInBand",
@@ -16,7 +16,9 @@
     "test:sla": "jest --runInBand tests/sla.test.js tests/horasUteis.test.js tests/atrasos.test.js"
   },
   "jest": {
-    "setupFiles": ["<rootDir>/tests/apoio/ambiente.js"],
+    "setupFiles": [
+      "<rootDir>/tests/apoio/ambiente.js"
+    ],
     "globalTeardown": "<rootDir>/tests/apoio/globalTeardown.js"
   },
   "dependencies": {
@@ -34,7 +36,6 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "nodemon": "^3.1.4",
     "supertest": "^7.3.1"
   }
 }

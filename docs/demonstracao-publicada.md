@@ -124,8 +124,7 @@ exigência de 2FA e se desativam as contas de exemplo.
 ## Na véspera da apresentação
 
 O que foi semeado em outubro parece quebrado em dezembro: chamados abertos há semanas,
-tudo em atraso, alerta de crítico em toda parte. O `reancorar-demo.js` não serve aqui —
-ele só reconhece a massa `SMP-DEMO-*` da produção. Recomece:
+tudo em atraso, alerta de crítico em toda parte. Recomece:
 
 1. No **SQL Editor do projeto da demonstração** (confira o nome do projeto no canto),
    cole o conteúdo de `backend/database/reiniciar-demonstracao.sql` e rode. Ele só

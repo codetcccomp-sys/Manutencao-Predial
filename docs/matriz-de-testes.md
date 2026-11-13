@@ -430,7 +430,6 @@ com o que cobre.
 | `backend/tests/migracoes.test.js` | Migrações e privilégios no banco migrado |
 | `backend/tests/nivelDeLog.test.js` | 4xx é recusa; 5xx é falha nossa e leva o stack |
 | `backend/tests/notificacoes.test.js` | Despacho de e-mail das notificações e a lista de cada pessoa |
-| `backend/tests/reancorarDemo.test.js` | Reancorar as datas da demonstração antiga |
 | `backend/tests/tls.test.js` | Certificado da autoridade do banco |
 | `backend/tests/totp.test.js` | TOTP conferido contra os vetores do RFC 6238 |
 | `backend/tests/transacao.test.js` | O auxiliar de transação |
