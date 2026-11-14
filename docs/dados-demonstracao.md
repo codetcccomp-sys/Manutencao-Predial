@@ -1,5 +1,8 @@
 # Dados de demonstração
 
+> **Registro histórico.** Esta massa saiu da produção em 12/10/2026 (`docs/piloto.md`, §2.0). Os dados
+> fictícios de hoje são os de [`apresentacao-na-producao.md`](apresentacao-na-producao.md).
+
 Carregados em 20/09/2026 para apresentação. **São fictícios.**
 
 O §4.3 do Termo separa as duas coisas com todas as letras: dados fictícios
@@ -109,28 +112,10 @@ transição que não aconteceu.
 
 ## Trazer para perto de hoje antes de apresentar
 
-Os prazos foram desenhados relativos ao dia da carga, e o relógio não para.
-Em 30/09, dez dias depois, 22 dos 25 chamados abertos já apareciam em
-atraso: um painel todo vermelho não mostra nada, porque sem contraste entre
-"no prazo" e "atrasado" não se vê o que o sistema faz com nenhum dos dois.
-
-O script desloca **todas** as datas da demonstração pelo mesmo intervalo, de
-modo que a carga vire "agora". A ordem dos eventos, as durações e quem estoura
-o prazo voltam a ser os do dia em que a massa foi desenhada. Só mexe em
-chamados `SMP-DEMO-*`, no que pertence a eles e nas pessoas `+demo.`; dado
-real no mesmo banco fica onde está.
-
-```bash
-cd backend
-# Com a DATABASE_URL de produção no ambiente. Sem --aplicar, só mostra:
-node database/reancorar-demo.js
-node database/reancorar-demo.js --aplicar
-```
-
-Rodar duas vezes seguidas não empurra nada para o futuro: a âncora (a data de
-criação das pessoas `+demo.`) anda junto, e a segunda execução mede a partir
-da primeira. Rode **na véspera** de cada apresentação: a cada dia que passa,
-mais chamados cruzam o prazo, e o retrato se afasta do desenhado.
+Havia um script para isso (`database/reancorar-demo.js`), que deslocava as datas dos chamados
+`SMP-DEMO-*`. A massa saiu da produção em 12/10/2026 e não existe em outro banco, então ele foi
+removido em 13/11/2026. A apresentação usa os dados de `docs/apresentacao-na-producao.md`, que se
+refazem com datas de hoje removendo e semeando de novo.
 
 ## Apagar antes do piloto real
 

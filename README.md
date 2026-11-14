@@ -76,9 +76,10 @@ véspera da apresentação estão em [docs/demonstracao-publicada.md](docs/demon
 O frontend responde também em `manutencao-predial-frontend.vercel.app`, o nome
 que a Vercel deu ao projeto. O endereço curto foi **acrescentado**, não
 trocado: renomear o projeto derruba o nome antigo, e no backend isso
-arrebentaria em silêncio duas coisas de uma vez — o `VITE_API_URL` do frontend
-e o agendador do aviso de atraso (RF08), que passaria a receber 404, se
-desligaria sozinho e pararia de registrar sem avisar ninguém.
+arrebentaria em silêncio duas coisas de uma vez — o encaminhamento de `/api` em
+`frontend/vercel.json`, por onde o site fala com a API, e o agendador do aviso de
+atraso (RF08), que passaria a receber 404, se desligaria sozinho e pararia de
+registrar sem avisar ninguém.
 
 Por isso o endereço da API continua o que é. Ele quase não é lido por pessoas:
 aparece no agendador e neste documento, e o custo de mexer é maior que o
