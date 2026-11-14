@@ -36,7 +36,8 @@ test('a gestão cadastra o material e o técnico designado o lança no chamado',
   await page.getByRole('textbox', { name: 'Nome', exact: true }).fill(nome);
   await page.getByRole('textbox', { name: /Unidade de medida/ }).fill('m');
   await page.getByRole('button', { name: 'Cadastrar' }).click();
-  await expect(page.getByText('Material cadastrado.')).toBeVisible();
+  // Exato: com o catálogo vazio (o banco do CI nasce assim), "Nenhum material cadastrado." também casaria.
+  await expect(page.getByText('Material cadastrado.', { exact: true })).toBeVisible();
   await expect(page.getByRole('textbox', { name: `Nome de ${nome}` })).toBeVisible();
   await semViolacoes(page);
   await conferirQueCabeNaTela(page, expect);
