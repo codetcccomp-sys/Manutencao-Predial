@@ -133,7 +133,8 @@ router.post(
   '/:id/materiais',
   validate({
     material_id: { obrigatorio: true, tipo: 'inteiro' },
-    quantidade: { obrigatorio: true, tipo: 'number', min: 0.01 },
+    // Teto da coluna NUMERIC(10,2): acima disso o banco recusaria com erro 500.
+    quantidade: { obrigatorio: true, tipo: 'number', min: 0.01, max: 99999999.99 },
   }),
   materiaisController.registrarNoChamado
 );

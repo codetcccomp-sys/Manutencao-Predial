@@ -330,6 +330,25 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RNF03 | Resposta pequena não é comprimida | `backend/tests/compressao.test.js` | deixa como está a resposta pequena, que não compensa comprimir |
 | Equipes | Só a gestão cria equipe | `backend/tests/equipesMateriais.test.js` | gestor cria equipe; solicitante não |
 | Materiais | O técnico designado lança o consumo | `backend/tests/equipesMateriais.test.js` | técnico designado lança consumo no chamado |
+| RF07 | Lançar, corrigir e retirar material entram na linha do tempo, com quem fez e sem mudar o estado | `backend/tests/equipesMateriais.test.js` | lançar, corrigir e retirar entram na linha do tempo, com quem fez e sem mudar o estado |
+| RF07 | Chamado concluído ou cancelado não aceita lançar nem retirar material | `backend/tests/equipesMateriais.test.js` | chamado concluído ou cancelado não aceita lançar nem retirar material |
+| Materiais | Quantidade acima do que a coluna guarda volta 422, não 500 | `backend/tests/equipesMateriais.test.js` | quantidade acima do que a coluna guarda volta 422, e não erro do banco |
+| Materiais | O catálogo recusa nome repetido, com outra caixa ou espaço | `backend/tests/equipesMateriais.test.js` | o catálogo recusa nome repetido, mesmo com outra caixa ou espaço, ao criar e ao renomear |
+| RF07 | A tela mostra o material lançado, com quantidade e unidade | `frontend/testes/MateriaisDoChamado.test.jsx` | mostra o que foi lançado, com quantidade e unidade |
+| RF07 | Lançar envia o material e a quantidade e recarrega o chamado (linha do tempo) | `frontend/testes/MateriaisDoChamado.test.jsx` | lança o material escolhido, com a quantidade como número, e recarrega o chamado |
+| RF07 | Material já lançado: o botão corrige e a ajuda avisa que substitui | `frontend/testes/MateriaisDoChamado.test.jsx` | material já lançado: o botão diz que corrige, e a ajuda diz que substitui |
+| RF07 | Retirar o lançamento | `frontend/testes/MateriaisDoChamado.test.jsx` | retira o lançamento |
+| RF07 | A recusa do servidor aparece na tela | `frontend/testes/MateriaisDoChamado.test.jsx` | a recusa do servidor aparece na tela |
+| RF07 | Quem não executa só lê, e nem pede o catálogo | `frontend/testes/MateriaisDoChamado.test.jsx` | quem não executa vê o que foi lançado, sem formulário nem botão de retirar, e nem pede o catálogo |
+| RF07 | Sem lançamento e sem poder lançar, a seção não aparece | `frontend/testes/MateriaisDoChamado.test.jsx` | quem não executa e não tem nada a ver não ganha uma seção vazia |
+| RF07 | Catálogo vazio: caminho para a gestão, orientação para o técnico | `frontend/testes/MateriaisDoChamado.test.jsx` | catálogo vazio: a gestão ganha o caminho para cadastrar; o técnico, a quem pedir |
+| RF07 | Técnico designado com atendimento aberto ganha a seção | `frontend/testes/ChamadoDetalhe.test.jsx` | o técnico designado, com o atendimento aberto, ganha a seção para lançar |
+| RF07 | Chamado concluído não oferece lançar material | `frontend/testes/ChamadoDetalhe.test.jsx` | chamado concluído não oferece lançar material, nem ao técnico designado |
+| RF07 | Técnico que não é o designado não lança | `frontend/testes/ChamadoDetalhe.test.jsx` | técnico que não é o designado não lança |
+| Materiais | Catálogo: cadastrar nome e unidade | `frontend/testes/CatalogoDeMateriais.test.jsx` | cadastra nome e unidade, confirma e limpa o formulário |
+| Materiais | Catálogo: corrigir o nome; sem mudança, nada a salvar | `frontend/testes/CatalogoDeMateriais.test.jsx` | corrige o nome de um material cadastrado; sem mudança, não há o que salvar |
+| Materiais | Catálogo: a recusa do servidor aparece | `frontend/testes/CatalogoDeMateriais.test.jsx` | a recusa do servidor (nome repetido) aparece na tela |
+| RF07 | De ponta a ponta: gestão cadastra, técnico lança, a linha do tempo registra, concluído só lê (computador e celular, com axe) | `frontend/e2e/materiais.spec.js` | a gestão cadastra o material e o técnico designado o lança no chamado |
 | RF09 | Nota fora de 1 a 5 volta 422, não erro do banco | `backend/tests/equipesMateriais.test.js` | avaliação com nota fora de 1..5 volta 422, e não erro do banco |
 | Cadastros | Material: atualiza campo a campo, e recusa sem campo ou inexistente | `backend/tests/cadastrosAuxiliares.test.js` | recusa atualizar sem campo nenhum, e material que não existe |
 | Cadastros | Equipe: ao adicionar técnico, recusa equipe e usuário inexistentes e técnico inativo | `backend/tests/cadastrosAuxiliares.test.js` | ao adicionar técnico: equipe inexistente, usuário inexistente e técnico inativo são recusados |

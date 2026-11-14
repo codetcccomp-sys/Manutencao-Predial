@@ -23,6 +23,41 @@ import { pathToFileURL } from 'url';
 
 const MUTACOES = [
   {
+    descricao: 'RF07: material volta a ser oferecido em chamado concluído',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'podeLancar={!encerrado && (podeGerenciar || chamado.tecnico_id === usuario.id)}',
+    para: 'podeLancar={podeGerenciar || chamado.tecnico_id === usuario.id}',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'RF07: qualquer técnico volta a ganhar o formulário de material',
+    arquivo: 'src/pages/ChamadoDetalhe.jsx',
+    de: 'podeLancar={!encerrado && (podeGerenciar || chamado.tecnico_id === usuario.id)}',
+    para: 'podeLancar={!encerrado}',
+    spec: 'testes/ChamadoDetalhe.test.jsx',
+  },
+  {
+    descricao: 'RF07: lançar material deixa de recarregar o chamado (a linha do tempo fica velha)',
+    arquivo: 'src/components/chamados/MateriaisDoChamado.jsx',
+    de: '      aoRegistrar?.();\n',
+    para: '',
+    spec: 'testes/MateriaisDoChamado.test.jsx',
+  },
+  {
+    descricao: 'RF07: quem não executa volta a ver o botão de retirar material',
+    arquivo: 'src/components/chamados/MateriaisDoChamado.jsx',
+    de: '              {podeLancar && (\n                <Botao',
+    para: '              {true && (\n                <Botao',
+    spec: 'testes/MateriaisDoChamado.test.jsx',
+  },
+  {
+    descricao: 'catálogo de materiais deixa o botão salvar ativo sem mudança',
+    arquivo: 'src/components/CatalogoDeMateriais.jsx',
+    de: 'disabled={!edicao[m.id] || enviando}',
+    para: 'disabled={enviando}',
+    spec: 'testes/CatalogoDeMateriais.test.jsx',
+  },
+  {
     descricao: 'cabeçalho volta a somar mb-6 com a margem da tela (vão entre título e conteúdo)',
     arquivo: 'src/components/ui/CabecalhoDePagina.jsx',
     de: '`flex flex-col gap-3 sm:flex-row',
