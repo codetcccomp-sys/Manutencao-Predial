@@ -46,7 +46,7 @@ Nenhum foi adotado ou assinado por instituição alguma.
 | Sistema | <https://conserva-predial.vercel.app> |
 | API | <https://manutencao-predial-backend-delta.vercel.app> |
 | Aviso de privacidade | <https://conserva-predial.vercel.app/privacidade> |
-| Demonstração (dados fictícios) | <https://conserva-predial-demo.vercel.app> |
+| Demonstração (dados fictícios; não configurada, ver abaixo) | <https://conserva-predial-demo.vercel.app> |
 | API da demonstração | <https://conserva-predial-demo-api.vercel.app> |
 
 ### Projetos na Vercel
@@ -70,7 +70,9 @@ login da Vercel. Foi desligado pelo `vercel.json` da raiz e **apagado no painel 
 repositório de novo apontando para a raiz, a Vercel não publica nada. Os quatro projetos acima têm
 pasta própria e não o leem.
 
-A demonstração é uma cópia à parte, com banco próprio, para apresentar sem tocar na
+**Decisão de 15/11/2026:** a apresentação usa a produção, com os dados de apresentação
+([docs/apresentacao-na-producao.md](docs/apresentacao-na-producao.md)); a demonstração abaixo não foi
+configurada e deixou de ser necessária. A demonstração é uma cópia à parte, com banco próprio, para apresentar sem tocar na
 produção: como é montada, o que só o dono do projeto cadastra e como refazê-la na
 véspera da apresentação estão em [docs/demonstracao-publicada.md](docs/demonstracao-publicada.md).
 

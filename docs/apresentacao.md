@@ -5,6 +5,11 @@
 > senhas das contas de demonstração **não** ficam aqui nem em lugar nenhum do
 > repositório; quem apresenta as recebe da equipe.
 
+> **Onde (decisão de 15/11/2026):** na produção, `https://conserva-predial.vercel.app`, com os
+> dados de apresentação ([`apresentacao-na-producao.md`](apresentacao-na-producao.md)), e não na
+> demonstração publicada, que não foi configurada. A conta da gestão exige a verificação em duas
+> etapas: quem apresenta leva o celular com o autenticador.
+
 ## O que mostrar ao vivo
 
 Três contas de demonstração, uma por perfil, na ordem do caminho do chamado.
