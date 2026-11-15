@@ -658,6 +658,13 @@ sob demanda): trava, migração, administrador e semente. A trava
 (`backend/database/guarda-demonstracao.js`) recusa o banco da produção e qualquer banco
 com dados que não esteja marcado como de demonstração.
 
+`.github/workflows/desempenho.yml` mede o site **publicado** (só sob demanda, e quando o script
+muda): resposta da API e carga das telas nos três perfis da medida local, com o resumo na
+página da execução (`frontend/desempenho/medir-producao.mjs`). O runner fica nos EUA, então o
+resultado é um teto; o tempo de quem usa está em **Usuários ▸ Uso e desempenho**. Com os
+segredos `DESEMPENHO_EMAIL` e `DESEMPENHO_SENHA` (conta de teste sem verificação em duas etapas)
+mede também a fila e o formulário de abertura.
+
 ## Rotas
 
 Exceto as indicadas como públicas, `/health`, `/health/db` e as de agendador,

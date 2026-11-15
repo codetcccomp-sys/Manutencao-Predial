@@ -179,7 +179,8 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   ficam mais lentas (o documento de projeto chegou a sair com tempo inflado por isso). Confira com
   `grep -c "Invalid hook call" dist/assets/index-*.js`: tem de dar 0. A API comprime as respostas
   (`compression` em `app.js`, `tests/compressao.test.js`; a lista de locais cai de 245 kB para 13 kB): sem
-  isso, em 4G lento a tela de Cadastros passa de 3 s só pelo tempo de baixar.
+  isso, em 4G lento a tela de Cadastros passa de 3 s só pelo tempo de baixar. O site publicado se mede
+  com o workflow `desempenho.yml` (runner nos EUA: é teto, não o tempo de quem usa).
 - **Monitoramento é próprio e anônimo** (`frontend/src/monitoramento/`, `telemetria_diaria`, migração 031): a tela
   vai pelo **modelo** da rota (`/chamados/:id`), nunca pelo caminho; nada fica no aparelho; "Não rastrear" desliga.
   Tela nova entra em `TELAS` e ação nova (`registrarAcao('...')`) em `ACOES`, em `telemetria.service.js` (um teste
