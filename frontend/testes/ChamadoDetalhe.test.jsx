@@ -997,3 +997,31 @@ describe('Chamado que não abre: a tela diz a causa e dá a saída', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Chamado não encontrado');
   });
 });
+
+describe('Materiais no chamado (RF07)', () => {
+  // O mock genérico responde `{}` para /chamados/7/materiais e /materiais: nada lançado e catálogo
+  // vazio, o que basta para saber se a seção e o formulário aparecem.
+  it('o técnico designado, com o atendimento aberto, ganha a seção para lançar', async () => {
+    montar({ como: TECNICO, dados: chamado({ estado: 'em_andamento', tecnico_id: TECNICO.id }) });
+
+    expect(await screen.findByRole('region', { name: 'Materiais' })).toBeInTheDocument();
+    expect(await screen.findByText(/Peça à gestão para cadastrar/)).toBeInTheDocument();
+  });
+
+  it('chamado concluído não oferece lançar material, nem ao técnico designado', async () => {
+    montar({ como: TECNICO, dados: chamado({ estado: 'concluido', tecnico_id: TECNICO.id }) });
+
+    await screen.findByRole('heading', { level: 1 });
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/chamados/7/materiais'));
+    expect(screen.queryByRole('region', { name: 'Materiais' })).toBeNull();
+    expect(api.get).not.toHaveBeenCalledWith('/materiais');
+  });
+
+  it('técnico que não é o designado não lança', async () => {
+    montar({ como: TECNICO, dados: chamado({ estado: 'em_andamento', tecnico_id: 99 }) });
+
+    await screen.findByRole('heading', { level: 1 });
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/chamados/7/materiais'));
+    expect(api.get).not.toHaveBeenCalledWith('/materiais');
+  });
+});

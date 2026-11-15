@@ -13,6 +13,7 @@ import {
 import LinkVoltar from '../components/ui/LinkVoltar';
 import RegistroIndisponivel, { causaDaFalha } from '../components/ui/RegistroIndisponivel';
 import { registrarAcao } from '../monitoramento';
+import MateriaisDoChamado from '../components/chamados/MateriaisDoChamado';
 import { LIMITE_BYTES, formatarTamanho, prepararAnexo } from '../dominio/prepararAnexo';
 import { formatarDia } from '../dominio/preventiva';
 import { minutosSemAtendimento, tempoEmPalavras } from '../dominio/atendimento';
@@ -792,6 +793,14 @@ function ChamadoDetalhe() {
           )}
         </div>
       )}
+
+      <MateriaisDoChamado
+        key={chamado.id}
+        chamadoId={chamado.id}
+        podeLancar={!encerrado && (podeGerenciar || chamado.tecnico_id === usuario.id)}
+        ehGestao={podeGerenciar}
+        aoRegistrar={carregar}
+      />
 
       {podeGerenciar && !['concluido', 'cancelado'].includes(chamado.estado) && (
         <form onSubmit={priorizar} className="bg-superficie rounded-lg border border-borda shadow-sm p-6 grid gap-4">

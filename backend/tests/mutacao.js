@@ -25,6 +25,48 @@ const { spawnSync } = require('child_process');
 
 const MUTACOES = [
   {
+    descricao: 'conferência pós-deploy deixa de acusar tarefa agendada parada',
+    arquivo: 'scripts/conferir-publicacao.js',
+    de: "saude.corpo.tarefas.filter((t) => t.situacao !== 'ok')",
+    para: 'saude.corpo.tarefas.filter(() => false)',
+    spec: 'tests/conferirPublicacao.test.js',
+  },
+  {
+    descricao: 'conferência pós-deploy aceita segredo recusado como agendador em ordem',
+    arquivo: 'scripts/conferir-publicacao.js',
+    de: 'if (saude.status !== 200 || !Array.isArray(saude.corpo?.tarefas)) {',
+    para: 'if (saude.status >= 500) {',
+    spec: 'tests/conferirPublicacao.test.js',
+  },
+  {
+    descricao: 'material volta a ser lançado em chamado concluído ou cancelado',
+    arquivo: 'src/services/materiais.service.js',
+    de: "const ENCERRADOS = ['concluido', 'cancelado'];",
+    para: 'const ENCERRADOS = [];',
+    spec: 'tests/equipesMateriais.test.js',
+  },
+  {
+    descricao: 'lançamento de material deixa de entrar na linha do tempo',
+    arquivo: 'src/services/materiais.service.js',
+    de: 'async function registrarHistorico(client, chamadoId, usuarioId, estado, observacao) {\n  await client.query(',
+    para: 'async function registrarHistorico(client, chamadoId, usuarioId, estado, observacao) {\n  return;\n  await client.query(',
+    spec: 'tests/equipesMateriais.test.js',
+  },
+  {
+    descricao: 'catálogo de materiais volta a aceitar nome repetido',
+    arquivo: 'src/services/materiais.service.js',
+    de: '  await recusarNomeRepetido(nome);\n',
+    para: '',
+    spec: 'tests/equipesMateriais.test.js',
+  },
+  {
+    descricao: 'quantidade de material sem teto volta a estourar a coluna',
+    arquivo: 'src/routes/chamados.routes.js',
+    de: 'min: 0.01, max: 99999999.99 }',
+    para: 'min: 0.01 }',
+    spec: 'tests/equipesMateriais.test.js',
+  },
+  {
     descricao: 'conferência pós-deploy deixa passar o roteador que responde 500',
     arquivo: 'scripts/conferir-publicacao.js',
     de: 'if (status === 0 || status >= 500)',
@@ -810,8 +852,8 @@ const MUTACOES = [
   {
     descricao: 'cadastros auxiliares: lançamento inexistente deixa de voltar 404',
     arquivo: 'src/services/materiais.service.js',
-    de: 'if (rowCount === 0) {',
-    para: 'if (false) {',
+    de: "    if (!rows[0]) {\n      throw new AppError('Este material não está lançado neste chamado.'",
+    para: "    if (false) {\n      throw new AppError('Este material não está lançado neste chamado.'",
     spec: 'tests/cadastrosAuxiliares.test.js',
   },
   {
@@ -1399,8 +1441,8 @@ const MUTACOES = [
   {
     descricao: "entrada: a quantidade de material passa a recusar casa decimal",
     arquivo: "src/routes/chamados.routes.js",
-    de: "quantidade: { obrigatorio: true, tipo: 'number', min: 0.01 },",
-    para: "quantidade: { obrigatorio: true, tipo: 'inteiro', min: 0.01 },",
+    de: "quantidade: { obrigatorio: true, tipo: 'number', min: 0.01, max: 99999999.99 },",
+    para: "quantidade: { obrigatorio: true, tipo: 'inteiro', min: 0.01, max: 99999999.99 },",
     spec: "tests/entradaMalformada.test.js",
   },
   {

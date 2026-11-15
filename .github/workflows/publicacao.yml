@@ -8,7 +8,9 @@ name: Conferência pós-deploy
 # entrar: os testes passaram (rodam com os arquivos no disco) e a função da Vercel respondia 500 em
 # tudo. Falhou aqui, o GitHub manda e-mail a quem segue o repositório.
 #
-# Não precisa de segredo: os endereços saem dos vercel.json dos sites, os mesmos que o navegador usa.
+# Os endereços saem dos vercel.json dos sites, os mesmos que o navegador usa. Com o segredo do
+# repositório CRON_SECRET (o MESMO valor do CRON_SECRET da API de produção na Vercel), confere
+# também se o agendador está passando (/tarefas/saude). Sem ele, essa parte é pulada com um aviso.
 #
 # A demonstração só é conferida com a variável do repositório CONFERIR_DEMONSTRACAO = sim (Settings →
 # Secrets and variables → Actions → Variables). Em 12/11/2026 a API dela estava sem banco nem segredos
@@ -63,6 +65,7 @@ jobs:
         env:
           CONFERIR_TENTATIVAS: 6
           CONFERIR_ESPERA_MS: 30000
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: node scripts/conferir-publicacao.js "$(node -p "require('./scripts/conferir-publicacao').apiDoSite('../frontend/vercel.json')")" producao
 
       # Roda mesmo com a produção falhando: numa conferência agendada, as duas respostas importam.

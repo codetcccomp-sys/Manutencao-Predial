@@ -25,13 +25,13 @@ const listarDoChamado = asyncHandler(async (req, res) => {
 
 const registrarNoChamado = asyncHandler(async (req, res) => {
   await chamadosService.garantirExecucao(req.params.id, req.usuario);
-  const materiais = await materiaisService.registrarNoChamado(req.params.id, req.body);
+  const materiais = await materiaisService.registrarNoChamado(req.params.id, req.body, req.usuario);
   res.status(201).json({ materiais });
 });
 
 const removerDoChamado = asyncHandler(async (req, res) => {
   await chamadosService.garantirExecucao(req.params.id, req.usuario);
-  const materiais = await materiaisService.removerDoChamado(req.params.id, req.params.materialId);
+  const materiais = await materiaisService.removerDoChamado(req.params.id, req.params.materialId, req.usuario);
   res.json({ materiais });
 });
 

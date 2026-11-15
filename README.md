@@ -679,7 +679,7 @@ todas exigem a sessão: o cookie `conserva_sessao` gravado pelo login (com
 | `POST` | `/chamados/:id/reabertura` | solicitante do chamado ou gestão, em até 48h |
 | `POST` | `/chamados/:id/avaliacao` | solicitante, chamado concluído. `nota` inteira de 1 a 5 e `comentario` opcional (até 1000 caracteres). Avaliar é confirmar a solução (RF09): entra na linha do tempo e volta em `chamado.avaliacao` |
 | `GET POST` | `/chamados/:id/comentarios` | quem tem acesso ao chamado; em chamado encerrado, só leitura |
-| `GET POST DELETE` | `/chamados/:id/materiais` | gestão ou técnico designado (leitura: quem vê o chamado) |
+| `GET POST DELETE` | `/chamados/:id/materiais` | gestão ou técnico designado, só com o atendimento aberto; cada lançamento entra no histórico (leitura: quem vê o chamado) |
 | `GET POST DELETE` | `/chamados/:id/anexos` | quem tem acesso ao chamado |
 | `GET` | `/usuarios/me` | o próprio usuário |
 | `GET` | `/usuarios` | gestor, administrador |

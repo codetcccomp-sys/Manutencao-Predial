@@ -96,6 +96,74 @@ describe('Conferência pós-deploy', () => {
     }
   });
 
+  describe('com o segredo do agendador', () => {
+    const SEGREDO = 'segredo-de-teste-da-conferencia';
+    const inseridas = [];
+
+    // Uma passagem com sucesso de cada tarefa, `minutos` atrás. A mais recente é a que vale.
+    async function passagem(tarefa, minutos) {
+      const { rows } = await pool.query(
+        `INSERT INTO execucao_tarefa (tarefa, iniciada_em, terminada_em, sucesso)
+         VALUES ($1, now() - make_interval(mins => $2), now() - make_interval(mins => $2), TRUE) RETURNING id`,
+        [tarefa, minutos]
+      );
+      inseridas.push(rows[0].id);
+    }
+
+    beforeAll(async () => {
+      await pool.query("DELETE FROM execucao_tarefa WHERE tarefa IN ('notificar-atrasos', 'gerar-preventivas')");
+    });
+
+    afterAll(async () => {
+      await pool.query('DELETE FROM execucao_tarefa WHERE id = ANY($1)', [inseridas]);
+    });
+
+    it('a rota de saúde das tarefas só abre com o segredo', async () => {
+      const { servidor, base } = await subir(app);
+      try {
+        expect((await fetch(`${base}/tarefas/saude`)).status).toBe(401);
+        const resp = await fetch(`${base}/tarefas/saude`, { headers: { Authorization: `Bearer ${SEGREDO}` } });
+        expect(resp.status).toBe(200);
+        expect((await resp.json()).tarefas.map((t) => t.tarefa).sort()).toEqual(['gerar-preventivas', 'notificar-atrasos']);
+      } finally {
+        await fechar(servidor);
+      }
+    });
+
+    it('acusa o aviso de atraso parado, como de 09/11/2026 em diante', async () => {
+      await passagem('gerar-preventivas', 60);
+      await passagem('notificar-atrasos', 3 * 24 * 60);
+      const { servidor, base } = await subir(app);
+      try {
+        const falhas = await conferir(base, 'producao', [], { segredoAgendador: SEGREDO });
+
+        expect(falhas).toEqual([expect.stringMatching(/^agendador: Aviso de atraso parada \(último sucesso em .+; esperado a cada 15 minutos\)$/)]);
+      } finally {
+        await fechar(servidor);
+      }
+    });
+
+    it('com as duas tarefas em dia, não acusa nada; sem o segredo, nem consulta', async () => {
+      await passagem('notificar-atrasos', 5);
+      const { servidor, base } = await subir(app);
+      try {
+        expect(await conferir(base, 'producao', [], { segredoAgendador: SEGREDO })).toEqual([]);
+        expect(await conferir(base, 'producao', [])).toEqual([]);
+      } finally {
+        await fechar(servidor);
+      }
+    });
+
+    it('segredo errado é falha, e não "tudo em ordem"', async () => {
+      const { servidor, base } = await subir(app);
+      try {
+        expect(await conferir(base, 'producao', [], { segredoAgendador: 'outro' })).toEqual(['/tarefas/saude respondeu 401']);
+      } finally {
+        await fechar(servidor);
+      }
+    });
+  });
+
   it('acusa a API que não responde', async () => {
     const { servidor, base } = await subir(app);
     await fechar(servidor);

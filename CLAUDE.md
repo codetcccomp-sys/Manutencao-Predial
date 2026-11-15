@@ -94,6 +94,10 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
 - **Versões do SLA (RN12)**: toda alteração por `sla.service.atualizar` grava uma linha em `sla_versao` (migração
   032: prazo, régua, vigência, autor). **`UPDATE sla` por SQL direto não deixa versão**: na produção, altere pela
   tela. A migração só vale lá depois de `npm run migrate`; antes disso o prazo muda e o histórico fica vazio.
+- **Materiais (RF07)**: o técnico designado (ou a gestão) lança na tela do chamado, escolhendo do catálogo
+  (Cadastros › Materiais, sem nome repetido). Só com o atendimento aberto: concluído ou cancelado recusa (409), e
+  quem precisa corrigir reabre. Lançar, corrigir e retirar entram na linha do tempo, com quem fez. A API existia
+  sem tela até 13/11/2026: o teste de API passava e ninguém conseguia lançar (`e2e/materiais.spec.js` impede a volta).
 - **Equipamento**: tem só `ativo BOOLEAN`.
 - **Sem conexão**: o service worker guarda as *leituras* (fila e chamado). Escrita
   falha na hora e a tela diz que nada foi registrado. É decisão deliberada
@@ -127,7 +131,8 @@ Dependem de decisão do dono do projeto antes de qualquer código:
 - **Depois de cada deploy, a API publicada é chamada** (`.github/workflows/publicacao.yml`, no aviso de deploy da
   Vercel e todo dia às 07:41 de Brasília): `/health`, `/health/db` e cada roteador de `app.js` abaixo de 500, na
   produção e, com a variável `CONFERIR_DEMONSTRACAO = sim`, na demo (`scripts/conferir-publicacao.js`; endereços
-  lidos dos `vercel.json`). Falhou, o GitHub manda e-mail. Não desfaz o deploy sozinho: o rollback na Vercel é decisão de quem administra.
+  lidos dos `vercel.json`). Com o segredo `CRON_SECRET` no GitHub (o mesmo da Vercel), confere também as tarefas
+  agendadas em `/tarefas/saude`: o aviso de atraso ficou parado de 09/11/2026 em diante sem ninguém ver. Falhou, o GitHub manda e-mail. Não desfaz o deploy sozinho: o rollback na Vercel é decisão de quem administra.
 - Migração nova é aditiva e roda inteira numa transação. Em produção aplica-se
   pelo mesmo `migrate`, nunca colando SQL sem registrar em `migracao`; faça antes
   um ensaio com `BEGIN … ROLLBACK`.

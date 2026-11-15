@@ -59,4 +59,15 @@ router.get(
   })
 );
 
+// Saúde das tarefas, para a conferência diária do GitHub (workflow publicacao.yml). É a mesma
+// leitura do painel da gestão (/operacao/agendador), mas com o segredo do agendador em vez de
+// login: em 09/11/2026 o agendador externo parou na queda da API e ficou dias desligado sem
+// ninguém ver, porque o aviso só aparecia para quem abrisse o painel.
+router.get(
+  '/saude',
+  asyncHandler(async (req, res) => {
+    res.json({ tarefas: await execucoes.saude() });
+  })
+);
+
 module.exports = router;

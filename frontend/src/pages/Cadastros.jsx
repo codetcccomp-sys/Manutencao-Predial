@@ -4,6 +4,7 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import Aviso from '../components/ui/Aviso';
 import CabecalhoDePagina from '../components/ui/CabecalhoDePagina';
+import CatalogoDeMateriais from '../components/CatalogoDeMateriais';
 import ExpedienteEFeriados from '../components/ExpedienteEFeriados';
 import RegrasDeDistribuicao from '../components/RegrasDeDistribuicao';
 import MostrarMais from '../components/ui/MostrarMais';
@@ -15,6 +16,7 @@ const ABAS = [
   { id: 'locais', rotulo: 'Locais' },
   { id: 'categorias', rotulo: 'Categorias' },
   { id: 'equipes', rotulo: 'Equipes' },
+  { id: 'materiais', rotulo: 'Materiais' },
   { id: 'distribuicao', rotulo: 'Distribuição' },
   { id: 'expediente', rotulo: 'Expediente' },
 ];
@@ -392,6 +394,8 @@ function Cadastros() {
       )}
 
       {!carregando && aba === 'expediente' && <ExpedienteEFeriados />}
+
+      {!carregando && aba === 'materiais' && <CatalogoDeMateriais />}
 
       {!carregando && aba === 'distribuicao' && (
         <RegrasDeDistribuicao categorias={categorias} equipes={equipes} locais={locais} />
