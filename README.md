@@ -583,6 +583,12 @@ projeto à parte, só no computador: `npm run e2e:firefox` (precisa de
 liga: sem o Firefox instalado ele falharia inteiro, e essa falha faria os testes de
 mutação de layout parecerem acusados. No CI é um job próprio.
 
+**Edge (RNF06).** O Edge roda também de verdade, com o executável da Microsoft (canal
+estável), e não só pelo motor: `npm run e2e:edge` (precisa do Edge instalado; o
+`npx playwright install msedge` instala o pacote oficial). Mesmas regras do Firefox: só
+com `E2E_EDGE=1`, só no computador, job próprio no CI. Em 15/11/2026, 130 testes
+passaram no Edge 157.
+
 Esta camada existe por um motivo específico: **geometria**. Todos os defeitos
 de responsividade deste projeto — o cartão de chamado esticando a página, as
 tabelas vazando do cartão, o painel de avisos saindo pela esquerda no celular,
@@ -630,11 +636,11 @@ ferramenta de quem escreve ou revisa teste.
 
 ### No CI
 
-`.github/workflows/ci.yml` tem quatro jobs: backend (PostgreSQL de serviço,
+`.github/workflows/ci.yml` tem cinco jobs: backend (PostgreSQL de serviço,
 migrações pelo mesmo `npm run migrate`, suíte), frontend (testes de componente
 e build), ponta a ponta (PostgreSQL, migrações, administrador semeado,
-Chromium e a suíte do Playwright) e ponta a ponta no Firefox (o mesmo, com o
-projeto `firefox`). O relatório do Playwright fica guardado
+Chromium e a suíte do Playwright) e ponta a ponta no Firefox e no Edge (o mesmo,
+com os projetos `firefox` e `edge`). O relatório do Playwright fica guardado
 como artefato quando algo falha.
 
 `.github/workflows/auditoria.yml` é separado do CI de propósito: advisory novo

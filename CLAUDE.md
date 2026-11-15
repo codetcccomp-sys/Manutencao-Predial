@@ -13,8 +13,8 @@ sem ler tudo, e o que **não** existe.
 - **Frontend**: React, Vite, Tailwind, React Router. **É PWA, não React
   Native**: nada de WatermelonDB; armazenamento local, se vier, é IndexedDB.
 - **Testes**: Jest + Supertest (backend), Vitest + Testing Library (componentes),
-  Playwright (ponta a ponta, projetos `computador` e `celular`; `firefox` só com `E2E_FIREFOX=1`,
-  no job próprio do CI: `npm run e2e:firefox`).
+  Playwright (ponta a ponta, projetos `computador` e `celular`; `firefox` só com `E2E_FIREFOX=1` e `edge`
+  (Microsoft Edge de verdade) só com `E2E_EDGE=1`, cada um no seu job do CI: `npm run e2e:firefox`, `npm run e2e:edge`).
 - **Segurança**: sessão em cookie HttpOnly, 2FA por TOTP, CSP estrita
   (`style-src 'self'`: estilo escrito como texto no HTML é bloqueado).
 
