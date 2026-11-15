@@ -25,6 +25,20 @@ const { spawnSync } = require('child_process');
 
 const MUTACOES = [
   {
+    descricao: 'conferência pós-deploy deixa de acusar tarefa agendada parada',
+    arquivo: 'scripts/conferir-publicacao.js',
+    de: "saude.corpo.tarefas.filter((t) => t.situacao !== 'ok')",
+    para: 'saude.corpo.tarefas.filter(() => false)',
+    spec: 'tests/conferirPublicacao.test.js',
+  },
+  {
+    descricao: 'conferência pós-deploy aceita segredo recusado como agendador em ordem',
+    arquivo: 'scripts/conferir-publicacao.js',
+    de: 'if (saude.status !== 200 || !Array.isArray(saude.corpo?.tarefas)) {',
+    para: 'if (saude.status >= 500) {',
+    spec: 'tests/conferirPublicacao.test.js',
+  },
+  {
     descricao: 'material volta a ser lançado em chamado concluído ou cancelado',
     arquivo: 'src/services/materiais.service.js',
     de: "const ENCERRADOS = ['concluido', 'cancelado'];",

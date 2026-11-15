@@ -15,6 +15,10 @@
  *   funcionando; 5xx é a função quebrada). A lista sai do próprio `app.js`: roteador novo entra
  *   na conferência sem ninguém lembrar.
  *
+ * - com o segredo do agendador (CRON_SECRET no ambiente), que cada tarefa agendada passou dentro
+ *   da tolerância (`/tarefas/saude`): o aviso de atraso ficou parado de 09/11/2026 em diante sem
+ *   que a conferência visse, porque ela só olhava a API.
+ *
  * Uso: node scripts/conferir-publicacao.js <url-da-api> [producao|demonstracao]
  * Repete a rodada inteira até CONFERIR_TENTATIVAS vezes (padrão 1), com CONFERIR_ESPERA_MS entre
  * elas: o aviso de deploy pronto pode chegar segundos antes de o domínio apontar para ele.
@@ -40,9 +44,13 @@ function rotasMontadas(codigo = fs.readFileSync(APP, 'utf8')) {
   return [...codigo.matchAll(/\[\s*'(\/[^']+)'\s*,\s*require\(/g)].map((m) => m[1]);
 }
 
-async function obter(base, caminho) {
+async function obter(base, caminho, cabecalhos = {}) {
   try {
-    const resp = await fetch(new URL(caminho, base), { redirect: 'manual', signal: AbortSignal.timeout(20000) });
+    const resp = await fetch(new URL(caminho, base), {
+      headers: cabecalhos,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(20000),
+    });
     let corpo = null;
     try {
       corpo = await resp.json();
@@ -56,7 +64,7 @@ async function obter(base, caminho) {
 }
 
 /** Uma rodada. Devolve a lista de falhas (vazia quando tudo atende). */
-async function conferir(base, esperado = 'producao', rotas = rotasMontadas()) {
+async function conferir(base, esperado = 'producao', rotas = rotasMontadas(), { segredoAgendador } = {}) {
   const falhas = [];
 
   const saude = await obter(base, '/health');
@@ -77,6 +85,18 @@ async function conferir(base, esperado = 'producao', rotas = rotasMontadas()) {
     if (status === 0 || status >= 500) falhas.push(`${rota} respondeu ${status || erro}`);
   }
 
+  if (segredoAgendador) {
+    const saude = await obter(base, '/tarefas/saude', { Authorization: `Bearer ${segredoAgendador}` });
+    if (saude.status !== 200 || !Array.isArray(saude.corpo?.tarefas)) {
+      falhas.push(`/tarefas/saude respondeu ${saude.status || saude.erro}`);
+    } else {
+      for (const t of saude.corpo.tarefas.filter((t) => t.situacao !== 'ok')) {
+        const desde = t.ultimo_sucesso ? `último sucesso em ${t.ultimo_sucesso}` : 'nenhum sucesso registrado';
+        falhas.push(`agendador: ${t.rotulo} ${t.situacao} (${desde}; esperado ${t.frequencia})`);
+      }
+    }
+  }
+
   return falhas;
 }
 
@@ -89,12 +109,18 @@ async function principal() {
   const tentativas = Number(process.env.CONFERIR_TENTATIVAS) || 1;
   const espera = Number(process.env.CONFERIR_ESPERA_MS) || 30000;
   const rotas = rotasMontadas();
+  // Só o segredo da API que se está conferindo: o da produção não vale na demonstração.
+  const segredoAgendador = process.env.CRON_SECRET || undefined;
+  if (!segredoAgendador && esperado === 'producao') {
+    console.log('::warning::CRON_SECRET não cadastrado no GitHub: o agendador não foi conferido.');
+  }
 
   let falhas = [];
   for (let i = 1; i <= tentativas; i += 1) {
-    falhas = await conferir(base, esperado, rotas);
+    falhas = await conferir(base, esperado, rotas, { segredoAgendador });
     if (falhas.length === 0) {
-      console.log(`${base} atende: /health, /health/db e ${rotas.length} roteadores (tentativa ${i}).`);
+      const extra = segredoAgendador ? ' e as tarefas agendadas' : '';
+      console.log(`${base} atende: /health, /health/db, ${rotas.length} roteadores${extra} (tentativa ${i}).`);
       return;
     }
     console.log(`Tentativa ${i} de ${tentativas}: ${falhas.join('; ')}`);
