@@ -34,6 +34,7 @@ e é a primeira coisa a fechar se ele passar a atender um prédio real.
 | [docs/apresentacao.md](docs/apresentacao.md) | Roteiro da demonstração ao vivo e checklist dos pitches de dezembro |
 | [docs/demonstracao-publicada.md](docs/demonstracao-publicada.md) | A demonstração no ar: o que só o dono do projeto cadastra, as travas e a rotina da véspera |
 | [docs/matriz-de-testes.md](docs/matriz-de-testes.md) | Cada regra ligada ao teste que a prova, o roteiro do ensaio com pessoas e as lacunas conhecidas |
+| [docs/ensaio-com-pessoas.md](docs/ensaio-com-pessoas.md) | Kit do ensaio com pessoas (RNF02): roteiro, tarefas por perfil, ficha de observação, questionário SUS e consolidação, para imprimir |
 
 Os documentos de piloto, dados, privacidade e apresentação são artefatos acadêmicos.
 Nenhum foi adotado ou assinado por instituição alguma.
