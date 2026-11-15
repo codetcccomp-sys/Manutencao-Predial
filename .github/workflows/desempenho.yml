@@ -1,0 +1,61 @@
+name: Desempenho na produção
+
+# Mede o site PUBLICADO nos três perfis da medida local (frontend/desempenho/medir-producao.mjs):
+# tempo de resposta da API e de carga das telas, com o resumo na página da execução e o detalhe
+# como artefato. Só lê; não falha por lentidão (é medida, não trava).
+#
+# Acionada à mão (Actions → Desempenho na produção → Run workflow) e quando o próprio script muda.
+# Com os segredos DESEMPENHO_EMAIL e DESEMPENHO_SENHA (uma conta de teste SEM verificação em duas
+# etapas), mede também a fila e o formulário de abertura; sem eles, só as telas públicas.
+on:
+  workflow_dispatch:
+    inputs:
+      repeticoes:
+        description: Cargas por tela e perfil
+        default: '5'
+  pull_request:
+    paths:
+      - frontend/desempenho/**
+      - .github/workflows/desempenho.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desempenho
+  cancel-in-progress: false
+
+jobs:
+  medir:
+    name: Site publicado
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Medir
+        env:
+          DESEMPENHO_EMAIL: ${{ secrets.DESEMPENHO_EMAIL }}
+          DESEMPENHO_SENHA: ${{ secrets.DESEMPENHO_SENHA }}
+          REPETICOES: ${{ inputs.repeticoes || '5' }}
+        run: node desempenho/medir-producao.mjs https://conserva-predial.vercel.app "$REPETICOES"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: desempenho-producao
+          path: frontend/desempenho-producao.json
+          if-no-files-found: ignore

@@ -248,3 +248,80 @@ jobs:
           name: playwright-report-firefox
           path: frontend/playwright-report
           retention-days: 7
+
+  e2e-edge:
+    name: Frontend (ponta a ponta, Edge)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: smp_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_NAME: smp_e2e
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: segredo_de_teste_e2e
+      JWT_EXPIRES_IN: 1h
+      CRON_SECRET: segredo_de_agendador_e2e
+      E2E_ADMIN_EMAIL: admin_e2e@exemplo.com
+      E2E_ADMIN_SENHA: senha_de_teste_e2e
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - run: npm ci
+        working-directory: backend
+
+      - run: npm ci
+        working-directory: frontend
+
+      # O mesmo aplicador de migrações de produção, pelo mesmo motivo do job
+      # do backend: o banco do teste precisa nascer do caminho que funciona.
+      - name: Aplicar migrações
+        working-directory: backend
+        run: npm run migrate
+
+      # O cadastro público só cria solicitante (RN01). Este é o único degrau
+      # que a API não oferece, e o script recusa rodar com NODE_ENV=production.
+      - name: Semear administrador de teste
+        working-directory: backend
+        run: node database/semear-admin.js
+
+      # RNF06: o Edge de verdade, canal estável da Microsoft. A imagem do GitHub costuma
+      # trazê-lo; quando não traz, o Playwright instala o pacote oficial.
+      - name: Instalar o Microsoft Edge
+        working-directory: frontend
+        run: |
+          command -v microsoft-edge-stable || npx playwright install --with-deps msedge
+          microsoft-edge-stable --version
+
+      # O playwright.config.js sobe o backend e o `vite preview` sozinho: o
+      # teste roda contra a build, que é o que vai para produção.
+      - name: Testes de ponta a ponta
+        working-directory: frontend
+        run: npm run e2e:edge
+
+      - name: Guardar o relatório quando falhar
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-edge
+          path: frontend/playwright-report
+          retention-days: 7

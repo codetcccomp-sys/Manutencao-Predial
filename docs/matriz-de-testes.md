@@ -503,6 +503,9 @@ ação). A tabela abaixo é o roteiro; as três últimas colunas ficam em branco
 executar, e uma linha só se fecha com o resultado observado e a evidência anexada (captura,
 protocolo do chamado, horário).
 
+Como conduzir (roteiro, tarefas por perfil, ficha de observação, questionário SUS e consolidação):
+[`docs/ensaio-com-pessoas.md`](ensaio-com-pessoas.md).
+
 | Nº | Cenário | Resultado esperado | Resultado observado | Evidência | Quem e quando |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Solicitante abre um chamado pela tela | Protocolo gerado, prazo calculado, chamado na fila da gestão | | | |

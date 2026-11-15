@@ -732,8 +732,9 @@ Uma rotina semanal curta, sempre no mesmo dia:
    está sendo avisado, e um histórico que simplesmente parou significa a mesma
    coisa, de forma mais discreta. Com a notificação de falha ligada, isso vira
    conferência de rotina em vez de vigilância — mas ela avisa sobre chamada
-   que falha, não sobre chamada que deixou de acontecer, então a olhada
-   continua valendo.
+   que falha, não sobre chamada que deixou de acontecer. Desde 15/11/2026 a
+   conferência diária do GitHub (`publicacao.yml`) também acusa tarefa parada,
+   pelo `/tarefas/saude`; a olhada semanal continua valendo como segunda rede.
 3. Exportar a planilha do período e guardar. É o dado bruto do piloto; se algo
    for reconfigurado no meio do caminho, a série exportada preserva o que
    havia.

@@ -62,7 +62,10 @@ export default defineConfig({
     },
     // RNF06: o Termo pede Chrome, Edge e Firefox. Chrome e Edge são o mesmo motor
     // (Chromium), coberto pelos dois projetos acima; o Firefox é outro motor, e só
-    // um navegador de verdade mostra o que muda nele.
+    // um navegador de verdade mostra o que muda nele. O Edge também roda de verdade
+    // (o executável da Microsoft, canal estável), num job próprio: o motor é o mesmo,
+    // mas é ele que a instituição abre, e a v9 do documento só podia dizer "vale o
+    // Chromium". Mesmas regras do Firefox: só com E2E_EDGE=1, só no computador.
     //
     // Só existe com E2E_FIREFOX=1 (o job próprio do CI): sem o Firefox instalado, o
     // projeto falharia inteiro por falta do navegador, e uma falha dessas faria todo
@@ -71,6 +74,14 @@ export default defineConfig({
     // é a largura, e a largura já é medida no Chromium.
     ...(process.env.E2E_FIREFOX
       ? [{ name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 900 } } }]
+      : []),
+    ...(process.env.E2E_EDGE
+      ? [
+          {
+            name: 'edge',
+            use: { ...devices['Desktop Edge'], channel: 'msedge', viewport: { width: 1280, height: 900 } },
+          },
+        ]
       : []),
   ],
 

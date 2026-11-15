@@ -34,6 +34,7 @@ e é a primeira coisa a fechar se ele passar a atender um prédio real.
 | [docs/apresentacao.md](docs/apresentacao.md) | Roteiro da demonstração ao vivo e checklist dos pitches de dezembro |
 | [docs/demonstracao-publicada.md](docs/demonstracao-publicada.md) | A demonstração no ar: o que só o dono do projeto cadastra, as travas e a rotina da véspera |
 | [docs/matriz-de-testes.md](docs/matriz-de-testes.md) | Cada regra ligada ao teste que a prova, o roteiro do ensaio com pessoas e as lacunas conhecidas |
+| [docs/ensaio-com-pessoas.md](docs/ensaio-com-pessoas.md) | Kit do ensaio com pessoas (RNF02): roteiro, tarefas por perfil, ficha de observação, questionário SUS e consolidação, para imprimir |
 
 Os documentos de piloto, dados, privacidade e apresentação são artefatos acadêmicos.
 Nenhum foi adotado ou assinado por instituição alguma.
@@ -583,6 +584,12 @@ projeto à parte, só no computador: `npm run e2e:firefox` (precisa de
 liga: sem o Firefox instalado ele falharia inteiro, e essa falha faria os testes de
 mutação de layout parecerem acusados. No CI é um job próprio.
 
+**Edge (RNF06).** O Edge roda também de verdade, com o executável da Microsoft (canal
+estável), e não só pelo motor: `npm run e2e:edge` (precisa do Edge instalado; o
+`npx playwright install msedge` instala o pacote oficial). Mesmas regras do Firefox: só
+com `E2E_EDGE=1`, só no computador, job próprio no CI. Em 15/11/2026, 130 testes
+passaram no Edge 157.
+
 Esta camada existe por um motivo específico: **geometria**. Todos os defeitos
 de responsividade deste projeto — o cartão de chamado esticando a página, as
 tabelas vazando do cartão, o painel de avisos saindo pela esquerda no celular,
@@ -630,11 +637,11 @@ ferramenta de quem escreve ou revisa teste.
 
 ### No CI
 
-`.github/workflows/ci.yml` tem quatro jobs: backend (PostgreSQL de serviço,
+`.github/workflows/ci.yml` tem cinco jobs: backend (PostgreSQL de serviço,
 migrações pelo mesmo `npm run migrate`, suíte), frontend (testes de componente
 e build), ponta a ponta (PostgreSQL, migrações, administrador semeado,
-Chromium e a suíte do Playwright) e ponta a ponta no Firefox (o mesmo, com o
-projeto `firefox`). O relatório do Playwright fica guardado
+Chromium e a suíte do Playwright) e ponta a ponta no Firefox e no Edge (o mesmo,
+com os projetos `firefox` e `edge`). O relatório do Playwright fica guardado
 como artefato quando algo falha.
 
 `.github/workflows/auditoria.yml` é separado do CI de propósito: advisory novo
@@ -651,6 +658,13 @@ restaurar estão em [docs/piloto.md](docs/piloto.md), §2.3.
 sob demanda): trava, migração, administrador e semente. A trava
 (`backend/database/guarda-demonstracao.js`) recusa o banco da produção e qualquer banco
 com dados que não esteja marcado como de demonstração.
+
+`.github/workflows/desempenho.yml` mede o site **publicado** (só sob demanda, e quando o script
+muda): resposta da API e carga das telas nos três perfis da medida local, com o resumo na
+página da execução (`frontend/desempenho/medir-producao.mjs`). O runner fica nos EUA, então o
+resultado é um teto; o tempo de quem usa está em **Usuários ▸ Uso e desempenho**. Com os
+segredos `DESEMPENHO_EMAIL` e `DESEMPENHO_SENHA` (conta de teste sem verificação em duas etapas)
+mede também a fila e o formulário de abertura.
 
 ## Rotas
 
