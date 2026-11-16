@@ -78,6 +78,13 @@ num banco limpo, mais `backend/tests/migracoes.test.js`.
   a passagem de 15 min do agendador (`/tarefas/notificar-atrasos`) manda sino e e-mail à gestão
   ativa, uma vez por chamado (`criticos.service`, `chamado.critico_notificado_em`, migração 030).
   O e-mail sai da conta do Gmail dos demais avisos; trocar por domínio da instituição é do dono.
+- **E-mail que para de sair** (recusado três vezes até 16/11/2026: o Google derruba a senha de app quando a
+  senha da conta muda): o sistema confere sozinho. A passagem de 15 min faz, de hora em hora, o login no SMTP sem
+  mandar mensagem (`conferenciaEmail.service`, `transporte.verify()`), e um envio recusado por senha (`EAUTH`/535)
+  grava a falha na hora. Os dois viram a tarefa `conferir-email` em `execucao_tarefa`: faixa vermelha "E-mails do
+  sistema não estão saindo" no painel e falha na conferência diária do GitHub (`/tarefas/saude`). Consertar é do
+  dono: senha de app nova em `SMTP_PASSWORD` na Vercel e novo deploy (`docs/piloto.md` §2.2); o aviso sai na
+  passagem seguinte. Sem SMTP configurado, a conferência passa (não é falha).
 - **Anexos**: até 10 por chamado por padrão; a administração define de 1 a 20 na tela de Usuários (RF03,
   configuração `anexos_por_chamado`; o teto é de `config/anexos.js`). 422 `LIMITE_DE_ANEXOS`, conferido sob
   cadeado por chamado, e aviso à gestão aos 70% do banco (`GET /operacao/armazenamento`).

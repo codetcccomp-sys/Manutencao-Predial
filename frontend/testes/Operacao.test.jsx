@@ -42,6 +42,38 @@ describe('Aviso de agendador parado', () => {
     expect(screen.getByText('Manutenção preventiva: a última passagem falhou (timeout).')).toBeInTheDocument();
   });
 
+  it('senha do e-mail recusada: diz que os e-mails não saem e o que trocar, separado do agendador', async () => {
+    api.get.mockResolvedValue({
+      data: {
+        tarefas: [
+          { tarefa: 'notificar-atrasos', rotulo: 'Aviso de atraso', situacao: 'ok' },
+          { tarefa: 'conferir-email', rotulo: 'Envio de e-mail', situacao: 'falhando', ultimo_erro: 'Invalid login: 535 5.7.8 BadCredentials' },
+        ],
+      },
+    });
+    render(<AvisoDoAgendador />);
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent('E-mails do sistema não estão saindo');
+    expect(aviso).toHaveTextContent('535 5.7.8 BadCredentials');
+    expect(aviso).toHaveTextContent('SMTP_PASSWORD');
+    // O agendador está em dia: o aviso dele não aparece por causa do e-mail.
+    expect(screen.queryByText('Tarefas automáticas paradas')).not.toBeInTheDocument();
+  });
+
+  it('e-mail que nunca foi conferido ou ficou sem passagem não vira aviso de e-mail', async () => {
+    api.get.mockResolvedValue({
+      data: {
+        tarefas: [
+          { tarefa: 'notificar-atrasos', rotulo: 'Aviso de atraso', situacao: 'ok' },
+          { tarefa: 'conferir-email', rotulo: 'Envio de e-mail', situacao: 'parada', ultimo_sucesso: '2026-10-07T09:00:00Z' },
+        ],
+      },
+    });
+    const { container } = render(<AvisoDoAgendador />);
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/operacao/agendador'));
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('se a consulta falha, não inventa alarme', async () => {
     api.get.mockRejectedValue(new Error('rede'));
     const { container } = render(<AvisoDoAgendador />);

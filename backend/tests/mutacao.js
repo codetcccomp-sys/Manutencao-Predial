@@ -25,6 +25,55 @@ const { spawnSync } = require('child_process');
 
 const MUTACOES = [
   {
+    descricao: 'envio recusado por senha deixa de virar aviso na hora',
+    arquivo: 'src/services/email.service.js',
+    de: "      await execucoes.registrarFalha('conferir-email', err.message).catch(() => {});\n",
+    para: '',
+    spec: 'tests/conferenciaEmail.test.js',
+  },
+  {
+    descricao: 'servidor de e-mail fora do ar no envio passa por senha recusada',
+    arquivo: 'src/services/email.service.js',
+    de: "return err?.code === 'EAUTH' || err?.responseCode === 535;",
+    para: 'return true;',
+    spec: 'tests/conferenciaEmail.test.js',
+  },
+  {
+    descricao: 'conferência do e-mail passa a fazer login a cada passagem de 15 minutos',
+    arquivo: 'src/services/conferenciaEmail.service.js',
+    de: '      if (recente.rows.length) return { conferido: false };\n',
+    para: '',
+    spec: 'tests/conferenciaEmail.test.js',
+  },
+  {
+    descricao: 'depois de uma falha, a conferência do e-mail espera uma hora para tirar o aviso',
+    arquivo: 'src/services/conferenciaEmail.service.js',
+    de: '    if (ultima?.sucesso) {',
+    para: '    if (ultima) {',
+    spec: 'tests/conferenciaEmail.test.js',
+  },
+  {
+    descricao: 'conferência do e-mail confere só se está configurado, sem fazer login',
+    arquivo: 'src/services/email.service.js',
+    de: '  await obterTransporte().verify();\n',
+    para: '',
+    spec: 'tests/conferenciaEmail.test.js',
+  },
+  {
+    descricao: 'saúde das tarefas (GitHub) deixa de conferir o e-mail antes de responder',
+    arquivo: 'src/routes/tarefas.routes.js',
+    de: "    await conferenciaEmail.conferirSeVencida();\n    res.json({ tarefas: await execucoes.saude() });",
+    para: "    res.json({ tarefas: await execucoes.saude() });",
+    spec: 'tests/conferenciaEmail.test.js',
+  },
+  {
+    descricao: 'passagem de 15 minutos deixa de conferir o e-mail',
+    arquivo: 'src/routes/tarefas.routes.js',
+    de: "    await conferenciaEmail.conferirSeVencida();\n    res.json(resultado);",
+    para: "    res.json(resultado);",
+    spec: 'tests/conferenciaEmail.test.js',
+  },
+  {
     descricao: 'conferência pós-deploy deixa de acusar tarefa agendada parada',
     arquivo: 'scripts/conferir-publicacao.js',
     de: "saude.corpo.tarefas.filter((t) => t.situacao !== 'ok')",
@@ -1104,7 +1153,7 @@ const MUTACOES = [
   {
     descricao: 'aviso de crítico, a passagem do agendador deixa de procurar críticos',
     arquivo: 'src/routes/tarefas.routes.js',
-    de: '        ...(await criticosService.notificarCriticosSemAtendimento()),\n',
+    de: '      ...(await criticosService.notificarCriticosSemAtendimento()),\n',
     para: '',
     spec: 'tests/avisoCriticoSemAtendimento.test.js',
   },

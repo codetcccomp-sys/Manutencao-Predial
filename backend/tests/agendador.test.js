@@ -107,7 +107,7 @@ describe('GET /operacao/agendador', () => {
   it('a gestão vê a situação das tarefas', async () => {
     const resp = await request(app).get('/operacao/agendador').set('Authorization', `Bearer ${gestor}`);
     expect(resp.status).toBe(200);
-    expect(resp.body.tarefas.map((t) => t.tarefa).sort()).toEqual(['gerar-preventivas', 'notificar-atrasos']);
+    expect(resp.body.tarefas.map((t) => t.tarefa).sort()).toEqual(['conferir-email', 'gerar-preventivas', 'notificar-atrasos']);
   });
 
   it('não é do técnico, e não abre com o segredo do agendador', async () => {

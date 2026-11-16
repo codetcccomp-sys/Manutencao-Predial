@@ -569,8 +569,22 @@ const MUTACOES = [
   {
     descricao: 'aviso do agendador passa a alarmar também com tudo em dia',
     arquivo: 'src/components/AvisoDoAgendador.jsx',
-    de: 'setProblemas((data?.tarefas ?? []).filter((t) => FRASES[t.situacao]));',
-    para: 'setProblemas(data?.tarefas ?? []);',
+    de: 'setProblemas(tarefas.filter((t) => t.tarefa !== EMAIL && FRASES[t.situacao]));',
+    para: 'setProblemas(tarefas);',
+    spec: 'testes/Operacao.test.jsx',
+  },
+  {
+    descricao: 'senha do e-mail recusada deixa de aparecer no painel',
+    arquivo: 'src/components/AvisoDoAgendador.jsx',
+    de: "setFalhaDoEmail(tarefas.find((t) => t.tarefa === EMAIL && t.situacao === 'falhando') ?? null);",
+    para: 'setFalhaDoEmail(null);',
+    spec: 'testes/Operacao.test.jsx',
+  },
+  {
+    descricao: 'e-mail parado (agendador parado) vira aviso de senha do e-mail',
+    arquivo: 'src/components/AvisoDoAgendador.jsx',
+    de: "t.tarefa === EMAIL && t.situacao === 'falhando'",
+    para: 't.tarefa === EMAIL',
     spec: 'testes/Operacao.test.jsx',
   },
   {
