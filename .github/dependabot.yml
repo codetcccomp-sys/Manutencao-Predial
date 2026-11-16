@@ -33,6 +33,13 @@ updates:
     groups:
       frontend-minor-e-patch:
         update-types: [minor, patch]
+    # O Playwright 1.65 traz o Firefox 159, e com ele a aba Materiais de Cadastros trava o
+    # navegador durante a análise do axe ("Page crashed", e2e/materiais.spec.js), em duas rodadas do
+    # PR #110. As mesmas atualizações com o Playwright 1.64 passaram no Firefox (PR #111,
+    # 16/11/2026). Só a 1.65 fica de fora: a próxima versão volta a ser proposta, e o CI a julga.
+    ignore:
+      - dependency-name: '@playwright/test'
+        versions: ['1.65.x']
 
   - package-ecosystem: github-actions
     directory: /
