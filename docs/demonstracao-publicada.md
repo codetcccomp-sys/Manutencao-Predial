@@ -1,5 +1,10 @@
 # Demonstração publicada
 
+> **Decisão de 15/11/2026: a apresentação usa a produção**, com os dados de apresentação
+> ([`apresentacao-na-producao.md`](apresentacao-na-producao.md)). Esta demonstração não foi
+> configurada (a API dela responde 503 por falta de banco e segredos) e deixou de ser necessária.
+> O que segue fica como referência, caso um dia se queira uma cópia à parte para treino.
+
 Uma cópia do sistema, no ar, com **dados fictícios**, para apresentar e deixar as
 pessoas experimentarem sem encostar na produção. Tem site, API e banco próprios;
 nada é compartilhado com a produção — nem o banco, nem os segredos.

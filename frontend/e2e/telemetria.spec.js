@@ -40,7 +40,9 @@ test('manda as aberturas de tela pelo modelo da rota, e nunca pelo endereço rea
 
   const corpo = corpoDe(requisicao);
   expect(corpo.telas['/chamados/:id']).toBeGreaterThanOrEqual(1);
-  expect(JSON.stringify(corpo)).not.toContain(String(chamado.id));
+  // O endereço real, e não o número solto: com o chamado 29, uma medida de 299 ms "continha" 29 e
+  // o teste falhava sem defeito nenhum (CI do Firefox, 15/11/2026).
+  expect(JSON.stringify(corpo)).not.toContain(`/chamados/${chamado.id}`);
   expect(requisicao.headers()['x-conserva']).toBe('1');
   // Nada de identidade no envio: o corpo só tem contagens e medidas.
   expect(Object.keys(corpo).sort()).toEqual(['acoes', 'desempenho', 'telas']);
@@ -90,7 +92,9 @@ test('um erro de tela chega à administração com a tela pelo modelo da rota', 
   const corpo = corpoDe(requisicao);
   expect(corpo.tela).toBe('/chamados/:id');
   expect(corpo.mensagem).toContain('falha de teste da telemetria');
-  expect(JSON.stringify(corpo)).not.toContain(String(chamado.id));
+  // O endereço real, e não o número solto: com o chamado 29, uma medida de 299 ms "continha" 29 e
+  // o teste falhava sem defeito nenhum (CI do Firefox, 15/11/2026).
+  expect(JSON.stringify(corpo)).not.toContain(`/chamados/${chamado.id}`);
 });
 
 // O outro lado do mesmo filtro: erro de script que não é do aplicativo não é enviado.

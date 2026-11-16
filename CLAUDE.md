@@ -157,7 +157,8 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   banco em `sa-east-1`: sem isso a Vercel usa `iad1` e cada consulta cruza o
   continente (117 ms contra 2 ms, medido). O aviso afirma São Paulo, e um teste lê
   o `vercel.json` para que as duas coisas não se separem.
-- **Há uma demonstração publicada** (`docs/demonstracao-publicada.md`): site, API e
+- **Há uma demonstração publicada**, mas **não configurada**: em 15/11/2026 o dono decidiu apresentar na produção, com os
+  dados de apresentação (abaixo). (`docs/demonstracao-publicada.md`): site, API e
   banco próprios, com dados fictícios. Os dois projetos da Vercel dela
   (`conserva-predial-demo`, pasta `demo/frontend`; `conserva-predial-demo-api`, pasta
   `backend`) seguem a `main`. Regras: nada é compartilhado com a produção, e

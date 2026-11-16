@@ -52,6 +52,9 @@ repete achados.
 5. **Impressos.** Seção 4 (uma por sessão), seção 5 (uma por participante), seção 6 (uma por
    participante), seção 7 (uma por ensaio).
 
+Para fazer tudo numa rodada só, com todos os perfis ao mesmo tempo, siga a seção 9: ela diz quem
+faz o quê a cada momento e quais contas criar.
+
 ## 4. Roteiro do facilitador
 
 **Abertura (leia em voz alta, 2 min):**
@@ -83,10 +86,10 @@ repete achados.
 **Tarefas — técnico** (cerca de 15 min, no celular):
 
 - **T1.** "Veja os chamados que estão com você e comece o atendimento do mais urgente."
-- **T2.** "Falta uma peça. Registre que o serviço está esperando material. A peça chegou:
-  retome." Fim: dois registros na linha do tempo.
-- **T3.** "Registre que usou 2 metros de cabo e conclua o serviço." Fim: concluído, com material
-  e confirmação de EPI.
+- **T2.** "Falta o reparo da torneira. Registre que o serviço está esperando material. A peça
+  chegou: retome." Fim: dois registros na linha do tempo.
+- **T3.** "Registre que usou 1 rolo de fita veda-rosca e conclua o serviço." Fim: concluído, com
+  material e confirmação de EPI.
 
 **Tarefas — gestão** (cerca de 15 min):
 
@@ -200,3 +203,86 @@ Assinaturas de quem conduziu: ______________________  ______________________
   tela de abertura, repita S1 com outras pessoas: quem já fez a tarefa aprendeu.
 - Atualize o documento de projeto (RNF02, 7.1 e 7.3) com o resultado, inclusive se o critério
   não foi atendido.
+
+## 9. Rodada conjunta (todos juntos, cerca de 1h30)
+
+Os perfis trabalham ao mesmo tempo, como no uso real: o pedido que um solicitante abre é o que a
+gestão distribui e o técnico atende. Decidido em 15/11/2026: na **produção**, com contas de ensaio.
+
+### 9.1 Quem
+
+| Papel | Quantos | Código na ficha |
+| --- | --- | --- |
+| Solicitante | 5 | S-A, S-B, S-C, S-D, S-E |
+| Técnico (no celular) | 2 | T-1, T-2 |
+| Gestão | 1 | G |
+| Equipe: facilitador | 1 | lê as falas e controla o tempo |
+| Equipe: observadores | 2 ou mais | um com os solicitantes, um com técnicos e gestão |
+
+Solicitantes não sentam lado a lado: quem vê o outro fazer aprende, e a tarefa S1 deixa de medir
+o que precisa medir.
+
+### 9.2 Contas (a administração cria na véspera, na tela Usuários)
+
+| Nome | E-mail | Perfil |
+| --- | --- | --- |
+| Ensaio Solicitante A … E | `ensaio.sa@ensaio.invalid` … `ensaio.se@ensaio.invalid` | solicitante |
+| Ensaio Técnico 1 e 2 | `ensaio.t1@ensaio.invalid`, `ensaio.t2@ensaio.invalid` | técnico |
+| Ensaio Gestão | `ensaio.g@ensaio.invalid` | gestor |
+| Ensaio Preparo | `ensaio.preparo@ensaio.invalid` | solicitante (só a equipe usa) |
+
+- A senha de cada conta é escolhida por quem cria (10 ou mais caracteres, fora das comuns) e vai
+  num cartão de papel entregue na hora. Não mande senha por mensagem.
+- Os avisos por e-mail dessas contas vão para endereços que não existem e voltam como não
+  entregues na caixa de saída do sistema. É esperado e não afeta nada.
+- A produção exige verificação em duas etapas da gestão. No primeiro acesso, a conta "Ensaio
+  Gestão" é levada a ligá-la, com um aplicativo autenticador no celular de quem participa (peça no
+  convite). Observe esse passo também: é a primeira coisa que uma pessoa real da gestão vai viver.
+
+### 9.3 Cartões de problema (tarefa S1, um por solicitante)
+
+| Cartão | Texto entregue |
+| --- | --- |
+| S-A | "A torneira do banheiro feminino do 1º andar está pingando sem parar. Registre isso no sistema." |
+| S-B | "Uma lâmpada do corredor do seu andar queimou. Registre isso no sistema." |
+| S-C | "O ar-condicionado da sala de reuniões não está gelando. Registre isso no sistema." |
+| S-D | "A porta do banheiro masculino do térreo não fecha direito. Registre isso no sistema." |
+| S-E | "A torneira do banheiro feminino do 1º andar está pingando. Registre isso no sistema." |
+
+S-E repete S-A de propósito: é o duplicado que a gestão cancela em G3.
+
+### 9.4 Linha do tempo
+
+| Quando | Solicitantes | Técnicos | Gestão | Equipe |
+| --- | --- | --- | --- | --- |
+| −0:30 | | | | Conferência da seção 3, item 4. Com a conta Preparo, abre o chamado crítico: "Fio desencapado soltando faísca na tomada da recepção", respondendo às perguntas de situação com risco à segurança das pessoas. Confere que nasceu **crítica** e anota o protocolo. Ninguém faz a triagem dele. |
+| 0:00 | Abertura em voz alta (seção 4) e cartões de acesso | idem | idem | Cronômetros prontos |
+| 0:05 | **S1**, cada um com seu cartão | Entrar e ver se há algo para fazer (a fila deve estar vazia) | Primeiro acesso, verificação em duas etapas; depois **G4** | Anotar o protocolo de cada S1 |
+| 0:20 | **S2** | Aguardam | **G2** (o crítico já tem mais de 15 min); **G1**: triagem de todos, S-A para o Técnico 1, S-B para o Técnico 2; **G3** cancela S-E | Conferir que o técnico recebeu o aviso |
+| 0:35 | Ver se chegou novidade sobre o próprio pedido | T-1: **T1, T2, T3** no pedido de S-A. T-2: **T1** no pedido de S-B; liga o modo avião, abre a fila e tenta comentar (cenário 10); desliga e conclui com EPI | Acompanha a fila | Observadores com os técnicos |
+| 0:55 | S-A: **S3** (avaliar). S-B: **S3** variante (reabrir) | | Vê a reabertura | |
+| 1:05 | Questionário SUS e as duas perguntas finais | idem | idem | Recolher os papéis |
+| 1:15 | Fim para os participantes | | | Seção 9.5 |
+
+Os tempos são guia, não regra: se S1 atrasar, todo o resto anda junto. Nunca encurte S1 para
+caber no horário, porque é a tarefa do critério.
+
+### 9.5 Depois que os participantes saem (equipe, 15 min)
+
+1. **Cenário 8:** com a conta de um técnico, tentar cancelar um chamado (não deve haver como);
+   com a conta de um solicitante, abrir o endereço do chamado de outro (deve recusar).
+2. **Cenário 12:** o painel da gestão não mostra "Tarefas automáticas paradas".
+3. **Limpar:** com a conta da gestão real, cancelar cada chamado do ensaio com a justificativa
+   "Ensaio de usabilidade". O concluído e avaliado (S-A) não se cancela direto: reabra-o (mesma
+   justificativa) e então cancele. Assim nenhum chamado do ensaio conta como concluído no prazo.
+4. **Desativar** as nove contas de ensaio na tela Usuários.
+5. **Anotar** todos os protocolos na seção 7, para descontá-los no piloto.
+
+### 9.6 Convite (para mandar às pessoas)
+
+> Oi! Estamos testando o Conserva Predial, um sistema de pedidos de manutenção do prédio, e
+> precisamos de pessoas que nunca o viram. São cerca de 1h30, no dia ___ às ___, em ___. Você
+> vai fazer algumas tarefas simples no celular ou no computador, como registrar um problema, e
+> responder a um questionário curto. Quem está sendo testado é o sistema, não você. Não
+> gravamos seu nome, sua tela nem sua voz. Se topar, traga o celular carregado. [Só para quem
+> fará o papel da gestão: instale antes um aplicativo autenticador, como o Google Authenticator.]
