@@ -215,16 +215,22 @@ describe('Conferência do servidor de e-mail', () => {
   });
 
   it('a passagem de 15 minutos confere o e-mail, e a falha dele não derruba o aviso de atraso', async () => {
+    // A passagem também manda os avisos de atraso de verdade (e cada envio faz login): num banco
+    // com chamados atrasados, contar logins não diz nada. A prova é o registro da conferência.
+    const app = require('../src/app');
+    let resp = await request(app).post('/tarefas/notificar-atrasos').set('Authorization', `Bearer ${SEGREDO}`);
+    expect(resp.status).toBe(200);
+    expect(await situacaoDoEmail()).toMatchObject({ situacao: 'ok', ultimo_resumo: { configurado: true } });
+
+    await pool.query("DELETE FROM execucao_tarefa WHERE tarefa = 'conferir-email'");
     recusarLogin = true;
     jest.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      const app = require('../src/app');
-      const resp = await request(app).post('/tarefas/notificar-atrasos').set('Authorization', `Bearer ${SEGREDO}`);
-      expect(resp.status).toBe(200);
+      resp = await request(app).post('/tarefas/notificar-atrasos').set('Authorization', `Bearer ${SEGREDO}`);
     } finally {
       console.error.mockRestore();
     }
-    expect(logins).toBe(1);
+    expect(resp.status).toBe(200);
     expect((await situacaoDoEmail()).situacao).toBe('falhando');
   });
 
