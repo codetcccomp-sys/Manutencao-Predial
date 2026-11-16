@@ -225,11 +225,12 @@ Dependem de decisão do dono do projeto antes de qualquer código:
   continua proibido onde houver uso real. Mexeu no seed? Os avisos têm de nascer com `email_enviado_em`
   e as contas inativas, senão a gestão real recebe e-mail de dado inventado (o teste confere).
 - O cadastro da produção (37 locais da "Sede", 9 planos preventivos) é de teste,
-  mantido para a apresentação, em dezembro de 2026. **Os planos estão desativados
-  desde 12/10/2026** para não gerarem chamados de teste no meio do piloto. Para
-  reativar, em cada plano ajuste a "Próxima execução" para uma data futura e só
-  então marque ativo: com a data antiga, o agendador geraria chamados já vencidos
-  (`docs/piloto.md` §2.0).
+  mantido para a apresentação, em dezembro de 2026. **Oito planos foram religados em
+  16/11/2026** (próximas execuções de 23/11 a 02/12, `data_inicio` alinhado); o `[TESTE]`
+  segue desligado. Os chamados que eles geram são reais (sem `-DEMO`): o
+  `remover-apresentacao.sql` não os apaga, e eles precisam sair antes do piloto. Religar um
+  plano é ajustar a "Próxima execução" para data futura antes de marcar ativo; por SQL, alinhe
+  também `data_inicio`, senão o calendário segue a data antiga (`docs/piloto.md` §2.0).
 - `exigir_2fa_gestao` e `cadastro_exige_aprovacao` são chaves da tabela
   `configuracao`, ligadas pela tela de Usuários. Ligar muda quem consegue
   entrar: não é efeito colateral de deploy.

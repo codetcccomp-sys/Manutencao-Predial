@@ -91,7 +91,11 @@ estiver preenchido.
 > 2026):** os 37 locais da "Sede", 9 planos preventivos (um deles `[TESTE]`) e
 > um equipamento `[TESTE]`.
 >
-> **Os 9 planos estão desativados desde 12/10/2026.** Ativos, eles gerariam
+> **Atualização de 16/11/2026:** para a apresentação, 8 planos foram religados com próximas
+> execuções de 23/11 a 02/12 (o `[TESTE]` continua desligado). Os chamados que eles gerarem são
+> de teste e precisam sair antes do piloto, junto com os dados de apresentação.
+>
+> **Os 9 planos estavam desativados desde 12/10/2026.** Ativos, eles gerariam
 > chamados sozinhos a partir de 31/10 (cerca de 11 até dezembro), todos sem
 > técnico e depois vencidos, misturados aos reais e puxando para baixo os
 > indicadores do piloto. Nada foi apagado.
