@@ -111,7 +111,7 @@ describe('Conferência pós-deploy', () => {
     }
 
     beforeAll(async () => {
-      await pool.query("DELETE FROM execucao_tarefa WHERE tarefa IN ('notificar-atrasos', 'gerar-preventivas')");
+      await pool.query("DELETE FROM execucao_tarefa WHERE tarefa IN ('notificar-atrasos', 'gerar-preventivas', 'conferir-email')");
     });
 
     afterAll(async () => {
@@ -124,7 +124,7 @@ describe('Conferência pós-deploy', () => {
         expect((await fetch(`${base}/tarefas/saude`)).status).toBe(401);
         const resp = await fetch(`${base}/tarefas/saude`, { headers: { Authorization: `Bearer ${SEGREDO}` } });
         expect(resp.status).toBe(200);
-        expect((await resp.json()).tarefas.map((t) => t.tarefa).sort()).toEqual(['gerar-preventivas', 'notificar-atrasos']);
+        expect((await resp.json()).tarefas.map((t) => t.tarefa).sort()).toEqual(['conferir-email', 'gerar-preventivas', 'notificar-atrasos']);
       } finally {
         await fechar(servidor);
       }

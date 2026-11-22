@@ -91,7 +91,11 @@ estiver preenchido.
 > 2026):** os 37 locais da "Sede", 9 planos preventivos (um deles `[TESTE]`) e
 > um equipamento `[TESTE]`.
 >
-> **Os 9 planos estão desativados desde 12/10/2026.** Ativos, eles gerariam
+> **Atualização de 16/11/2026:** para a apresentação, 8 planos foram religados com próximas
+> execuções de 23/11 a 02/12 (o `[TESTE]` continua desligado). Os chamados que eles gerarem são
+> de teste e precisam sair antes do piloto, junto com os dados de apresentação.
+>
+> **Os 9 planos estavam desativados desde 12/10/2026.** Ativos, eles gerariam
 > chamados sozinhos a partir de 31/10 (cerca de 11 até dezembro), todos sem
 > técnico e depois vencidos, misturados aos reais e puxando para baixo os
 > indicadores do piloto. Nada foi apagado.
@@ -382,6 +386,39 @@ duas etapas ligada continua digitando o código.
 > seria voltar ao modo fraco sozinha, e uma conexão interceptável que funciona
 > normalmente não dá sinal nenhum de que está interceptável — descobre-se
 > depois, se é que se descobre.
+
+### Quando o e-mail para de sair
+
+O Gmail recusou a senha de app três vezes até 16/11/2026, sempre com
+`535 5.7.8 BadCredentials`. A causa é do Google, não do sistema: **a senha de
+app cai quando a senha da conta muda**, quando a verificação em duas etapas é
+desligada e religada, ou depois de um alerta de segurança na conta.
+
+Desde 16/11/2026 o sistema percebe sozinho. De hora em hora, na passagem de 15
+minutos do agendador, a API faz o login no servidor de e-mail sem mandar
+mensagem nenhuma; e todo envio recusado por senha vira falha na hora. A falha
+aparece em dois lugares:
+
+- no painel da gestão, a faixa vermelha **"E-mails do sistema não estão
+  saindo"**, com a resposta do servidor;
+- na conferência do GitHub (`publicacao.yml`, depois de cada deploy e todo dia
+  às 07:41), que falha com `agendador: Envio de e-mail falhando` e manda e-mail
+  a quem administra o repositório.
+
+Para consertar (só quem administra, e a senha nunca vai para chat nem commit):
+
+1. Na conta do Google que envia, **Segurança → Senhas de app**: gere uma nova.
+2. Na Vercel, projeto do backend, **Settings → Environment Variables**: troque
+   `SMTP_PASSWORD` em Production pela nova (com ou sem os espaços: o sistema
+   tira).
+3. **Deployments → Redeploy** do último deploy de produção. Variável nova só
+   vale em deploy novo.
+4. A faixa some na passagem seguinte do agendador (até 15 minutos). Confira
+   pedindo "Esqueci minha senha" para uma conta sua.
+
+Para não depender mais disso: um provedor de e-mail transacional com chave de
+API (Brevo, Resend e afins) e um domínio da instituição. A chave não cai
+quando alguém troca a senha de uma conta pessoal. É decisão do dono.
 
 ### Limite do pedido de recuperação de senha
 

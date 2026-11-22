@@ -32,8 +32,9 @@ só aparecem como autoras de chamados e de comentários.
 - **Não manda e-mail para ninguém.** As contas fictícias são inativas (não recebem aviso nem
   aparecem para atribuição), todo aviso nasce com `email_enviado_em`, e os atrasos e os críticos
   já nascem avisados: a tarefa de 15 minutos não encontra o que avisar à gestão real.
-- **Não altera o cadastro** (locais, categorias, planos, regras). Planos preventivos continuam
-  desativados.
+- **Não altera o cadastro** (locais, categorias, planos, regras). Os planos preventivos foram
+  religados à parte, em 16/11/2026 (8 de 9), e os chamados que eles geram não têm `-DEMO`: este
+  script não os remove.
 - Testes: `backend/tests/semearApresentacao.test.js`, com 9 mutações em `tests/mutacao.js`.
 
 ## Como rodar

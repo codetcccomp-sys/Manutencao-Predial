@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const execucoes = require('./execucoes.service');
 
 // Timeouts curtos e explícitos. O envio acontece dentro da requisição, e em
 // função serverless não há processo que sobreviva para terminar depois: um
@@ -79,8 +80,31 @@ async function enviar({ para, assunto, texto }) {
     return true;
   } catch (err) {
     console.error(`[email] falha ao enviar para ${para}:`, err.message);
+    // Senha recusada é o defeito que se repete (o Google revoga a senha de app quando a senha da
+    // conta muda): vira aviso no painel na hora, em vez de esperar a conferência de hora em hora.
+    if (recusouLogin(err)) {
+      await execucoes.registrarFalha('conferir-email', err.message).catch(() => {});
+    }
     return false;
   }
 }
 
-module.exports = { enviar, estaConfigurado, senhaLimpa };
+/** O servidor recusou usuário ou senha (no Gmail, `535 5.7.8 BadCredentials`). */
+function recusouLogin(err) {
+  return err?.code === 'EAUTH' || err?.responseCode === 535;
+}
+
+/**
+ * Confere se o servidor de e-mail aceita o login, sem mandar mensagem nenhuma.
+ *
+ * Sem SMTP configurado não há o que conferir: o sistema funciona sem e-mail, e isso não é
+ * falha. Configurado, qualquer recusa (senha, conexão, certificado) lança, e quem chama
+ * registra como falha.
+ */
+async function conferir() {
+  if (!estaConfigurado()) return { configurado: false };
+  await obterTransporte().verify();
+  return { configurado: true };
+}
+
+module.exports = { enviar, conferir, estaConfigurado, senhaLimpa };

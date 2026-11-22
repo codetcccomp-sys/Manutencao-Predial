@@ -180,6 +180,19 @@ passam no CI e falham também sem a mudança em curso, então a causa é do ambi
 | RF08 | Sem técnico, o aviso vai para a gestão | `backend/tests/atrasos.test.js` | sem técnico designado, avisa a gestão, que é quem pode agir |
 | Agendador | Sem `CRON_SECRET` a rota fica desligada, não aberta | `backend/tests/atrasos.test.js` | sem CRON_SECRET no ambiente, a rota fica desligada em vez de aberta |
 | Agendador | Tarefa sem passagem aparece como parada | `backend/tests/agendador.test.js` | sem passagem dentro da tolerância, a tarefa aparece como parada |
+| E-mail | Senha do e-mail recusada aparece como falha, com a resposta do servidor | `backend/tests/conferenciaEmail.test.js` | senha recusada: a tarefa fica falhando, com a resposta do servidor |
+| E-mail | Envio recusado vira aviso na hora, sem esperar a conferência | `backend/tests/conferenciaEmail.test.js` | um envio de verdade recusado vira falha na hora, sem esperar a conferência |
+| E-mail | Servidor fora do ar no envio não é tratado como senha recusada | `backend/tests/conferenciaEmail.test.js` | servidor fora do ar no envio não é senha recusada: fica para a conferência |
+| E-mail | Login aceito deixa a conferência ok, sem mandar mensagem | `backend/tests/conferenciaEmail.test.js` | login aceito: a tarefa fica ok, sem mandar mensagem nenhuma |
+| E-mail | Uma conferência por hora, não a cada 15 minutos | `backend/tests/conferenciaEmail.test.js` | com sucesso há menos de uma hora, não faz login de novo |
+| E-mail | Passada uma hora, confere de novo | `backend/tests/conferenciaEmail.test.js` | com sucesso há mais de uma hora, confere de novo |
+| E-mail | Depois da falha, a senha nova tira o aviso na passagem seguinte | `backend/tests/conferenciaEmail.test.js` | depois de uma falha, confere a cada passagem, e a senha nova tira o aviso na seguinte |
+| E-mail | Falha depois de sucesso recente não espera a hora para ser conferida | `backend/tests/conferenciaEmail.test.js` | falha depois de um sucesso recente: confere já na passagem seguinte, sem esperar a hora |
+| E-mail | Sem SMTP configurado não é falha | `backend/tests/conferenciaEmail.test.js` | sem SMTP configurado não há o que conferir, e isso não é falha |
+| E-mail | A passagem de 15 minutos confere o e-mail sem derrubar o aviso de atraso | `backend/tests/conferenciaEmail.test.js` | a passagem de 15 minutos confere o e-mail, e a falha dele não derruba o aviso de atraso |
+| E-mail | A conferência do GitHub (`/tarefas/saude`) acusa a senha recusada | `backend/tests/conferenciaEmail.test.js` | a saúde das tarefas (conferência do GitHub) confere o e-mail antes de responder |
+| E-mail | O painel diz que os e-mails não saem e o que trocar | `frontend/testes/Operacao.test.jsx` | senha do e-mail recusada: diz que os e-mails não saem e o que trocar, separado do agendador |
+| E-mail | E-mail sem passagem (agendador parado) não vira aviso de senha | `frontend/testes/Operacao.test.jsx` | e-mail que nunca foi conferido ou ficou sem passagem não vira aviso de e-mail |
 
 ## 5. Execução, conclusão, reabertura e cancelamento
 

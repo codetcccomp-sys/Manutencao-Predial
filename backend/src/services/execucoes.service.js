@@ -20,6 +20,16 @@ const TAREFAS = {
     frequencia: 'uma vez por dia',
     toleranciaMinutos: 26 * 60,
   },
+  // Não é uma tarefa que alguém agenda: é o login no servidor de e-mail, feito de hora em hora
+  // na passagem de 15 minutos (conferenciaEmail.service). Entrou aqui porque o Gmail recusou a
+  // senha de app três vezes (a última em 16/11/2026) e, nas três, ninguém soube até alguém
+  // pedir "esqueci minha senha" e o link não chegar. Na lista, a falha aparece no painel da
+  // gestão e faz a conferência diária do GitHub falhar, como a das outras tarefas.
+  'conferir-email': {
+    rotulo: 'Envio de e-mail',
+    frequencia: 'a cada hora',
+    toleranciaMinutos: 3 * 60,
+  },
 };
 
 // Um mês de histórico basta para ver o padrão; mais que isso é tabela
@@ -63,6 +73,17 @@ async function registrar(tarefa, executar) {
       )
       .catch(() => {});
   }
+}
+
+/**
+ * Registra uma falha que aconteceu fora de uma passagem: um envio de verdade recusado pelo
+ * servidor de e-mail. Sem isto, a senha recusada às 10h só apareceria na conferência das 11h.
+ */
+async function registrarFalha(tarefa, erro) {
+  await pool.query(
+    `INSERT INTO execucao_tarefa (tarefa, terminada_em, sucesso, erro) VALUES ($1, now(), FALSE, $2)`,
+    [tarefa, String(erro).slice(0, 1000)]
+  );
 }
 
 /**
@@ -127,4 +148,4 @@ async function saude(agora = new Date()) {
   });
 }
 
-module.exports = { registrar, saude, TAREFAS };
+module.exports = { registrar, registrarFalha, saude, TAREFAS };

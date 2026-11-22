@@ -3,6 +3,7 @@ const atrasosService = require('../services/atrasos.service');
 const criticosService = require('../services/criticos.service');
 const preventivaService = require('../services/preventiva.service');
 const execucoes = require('../services/execucoes.service');
+const conferenciaEmail = require('../services/conferenciaEmail.service');
 const { autenticarAgendador } = require('../middlewares/cron');
 const { asyncHandler } = require('../utils/asyncHandler');
 
@@ -26,12 +27,13 @@ router.post(
     // A mesma passagem de 15 minutos também procura os críticos que ninguém atendeu (achado 3):
     // um agendador só, e o painel de saúde das tarefas cobre os dois. O aviso de atraso vai
     // primeiro, e uma falha do segundo aparece como falha da tarefa, em vez de passar calada.
-    res.json(
-      await execucoes.registrar('notificar-atrasos', async () => ({
-        ...(await atrasosService.notificarAtrasados()),
-        ...(await criticosService.notificarCriticosSemAtendimento()),
-      }))
-    );
+    const resultado = await execucoes.registrar('notificar-atrasos', async () => ({
+      ...(await atrasosService.notificarAtrasados()),
+      ...(await criticosService.notificarCriticosSemAtendimento()),
+    }));
+    // De hora em hora, aproveitando a passagem: o login no servidor de e-mail ainda vale?
+    await conferenciaEmail.conferirSeVencida();
+    res.json(resultado);
   })
 );
 
@@ -66,6 +68,9 @@ router.get(
 router.get(
   '/saude',
   asyncHandler(async (req, res) => {
+    // Confere o e-mail antes de responder, se a última conferência passou da hora: a
+    // conferência pós-deploy chega aqui minutos depois de uma senha trocada na Vercel.
+    await conferenciaEmail.conferirSeVencida();
     res.json({ tarefas: await execucoes.saude() });
   })
 );
