@@ -19,6 +19,12 @@ updates:
     groups:
       backend-minor-e-patch:
         update-types: [minor, patch]
+    # O pdfkit 0.21 passou a depender do fontkit só em ESM (`import` no index.js). O Node 22/24
+    # carregaria, mas o Jest 29 não: 55 das 71 suítes falham ao subir (PR #118, 23/11/2026).
+    # Fica na 0.20 até o Jest ir para a 30 (PR #40) ou o pdfkit voltar a publicar CommonJS.
+    ignore:
+      - dependency-name: pdfkit
+        versions: ['0.21.x']
 
   - package-ecosystem: npm
     directory: /frontend
